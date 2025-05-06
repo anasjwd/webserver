@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="stylesheet" href="./assets/css/style.css">
+		<title>About Our Project | 42 Webserv</title>
+	</head>
+	<body>
+		<nav>
+			<div class="nav-container">
+				<a href="index.html" class="logo">42 Webserv</a>
+				<ul class="nav-links">
+					<li><a href="index.html">Home</a></li>
+					<li><a href="cgi.html">The CGI</a></li>
+					<li><a href="about.html">About us</a></li>
+					<li><button class="theme-toggle" id="themeToggle">🌙</button></li>
+				</ul>
+			</div>
+		</nav>
+	
+		<div class="main-content">
+			<div class="container">
+				<h1>About Our Project</h1>
+				
+				<div class="content-section">
+					<h2>Project Overview</h2>
+					<p>
+						The 42 Webserv project is a complete HTTP server implementation developed in C++ as part of the 42 School curriculum.
+						Our server handles multiple client connections simultaneously, processes HTTP requests, and serves appropriate responses
+						while strictly adhering to RFC standards.
+					</p>
+				</div>
+				
+				<h2>Project Components</h2>
+				<p>The server is composed of several key components working together:</p>
+				
+				<div class="project-components">
+					<div class="component-card">
+						<h3><span>🔌</span> Socket Management</h3>
+						<p>
+							Implements non-blocking socket operations using poll() for handling multiple connections efficiently.
+							Includes IP address parsing, port binding, and connection queuing.
+						</p>
+					</div>
+					
+					<div class="component-card">
+						<h3><span>📝</span> Configuration Parser</h3>
+						<p>
+							Reads and validates server configuration files with support for multiple servers, routes,
+							error pages, and CGI settings. Handles both JSON and custom configuration formats.
+						</p>
+					</div>
+					
+					<div class="component-card">
+						<h3><span>📨</span> Request Parser</h3>
+						<p>
+							Parses incoming HTTP requests including headers, body, and chunked transfer encoding.
+							Validates request syntax according to RFC 7230 standards.
+						</p>
+					</div>
+					
+					<div class="component-card">
+						<h3><span>📤</span> Response Generator</h3>
+						<p>
+							Constructs proper HTTP responses with status codes, headers, and body content.
+							Handles both static file serving and dynamic content generation.
+						</p>
+					</div>
+					
+					<div class="component-card">
+						<h3><span>⚙️</span> CGI Handler</h3>
+						<p>
+							Implements CGI 1.1 specification with support for multiple interpreters (Python, PHP, Perl).
+							Manages environment variables, standard I/O streams, and timeout control.
+						</p>
+					</div>
+					
+					<div class="component-card">
+						<h3><span>🧪</span> Testing Framework</h3>
+						<p>
+							Comprehensive test suite including unit tests, integration tests, and performance benchmarks.
+							Automated testing with custom client implementations.
+						</p>
+					</div>
+				</div>
+				
+				<h2>Technical Specifications</h2>
+				<div class="content-section">
+					<ul>
+						<li><strong>Language:</strong> C++98 (with some C++11 features where allowed)</li>
+						<li><strong>Concurrency:</strong> Single-process, event-driven architecture</li>
+						<li><strong>Protocols:</strong> HTTP/1.1 (RFC 7230-7235)</li>
+						<li><strong>Supported Methods:</strong> GET, POST, DELETE, HEAD</li>
+						<li><strong>Configuration:</strong> Multiple servers with different host:port combinations</li>
+						<li><strong>Performance:</strong> Handles 1000+ concurrent connections on modern hardware</li>
+					</ul>
+				</div>
+				
+				<h2>Development Team</h2>
+				<div class="team-members">
+					<div class="member-card">
+						<h4>Alassiqu</h4>
+						<p class="member-role">Core Server & Socket Management</p>
+						<p>Implemented the main event loop, connection handling, and request parsing components.</p>
+					</div>
+					
+					<div class="member-card">
+						<h4>Ajawad</h4>
+						<p class="member-role">Configuration & Response Handling</p>
+						<p>Developed the configuration parser and response generation system with proper HTTP headers.</p>
+					</div>
+					
+					<div class="member-card">
+						<h4>Ahanaf</h4>
+						<p class="member-role">CGI Implementation & Testing</p>
+						<p>Built the CGI handler and comprehensive test suite for all server components.</p>
+					</div>
+				</div>
+			</div>
+		</div>
+	
+		<footer>
+			<p><b>© 2025 42 Webserv Project |</b> Created by 
+			<b>GEET (Alassiqu, Ajawad, Ahanaf)</b></p>
+		</footer>
+	
+		<script src="./assets/js/script.js"></script>
+	</body>
+</html>

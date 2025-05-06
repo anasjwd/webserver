@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="stylesheet" href="./assets/css/style.css">
+		<title>CGI Implementation | 42 Webserv</title>
+	</head>
+	<body>
+		<nav>
+			<div class="nav-container">
+				<a href="index.html" class="logo">42 Webserv</a>
+				<ul class="nav-links">
+					<li><a href="index.html">Home</a></li>
+					<li><a href="cgi.html">The CGI</a></li>
+					<li><a href="about.html">About</a></li>
+					<li><button class="theme-toggle" id="themeToggle">🌙</button></li>
+				</ul>
+			</div>
+		</nav>
+	
+		<div class="main-content">
+			<div class="container">
+				<h1>CGI Implementation</h1>
+				
+				<div class="content-section">
+					<h2>How CGI Works in Our Webserv</h2>
+					<p>
+						Our server implements CGI (Common Gateway Interface) to execute external programs
+						that generate dynamic content. When a request is made to a CGI-enabled route,
+						the server launches the appropriate interpreter and passes the request data.
+					</p>
+				</div>
+				
+				<h2>CGI Examples</h2>
+				<p>Try these CGI scripts with our webserver:</p>
+				
+				<div class="cgi-examples">
+					<div class="cgi-card">
+						<h3><span>🐍</span> Environment Viewer</h3>
+						<p>Displays all CGI environment variables passed by the server</p>
+						<a href="/cgi-bin/env.py" class="btn">Run Script</a>
+					</div>
+					
+					<div class="cgi-card">
+						<h3><span>🧮</span> Simple Calculator</h3>
+						<p>Performs basic arithmetic operations via GET parameters</p>
+						<a href="/cgi-bin/calc.py?3 + 5" class="btn">Run Example</a>
+					</div>
+					
+					<div class="cgi-card">
+						<h3><span>📤</span> Upload Test</h3>
+						<p>Simulates file upload handling (POST method)</p>
+						<a href="/cgi-bin/upload.py" class="btn">Test Upload</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	
+		<footer>
+			<p><b>© 2025 42 Webserv Project |</b> Created by 
+			<b>GEET (Alassiqu, Ajawad, Ahanaf)</b></p>
+		</footer>
+	
+		<script src="./assets/js/script.js"></script>
+	</body>
+</html>
