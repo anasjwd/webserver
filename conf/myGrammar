@@ -1,0 +1,45 @@
+GRAMMAR:
+
+:=		: definition of a rule
+[]		: it might appear, or it might not
+<>		: non-terminal symbols
+|		: or
+".."	: terminal symbols
+<...>	: prev element is repeatable
+<END>	: ";"
+
+<listen>	:= "listen" (<host_port> | <port>) <END> # Default: listen *:80 | *:8080
+<host_port>	:= <host> [":" <port>]
+<host>		:= <ipv4> | "localhost" | "*"
+<ipv4>		:= <digit>+ "." <digit>+ "." <digit>+ "." <digit>+
+<port>		:= [":"] <digit>{1,5}
+
+<server_name>	:= "server_name" <names> <END> # Default: server_name "";
+<names>			:= <name> | <names>
+<name>			:= <letter>+
+
+<error_page>	:= "error_page" <code> <response_code> <uri> <END>
+<code> 			:= <digit>+
+<response_code>	:= "="? <code>
+<uri>			:= <path> | <named_location>
+<path> 			:= "/" <letter>+
+<named_location>:= "@" <letter>+
+
+<client_max_body_size> := "client_max_body_size" <digit>+ <END> # Default: 1mb
+
+<location>		:= "location" "="? <letter>+ "{" <directives> "}" <END>
+<directives>	:= <directive> | <directives>
+<directive>		:= <root> | <limit_except> | <alias> | <return> | <deny> | <allow>
+
+<root>	:= "root" <path> <END>
+<path>	:= "/" <letter>+
+
+<limit_except>	:= "limit_except" <methods> "{" <directives> "}" <END>
+<methods>		:= <method> | <methods>
+<method>		:= "GET" | "POST" | "PUT" | "DELETE"
+<directives>	:= <directive> | <directives>
+<directive>		:= <deny> | <allow>
+
+<return>	:= "return" <code> [<url>] <END> # context: server
+<code>		:= <digit>+
+<url>		:= "/" <letter>+

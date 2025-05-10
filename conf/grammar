@@ -1,0 +1,113 @@
+# This file contains the grammar for the Nginx configuration file format
+
+# The symbol ::= is used to define grammar rules
+# The symbol | is used to define alternatives
+# The symbol * is used to define zero or more repetitions
+# The symbol + is used to define one or more repetitions
+# The symbol ? is used to define zero or one repetitions
+# The symbol [ ... ] is used to define optional elements
+# The symbol { ... } is used to define a block of elements
+# The symbol "..." is used to define a literal string
+# The symbol <...> is used to define a non-terminal symbol
+# The symbol ... is used to define a comment
+
+<host> ::= <hostname> | <ipv4address>
+
+<hostname> ::= <label> [ "." <label> ]*  
+# e.g., example.com
+
+<label> ::= <letter> [ <letter> | <digit> | "-" ]*  
+# e.g., example-label
+
+<letter> ::= "a" | "b" | ... | "z" | "A" | "B" | ... | "Z"
+<digit> ::= "0" | "1" | ... | "9"
+
+<ipv4address> ::= <digit>+ "." <digit>+ "." <digit>+ "." <digit>+
+# e.g., 192.168.1.1
+
+<port> ::= <digit>+
+# e.g., 80
+
+<path> ::= ("/")+ <segment> [ ("/")+ <segment> ]* [ "/" ]*
+# <path> starts with one or more "/" followed by a <segment>
+# Optionally, it can have one or more "/" followed by a <segment>
+# Optionally, it can end with zero or more "/"
+# e.g., /path/to/resource, ////path///source////
+
+<segment> ::= <segment_char> [ <segment_char> ]*
+<segment_char> ::= <unreserved_char> | <percent_encoding>
+<percent_encoding> ::= "%" <hexdig> <hexdig>
+<hexdig> ::= <digit> | "a" | "b" | ... | "f" | "A" | "B" | ... | "F"
+<unreserved_char> ::= <letter> | <digit> | "-" | "_" | "." | "~"
+<letter> ::= "a" | "b" | ... | "z" | "A" | "B" | ... | "Z"
+<digit> ::= "0" | "1" | ... | "9"
+
+<CIDR> ::= <ipv4address> "/" <digit>+
+# e.g., 192.168.1.0/24
+
+# HTTP directive Grammar
+<nginx_config> ::= <http_directive>
+<http_directive> ::= "http" "{" <http_directives> "}" [ "{" <http_directives> "}" ]*
+<http_directives> ::= [ <root_directive> | <index_directive> | <client_max_body_size_directive> | <root_directive> | <error_page_directive> ]* <server_directive>+
+# e.g., http { server { listen 80; server_name example.com; } }
+
+# Server directive Grammar
+<server_directive> ::= "server" "{" <server_directives> "}"
+<server_directives> ::= ( <listen_directive> | <server_name_directive> | <root_directive> | <index_directive> | <client_max_body_size> | <error_page_directive> | <location_directive> )*
+# e.g., server { listen 80; server_name example.com; }
+
+# Listen directive Grammar
+<listen_directive> ::= "listen" [ <ipv4address> | "localhost" ":" ] <port> ";"
+# e.g., listen 80, listen localhost:80, listen 192.168.1.1:80;
+
+# Server_name directive Grammar
+<server_name_directive> ::= "server_name" <hostname> [" " <hostname> ]* ";"
+# e.g., server_name example.com;
+
+# Client_max_body_size directive Grammar
+<client_max_body_size_directive> ::= "client_max_body_size" <size> ";"
+<size> ::= <digit>+ [ "K" | "M" | "G" ]
+# e.g., client_max_body_size 10M;
+
+# Location directive Grammar
+<location_directive> ::= "location" ( <path> | <file_extension> ) "{" <location_directives> "}" [ <location_directive> ]*
+<file_extension> ::= "." <segment>
+<location_directives> ::= [ <root_directive> | <index_directive> | <limit_except_directive> | <error_page_directive> | <cgi_directive> | <return_directive> ]*
+# e.g., location / { root /var/www/html; }, location .php { cgi /usr/bin/php-cgi; }
+
+# Limit_except directive Grammar
+<limit_except_directive> ::= "limit_except" <method> [" " <method>]* "{"  "}"
+<method> ::= "GET" | "POST" | "PUT" | "DELETE" | "OPTIONS" | "HEAD"
+# e.g., limit_except GET POST { ... }
+
+<allow_deny_directives> ::= ( <allow_directive> | <deny_directive> )*
+<allow_directive> ::= "allow" ( <host> | <CIDR> ) ";"
+<deny_directive> ::= "deny" ( <host> | <CIDR> ) ";"
+# e.g., allow 192.168.1.1; deny all;
+
+# Root directive Grammar
+<root_directive> ::= "root" <path> ";"
+# e.g., root /var/www/html;
+
+# Error_page directive Grammar
+<error_page_directive> ::= "error_page" <status_code> <path> ";"
+# e.g., error_page 404 /404.html;
+
+# Index directive Grammar
+<index_directive> ::= "index" <filename> ";"
+<filename> ::= <segment> [ <segment> ]*
+# e.g., index index.html;
+
+# CGI directive Grammar
+<cgi_directive> ::= "cgi" <path> ";"
+<return_directive> ::= "return" <status_code> [ <message> | <path> ] ";"
+# e.g., return 301 /new-url, return 404 "Not Found";
+
+<status_code> ::= "200" | "301" | "302" | "303" | "307" | "308" | "400" | "401" | "403" | "404" | "500" | "502" | "503" | "504"
+
+<message> ::= <text_status_code> <string>
+
+<text_status_code> ::= "200" | "400" | "402" | "403" | "404" | "500"
+
+<string> ::= '"' ... '"'
+# e.g., "Not Found"
