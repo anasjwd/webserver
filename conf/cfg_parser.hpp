@@ -12,7 +12,8 @@ enum TOKEN {
 	DIR_START,
 	DIR_END,
 	BLOCK_END,
-	COLON
+	COLON,
+	EQUAL
 };
 
 enum DIRTYPE {
@@ -74,12 +75,14 @@ class ClientMaxBodySize : public Directive {
 		ClientMaxBodySize(void);
 		~ClientMaxBodySize(void);
 		ClientMaxBodySize(const ClientMaxBodySize& other);
-		ClientMaxBodySize& operator=(const ClientMaxBodySize& other)
+		ClientMaxBodySize& operator=(const ClientMaxBodySize& other);
+		DIRTYPE getType(void) const;
 };
 
 class Location : public Directive {
 	private:
 		char* uri;
+		bool exactMatch;
 		std::vector<Directive*> children;
 	public:
 		Location(void);

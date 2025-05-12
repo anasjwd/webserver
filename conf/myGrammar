@@ -16,30 +16,42 @@ GRAMMAR:
 
 <server_name>	:= "server_name" <names> <END> # Default: server_name "";
 <names>			:= <name> | <names>
-<name>			:= <letter>+
+<name>			:= <char>+
 
 <error_page>	:= "error_page" <code> <response_code> <uri> <END>
 <code> 			:= <digit>+
 <response_code>	:= "="? <code>
 <uri>			:= <path> | <named_location>
-<path> 			:= "/" <letter>+
-<named_location>:= "@" <letter>+
+<path> 			:= "/" <char>+
+<named_location>:= "@" <char>+
 
 <client_max_body_size> := "client_max_body_size" <digit>+ <END> # Default: 1mb
 
-<location>		:= "location" "="? <letter>+ "{" <directives> "}" <END>
-<directives>	:= <directive> | <directives>
+<location>		:= "location" "="? <char>+ "{" <directives> "}" <END>
+<directives>	:= <directive> | <directive> <directives>
 <directive>		:= <root> | <limit_except> | <alias> | <return> | <deny> | <allow>
 
 <root>	:= "root" <path> <END>
-<path>	:= "/" <letter>+
+<path>	:= "/" <char>+
 
 <limit_except>	:= "limit_except" <methods> "{" <directives> "}" <END>
 <methods>		:= <method> | <methods>
 <method>		:= "GET" | "POST" | "PUT" | "DELETE"
-<directives>	:= <directive> | <directives>
+<directives>	:= <directive> | <directive> <directives>
 <directive>		:= <deny> | <allow>
 
 <return>	:= "return" <code> [<url>] <END> # context: server
 <code>		:= <digit>+
-<url>		:= "/" <letter>+
+<url>		:= "/" <char>+
+
+<index>			:= "index" <files> [<path_to_file>] <END>
+<files>			:= <file> | <file> <files>
+<path_to_file>	:= "/" <file>
+<file>			:= <char>+
+
+<autoindex>	:= "on" | "off"
+
+<allow>	:= <ipv4> | <CIDR> | "all" <END>
+<deny>	:= <ipv4> | <CIDR> | "all" <END>
+<CIDR>	:= <ipv4> "/" <digit>+
+<ipv4>	:= <digit>+ "." <digit>+ "." <digit>+ "." <digit>+

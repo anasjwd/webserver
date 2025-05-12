@@ -74,7 +74,7 @@ std::vector<char*> splitString(char* content)
 	{
 		while (isSep(content[idx], " \t\n"))
 			idx++;
-		if (inStr(content[idx], "{};:"))
+		if (inStr(content[idx], "{};:="))
 		{
 			wordHolder = new char[2];
 			wordHolder[0] = content[idx++];
@@ -122,6 +122,10 @@ std::vector<t_token*> tokenize(char* content)
 				break;
 			case ':':
 				token->type = COLON;
+				delete[] words[i];
+				break;
+			case '=':
+				token->type = EQUAL;
 				delete[] words[i];
 				break;
 			default:

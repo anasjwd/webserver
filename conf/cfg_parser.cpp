@@ -43,6 +43,8 @@ int main(int ac, char** av)
 			std::cout << "BLOCK_END: ;" << std::endl;
 		else if (tokens[i]->type == COLON)
 			std::cout << "COLON: :" << std::endl;
+		else if (tokens[i]->type == EQUAL)
+			std::cout << "EQUAL: =" << std::endl;
 		delete[] tokens[i]->data;
 		delete tokens[i];
 	}
