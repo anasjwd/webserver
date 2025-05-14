@@ -1,6 +1,6 @@
 // Get error details from URL parameters
 const urlParams = new URLSearchParams(window.location.search);
-const errorCode = urlParams.get('code') || '404';
+const errorCode = urlParams.get('code') || '500';
 const errorMessage = urlParams.get('message') || '';
 
 // Error code to details mapping
