@@ -25,8 +25,8 @@ A lightweight, efficient, and standards-compliant HTTP web server implemented in
 | Name               | GitHub Handle | Responsibilities                                                    |
 |--------------------|---------------|---------------------------------------------------------------------|
 | JAWAD Anas         | @anasjwd      | Core server architecture, socket management, select-based I/O       |
-| LASSIQUI Achraf    | @ahanaf       | Response generation, CGI handling, session                          |
-| HANAF Ayoub        | @lassachraf   | HTTP request parsing, error pages, testing, cookies                 |
+| HANAF Ayoub        | @dev-hanaf    | Response generation, CGI handling, session                          |
+| LASSIQUI Achraf    | @lassachraf   | HTTP request parsing, error pages, testing, cookies                 |
 
 <!-- > Each team member worked independently on their modules before integrating everything together for the final build. -->
 
@@ -35,7 +35,7 @@ A lightweight, efficient, and standards-compliant HTTP web server implemented in
 To compile the server, simply run:
 
 ```bash
-git clone repo-link && make
+git clone https://github.com/anasjwd/webserver/ && cd webserver/ && make
 ```
 
 Makefile rules:
