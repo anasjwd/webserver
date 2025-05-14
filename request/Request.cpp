@@ -1,4 +1,5 @@
 # include <map>
+#include <ostream>
 # include <string>
 # include <cstddef>
 # include <sstream>
@@ -8,9 +9,20 @@
 # include "../includes/Request.hpp"
 
 Request::Request()
-	:   uri(""), body(""), method(""), version(""), state(0), close(0)
+	: uri(""), body(""), state(0), method(""), version("")
 {
 	std::cout << "Request created!" << std::endl;
+}
+
+Request::Request(const Request& req)
+{
+	(void)req;
+}
+
+Request&	Request::operator=(const Request& req)
+{
+	(void)req;
+	return *this;
 }
 
 Request::~Request()
@@ -18,7 +30,8 @@ Request::~Request()
 	std::cout << "Request destroyed!" << std::endl;
 }
 
-static std::string toLower(const std::string& str) {
+static std::string	toLower(const std::string& str)
+{
 	std::string result = str;
 	for (size_t i = 0; i < result.size(); ++i) {
 		result[i] = std::tolower(result[i]);
@@ -26,18 +39,17 @@ static std::string toLower(const std::string& str) {
 	return result;
 }
 
-static void	trim(std::string& str)
-{
-	str.erase(str.begin(), std::find_if(str.begin(), str.end(), [](unsigned char c) {
-		return !std::isspace(c);
-	}));
-
-	str.erase(std::find_if(str.rbegin(), str.rend(), [](unsigned char c) {
-		return !std::isspace(c);
-	}).base(), str.end());
+static bool	isNotSpace(unsigned char c) {
+	return !std::isspace(c);
 }
 
-static	bool	validChars(std::string& uri)
+static void trim(std::string& str) {
+	str.erase(str.begin(), std::find_if(str.begin(), str.end(), isNotSpace));
+	std::string::reverse_iterator rit = std::find_if(str.rbegin(), str.rend(), isNotSpace);
+	str.erase(rit.base(), str.end());
+}
+
+static bool	validChars(std::string& uri)
 {
 	const std::string	validChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=%";
 
@@ -49,7 +61,6 @@ static	bool	validChars(std::string& uri)
 
 bool	Request::parseUri()
 {
-	// Check if empty or invalid URI.
 	if (uri.empty() || uri[0] != '/' || validChars(uri) == false) {
 		state = HTTP_BAD_REQUEST;
 		return false;
@@ -58,12 +69,10 @@ bool	Request::parseUri()
 	std::string			pair;
 	std::string			queryStr;
 
-	// Check if there's query in the URI.
 	size_t				queryPos = uri.find('?');
 	if (queryPos == std::string::npos)
 		return true;
 
-	// Read and store queries.
 	queryStr = uri.substr(queryPos + 1);
 	std::stringstream	query(queryStr);
 	while (std::getline(query, pair, '&')) {
@@ -75,7 +84,6 @@ bool	Request::parseUri()
 		}
 	}
 
-	// Check URI length.
 	uri = uri.substr(0, queryPos);
 	if (uri.length() > 2048) {
 		state = HTTP_URI_TOO_LONG;
@@ -87,7 +95,6 @@ bool	Request::parseUri()
 
 bool	Request::parseMethod()
 {
-	// Validate methods.
 	if (method != "GET" && method != "POST" && method != "DELETE") {
 		state = HTTP_METHOD_NOT_ALLOWED;
 		return false;
@@ -98,7 +105,6 @@ bool	Request::parseMethod()
 
 bool	Request::parseVersion()
 {
-	// Check used protocol and version of it.
 	if (version.size() < 8 || version.substr(0, 5) != "HTTP/") {
 		state = HTTP_BAD_REQUEST;
 		return false;
@@ -106,8 +112,7 @@ bool	Request::parseVersion()
 
 	std::string	vsn = version.substr(5);
 
-	// Supporting HTTP/1.1 only.
-	if (vsn != "1.1") {
+	if (vsn.length() != 3 && vsn != "1.1") {
 		state = HTTP_VERSION_NOT_SUPPORTED;
 		return false;
 	}
@@ -118,18 +123,15 @@ bool	Request::parseVersion()
 bool	Request::parseHeaders(std::stringstream& stream, std::string& line)
 {
 	while (std::getline(stream, line)) {
-		// Break if empty line or headers are finished.
 		if (line.empty() || line == "\r")
-			break;
-
-		// Check for ':' in the readed header line.
-		size_t colonPos = line.find(':');
-		if (colonPos == std::string::npos) {
-			state = HTTP_BAD_REQUEST;
-			return false;
+		break;
+	
+	size_t colonPos = line.find(':');
+	if (colonPos == std::string::npos) {
+		state = HTTP_BAD_REQUEST;
+		return false;
 		}
-
-		// Seperate key, value and trim them.
+		
 		std::string key = line.substr(0, colonPos);
 		std::string value = line.substr(colonPos + 1);
 		trim(key);
@@ -139,16 +141,27 @@ bool	Request::parseHeaders(std::stringstream& stream, std::string& line)
 			state = HTTP_BAD_REQUEST;
 			return false;
 		}
-		// Save the parsed header.
+		
 		headers[toLower(key)] = value;
 	}
-
+	
 	return true;
+}
+
+void	Request::clearRequest()
+{
+	uri = "";
+	body = "";
+	state = 0;
+	method = "";
+	version = "";
+	headers.clear();
+	bodyParams.clear();
+	queryParams.clear();
 }
 
 bool    Request::parseUrlEncodedBody()
 {
-	// Not done yet!
 	std::string			pair;
 	std::stringstream	ss(body);
 
@@ -164,42 +177,20 @@ bool    Request::parseUrlEncodedBody()
 	return true;
 }
 
-
 bool	Request::parseBodyByContentType()
 {
-	// Not done yet!
 	std::string	contentType;
 
 	if (headers.find("content-type") != headers.end())
 		contentType = headers["content-type"];
 	else
-		return true;
+	 	return true;
 
-	if (contentType == "application/x-www-form-urlencoded")
-		return parseUrlEncodedBody();
-	else if (contentType.find("multipart/form-data") == 0)
-		return parseMultipartBody(contentType);
-	else if (contentType == "application/json")
-		return parseJsonBody();
-	else if (contentType == "text/plain")
-		return true;
-	else
-		state = HTTP_UNSUPPORTED_MEDIA_TYPE;
+	/*
+		To be done !
+	*/
 
 	return false;
-}
-
-void    Request::clearRequest()
-{
-	// Clear the request!
-	uri = "";
-	body = "";
-	state = 0;
-	method = "";
-	version = "";
-	headers.clear();
-	bodyParams.clear();
-	queryParams.clear();
 }
 
 bool	Request::parseRequestLineAndHeaders(std::string& buffer)
@@ -264,43 +255,78 @@ bool	Request::readBodyFromBuffer(std::string& buffer)
 	return true;
 }
 
-void	Request::readFromSocket(int socketfd)
+bool	Request::readFromSocket(int socketfd)
 {
 	clearRequest();
 
 	std::string		buffer;
-	ssize_t			bytesRead;
 	char			chunk[1024];
 	bool			headersParsed = false;
-
-	while (1) {
-		bytesRead = recv(socketfd, chunk, sizeof(chunk), 0);
-		if (bytesRead < 0) {
-			state = HTTP_INTERNAL_SERVER_ERROR;
-			break;
-		}
-		if (bytesRead == 0)
-			break;
-		buffer.append(chunk, bytesRead);
-		if (!headersParsed) {
-			if (!parseRequestLineAndHeaders(buffer)) {
-				if (state != 0)
-					break;
-				continue;
-			}
-			headersParsed = true;
-			if (method == "GET" || method == "DELETE") {
-				body.clear();
-				state = HTTP_OK;
-				break;
-			}
-		}
-
-		if (headersParsed && method == "POST") {
-			if (readBodyFromBuffer(buffer)) {
-				state = HTTP_OK;
-				break;
-			}
-		}
+	size_t			bytesRead = recv(socketfd, chunk, sizeof(chunk), 0);
+	
+	if (bytesRead < 0) {
+		state = HTTP_INTERNAL_SERVER_ERROR;
+		return false;
 	}
+
+	if (bytesRead == 0)
+		return true;
+
+	buffer.append(chunk, bytesRead);
+
+	if (!headersParsed) {
+		if (!parseRequestLineAndHeaders(buffer)) {
+			if (state != 0)
+				return false;
+			return false;
+		}
+		headersParsed = true;
+	}
+
+	if (headersParsed && method == "POST") {
+		if (!readBodyFromBuffer(buffer))
+			if (state != 0)
+				return false;
+	}
+
+	state = HTTP_OK;
+	return true;
+}
+
+/*
+	Each connection should have:
+		* It own buffer (make it a file maybe).
+		* A specific chunk size, a default one and a custom one maybe from the conf file.
+		* A boolean to check if the headers are already parsed or not, set to false by default.
+		* A boolean that check either the whole request is finished.
+*/
+
+std::ostream&	operator<<(std::ostream& os, const Request& req)
+{
+	os << "Request query:\n"
+		<< "Method: " << req.method << ", Uri: " << req.uri
+		<< ", Version: " << req.version << "." << std::endl;
+
+	if (!req.queryParams.empty()) {
+		os << "Query Parameters:\n";
+		std::map<std::string, std::string>::const_iterator it = req.queryParams.begin();
+		for (;it != req.queryParams.end(); ++it)
+			os << "\t" << it->first << " = " << it->second << "\n";
+	}
+	
+	if (!req.headers.empty()) {
+		os << "Request Headers:\n";
+		std::map<std::string, std::string>::const_iterator it = req.headers.begin();
+		for (;it != req.headers.end(); ++it)
+			os << "\t" << it->first << ": " << it->second << "\n";
+	}
+
+	if (req.method == "POST")
+	{
+		os << req.body;
+	}
+	// Print body when fully parsed!
+
+	os << std::endl;
+	return os;
 }

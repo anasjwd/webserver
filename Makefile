@@ -5,7 +5,7 @@ CFLAGS		=	-Wall -Wextra -Werror
 
 RM			=	rm -f
 
-SRC			=	$(wildcard */*.cpp)
+SRC			=	$(wildcard */*.cpp *.cpp)
 OBJ			=	$(SRC:.cpp=.o)
 
 all:		$(NAME)
@@ -20,3 +20,6 @@ fclean:	clean
 	$(RM) $(NAME)
 
 re:	fclean all
+
+test:
+	@echo "=>" $(SRC);

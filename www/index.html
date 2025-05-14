@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="stylesheet" href="./assets/css/style.css">
+		<title>42 Webserv Project</title>
+	</head>
+	<body>
+		<nav>
+			<div class="nav-container">
+				<a href="index.html" class="logo">42 Webserv</a>
+				<ul class="nav-links">
+					<li><a href="index.html">Home</a></li>
+					<li><a href="cgi.html">The CGI</a></li>
+					<li><a href="about.html">About</a></li>
+					<li><button class="theme-toggle" id="themeToggle">🌙</button></li>
+				</ul>
+			</div>
+		</nav>
+	
+		<div class="main-content">
+			<div class="container">
+				<header>
+					<h1>42 Webserv Project</h1>
+					<p class="description">
+						A lightweight HTTP server implementation as part of the 42 School curriculum.
+						This project involves creating a web server that can handle multiple client connections,
+						process HTTP requests, and serve appropriate responses.
+					</p>
+				</header>
+
+				<div class="features">
+					<div class="feature-card">
+						<h3>CGI Support</h3>
+						<p>
+							Full CGI implementation supporting multiple interpreters (Python, PHP, Perl).
+							Includes environment variable passing, timeout management, and proper
+							input/output handling.
+						</p>
+						<a href="cgi.html">Explore CGI →</a>
+					</div>
+
+					<div class="feature-card">
+						<h3>Core Features</h3>
+						<p>
+							Our webserver implements all mandatory features including GET, POST, DELETE methods,
+							config file parsing, and proper error handling. It supports chunked transfer encoding
+							and can handle multiple concurrent connections.
+						</p>
+						<a href="about.html">Learn more →</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	
+		<footer>
+			<p><b>© 2025 42 Webserv Project |</b> Created by 
+			<b>GEET (Alassiqu, Ajawad, Ahanaf)</b></p>
+		</footer>
+
+		<script src="./assets/js/script.js"></script>
+	</body>
+</html>
