@@ -15,7 +15,7 @@ GRAMMAR:
 <port>		:= [":"] <digit>{1,5}
 
 <server_name>	:= "server_name" <names> <END> # Default: server_name "";
-<names>			:= <name> | <names>
+<names>			:= <name> | <name> <names>
 <name>			:= <char>+
 
 <error_page>	:= "error_page" <code> <response_code> <uri> <END>
@@ -35,7 +35,7 @@ GRAMMAR:
 <path>	:= "/" <char>+
 
 <limit_except>	:= "limit_except" <methods> "{" <directives> "}" <END>
-<methods>		:= <method> | <methods>
+<methods>		:= <method> | <method> <methods>
 <method>		:= "GET" | "POST" | "PUT" | "DELETE"
 <directives>	:= <directive> | <directive> <directives>
 <directive>		:= <deny> | <allow>
@@ -49,7 +49,7 @@ GRAMMAR:
 <path_to_file>	:= "/" <file>
 <file>			:= <char>+
 
-<autoindex>	:= "on" | "off"
+<autoindex>	:= ("on" | "off") <END>
 
 <allow>	:= <ipv4> | <CIDR> | "all" <END>
 <deny>	:= <ipv4> | <CIDR> | "all" <END>

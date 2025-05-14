@@ -17,8 +17,20 @@ enum TOKEN {
 };
 
 enum DIRTYPE {
+	HTTP,
+	SERVER,
 	LISTEN,
-	SERVER_NAME
+	SERVER_NAME,
+	ERROR_PAGE,
+	CLIENT_MAX_BODY_SIZE,
+	LOCATION,
+	ROOT,
+	LIMIT_EXCEPT,
+	RETURN,
+	INDEX,
+	AUTOINDEX,
+	DENY,
+	ALLOW
 };
 
 typedef struct s_token {
@@ -26,94 +38,20 @@ typedef struct s_token {
 	char* data;
 } t_token;
 
-class Directive {
-	public:
-		DIRTYPE getType(void) const = 0;
-};
-
-class Listen : public Directive {
-	private:
-		char* host;
-		unsigned int port;
-
-	public:
-		Listen(void);
-		~Listen(void);
-		Listen(const Listen& other);
-		Listen& operator=(const Listen& other);
-		DIRTYPE getType(void) const;
-};
-
-class ServerName : public Directive {
-	private:
-		char** serverNames;
-	public:
-		ServerName(void);
-		~ServerName(void);
-		ServerName(const ServerName& other);
-		ServerName& operator=(const ServerName& other);	
-		DIRTYPE getType(void) const;
-};
-
-class ErrorPage : public Directive {
-	private:
-		unsigned int code;
-		unsigned int responseCode;
-		char* uri;
-	public:
-		ErrorPage(void);
-		~ErrorPage(void);
-		ErrorPage(const ErrorPage& other);
-		ErrorPage operator=(const ErrorPage& other);
-		DIRTYPE getType(void) const;
-};
-
-class ClientMaxBodySize : public Directive {
-	private:
-		unsigned int size;
-	public:
-		ClientMaxBodySize(void);
-		~ClientMaxBodySize(void);
-		ClientMaxBodySize(const ClientMaxBodySize& other);
-		ClientMaxBodySize& operator=(const ClientMaxBodySize& other);
-		DIRTYPE getType(void) const;
-};
-
-class Location : public Directive {
-	private:
-		char* uri;
-		bool exactMatch;
-		std::vector<Directive*> children;
-	public:
-		Location(void);
-		~Location(void);
-		Location(const Location& other);
-		Location& operator=(const Location& other);
-		DIRTYPE getType(void) const;
-};
-
-class Root : public Directive {
-	private:
-		char* path;
-	public:
-		Root(void);
-		~Root(void);
-		Root(const Root& other);
-		Root& operator=(const Root& other);
-		DIRTYPE getType(void) const;
-};
-
-class Return : public Directive {
-	private:
-		unsigned int code;
-		char* url;
-	public:
-		Return(void);
-		~Return(void);
-		Return(const Return& other);
-		Return& operator=(const Return& other);
-		DIRTYPE getType(void) const;
-};
+#include "IDirective.hpp"
+#include "Http.hpp"
+#include "Server.hpp"
+#include "Listen.hpp"
+#include "ServerName.hpp"
+#include "ErrorPage.hpp"
+#include "ClientMaxBodySize.hpp"
+#include "Location.hpp"
+#include "Root.hpp"
+#include "LimitExcept.hpp"
+#include "Return.hpp"
+#include "Index.hpp"
+#include "Allow.hpp"
+#include "Deny.hpp"
 
 std::vector<t_token*> tokenize(char* content);
 
