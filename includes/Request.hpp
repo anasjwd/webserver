@@ -1,7 +1,9 @@
 # pragma once
 
 # include <map>
+# include <memory>
 # include <string>
+# include "../includes/Response.hpp"
 
 # define	HTTP_OK									200
 # define	HTTP_BAD_REQUEST						400
@@ -30,11 +32,12 @@
 # define	HTTP_GATEWAY_TIMEOUT					504
 # define	HTTP_VERSION_NOT_SUPPORTED				505
 
+struct  Connection;
+
 class   Request
 {
-
 	public:
-		Request();
+	Request();
 		~Request();
 
 		std::string							uri;
@@ -48,6 +51,8 @@ class   Request
 		std::map<std::string, std::string>	bodyParams;
 		std::map<std::string, std::string>	queryParams;
 
+		std::map<int, Connection*>			connections;
+
 		bool								parseUri();
 		bool								parseMethod();
 		bool								parseVersion();
@@ -57,9 +62,20 @@ class   Request
 		bool								parseUrlEncodedBody();
 		bool								parseBodyByContentType();
 		bool								parseMultipartBody(std::string& type);
-
+		
 		void								clearRequest();
-		void								readFromSocket(int sockfd);
+		bool								readFromSocket(int sockfd);
 		bool								readBodyFromBuffer(std::string& buffer);
 		bool								parseRequestLineAndHeaders(std::string& buffer);
+};
+
+struct	Connection
+{
+	int				sockfd;
+	std::string		buffer;
+	Request			request;
+	Response		response;
+	bool			headersParsed;
+
+	Connection(int fd) : sockfd(fd), headersParsed(false) {}
 };
