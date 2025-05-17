@@ -1,72 +1,64 @@
-# pragma once
+#pragma once
 
-# include <map>
-#include <ostream>
-# include <string>
+#include <map>
+#include <string>
 
-# define	HTTP_OK								200
-# define	HTTP_BAD_REQUEST					400
-# define	HTTP_UNAUTHORIZED					401
-# define	HTTP_PAYMENT_REQUIRED				402
-# define	HTTP_FORBIDDEN						403
-# define	HTTP_NOT_FOUND						404
-# define	HTTP_METHOD_NOT_ALLOWED				405
-# define	HTTP_NOT_ACCEPTABLE					406
-# define	HTTP_PROXY_AUTHENTICATION_REQUIRED	407
-# define	HTTP_REQUEST_TIMEOUT				408
-# define	HTTP_CONFLICT						409
-# define	HTTP_GONE							410
-# define	HTTP_LENGTH_REQUIRED				411
-# define	HTTP_PRECONDITION_FAILED			412
-# define	HTTP_PAYLOAD_TOO_LARGE				413
-# define	HTTP_URI_TOO_LONG					414
-# define	HTTP_UNSUPPORTED_MEDIA_TYPE			415
-# define	HTTP_RANGE_NOT_SATISFIABLE			416
-# define	HTTP_EXPECTATION_FAILED				417
-# define	HTTP_UPGRADE_REQUIRED				426
-# define	HTTP_INTERNAL_SERVER_ERROR			500
-# define	HTTP_NOT_IMPLEMENTED				501
-# define	HTTP_BAD_GATEWAY					502
-# define	HTTP_SERVICE_UNAVAILABLE			503
-# define	HTTP_GATEWAY_TIMEOUT				504
-# define	HTTP_VERSION_NOT_SUPPORTED			505
+#define HTTP_INCOMPLETE                0
+#define HTTP_OK                        200
+#define HTTP_BAD_REQUEST               400
+#define HTTP_UNAUTHORIZED              401
+#define HTTP_FORBIDDEN                 403
+#define HTTP_NOT_FOUND                 404
+#define HTTP_METHOD_NOT_ALLOWED        405
+#define HTTP_LENGTH_REQUIRED           411
+#define HTTP_PAYLOAD_TOO_LARGE         413
+#define HTTP_URI_TOO_LONG              414
+#define HTTP_UNSUPPORTED_MEDIA_TYPE    415
+#define HTTP_INTERNAL_SERVER_ERROR     500
+#define HTTP_VERSION_NOT_SUPPORTED     505
 
-class   Request
-{
-	private:
-		Request(const Request& req);
-		Request&	operator=(const Request& req);
+#define MAX_BODY_SIZE                 (10 * 1024 * 1024) // 10MB
+#define MAX_URI_LENGTH                2048
 
-	public:
-		Request();
-		~Request();
+class Request {
+private:
+    Request(const Request& req);
+    Request& operator=(const Request& req);
 
-		std::string							uri;
-		std::string							body;
-		int									state;
-		std::string							method;
-		std::string							version;
+public:
+    Request();
+    ~Request();
 
-		std::map<std::string, std::string>	headers;
-		std::map<std::string, std::string>	bodyParams;
-		std::map<std::string, std::string>	queryParams;
+    std::string                         uri;
+    std::string                         body;
+    int                                 state;
+    std::string                         method;
+    std::string                         version;
 
-		bool								parseUri();
-		bool								parseMethod();
-		bool								parseVersion();
-		bool								parseHeaders(std::stringstream& stream, std::string& line);
+    std::map<std::string, std::string>  headers;
+    std::map<std::string, std::string>  bodyParams;
+    std::map<std::string, std::string>  queryParams;
 
-		void								clearRequest();
+    bool                                parseUri();
+    bool                                parseMethod();
+    bool                                parseVersion();
+    bool                                parseHeaders(std::stringstream& stream, std::string& line);
 
-		bool								parseJsonBody();
-		bool								parseUrlEncodedBody();
-		bool								parseBodyByContentType();
-		bool								parseMultipartBody(std::string& type);
-		
-		bool								readFromSocket(int sockfd);
-		bool								readBodyFromBuffer(std::string& buffer);
-		bool								parseRequestLineAndHeaders(std::string& buffer);
+    void                                clearRequest();
 
+    bool                                parseJsonBody();
+    bool                                parseMultipartBody();
+    bool                                parseUrlEncodedBody();
+    bool                                parseBodyByContentType();
+
+    void                                sendResponse(int client_fd);
+    
+    bool                                parseFromBuffer(std::string& buffer);
+    bool                                readBodyFromBuffer(std::string& buffer);
+    bool                                parseRequestLineAndHeaders(std::string& buffer);
+
+    //////////////////////
+	std::string							getContentType();
 };
 
-std::ostream&	operator<<(std::ostream& os, const Request& req);
+std::ostream& operator<<(std::ostream& os, const Request& req);

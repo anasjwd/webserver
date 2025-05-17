@@ -5,7 +5,7 @@ CFLAGS		=	-Wall -Wextra -Werror
 
 RM			=	rm -f
 
-SRC			=	$(wildcard */*.cpp *.cpp)
+SRC			=	$(wildcard request/*.cpp *.cpp)
 OBJ			=	$(SRC:.cpp=.o)
 
 all:		$(NAME)
