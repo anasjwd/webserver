@@ -2,7 +2,7 @@
 
 #include "cfg_parser.hpp"
 
-class Directive {
+class IDirective {
 	public:
 		virtual DIRTYPE getType(void) const = 0;
 };

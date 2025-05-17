@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IDirective.hpp"j
+#include "IDirective.hpp"
 
 class Return : public IDirective {
 	private:
