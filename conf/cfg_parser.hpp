@@ -9,9 +9,9 @@
 
 enum TOKEN {
 	STRING,
-	DIR_START,
-	DIR_END,
+	BLOCK_START,
 	BLOCK_END,
+	DIR_END,
 	COLON,
 	EQUAL
 };

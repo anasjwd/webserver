@@ -2,9 +2,7 @@
 
 #include "cfg_parser.hpp"
 
-Location::Location(char* uri, bool exactMatch) :
-	uri(uri),
-	exactMatch(exactMatch)
+Location::Location()
 {}
 
 Location::~Location(void)

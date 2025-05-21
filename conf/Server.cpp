@@ -2,7 +2,7 @@
 
 #include "cfg_parser.hpp"
 
-Server::Server(bool isDefaultServer) : isDefaultServer(isDefaultServer)
+Server::Server()
 {}
 
 Server::~Server(void)
