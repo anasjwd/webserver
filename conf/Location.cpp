@@ -1,13 +1,13 @@
-#pragma once
-
-#include "cfg_parser.hpp"
+#include "Location.hpp"
 
 Location::Location()
-{}
+{
+	uri = NULL;
+}
 
 Location::~Location(void)
 {
-	delete[] uri;
+	free(uri);
 }
 
 DIRTYPE Location::getType(void) const
@@ -15,7 +15,12 @@ DIRTYPE Location::getType(void) const
 	return LOCATION;
 }
 
-void Location::addDirective(IDirective* dir)
+void Location::setUri(char* value)
 {
-	directives.push_back(dir);
+	uri = value;
+}
+
+void Location::setExactMatch(bool value)
+{
+	exactMatch = value;
 }

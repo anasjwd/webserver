@@ -85,7 +85,10 @@ std::vector<char*> splitString(char* content)
 		else
 			wordHolder = grabWord(content, idx);
 		if (wordHolder[0] == '\0')
+		{
+			delete[] wordHolder;
 			break;
+		}
 		words.push_back(wordHolder);
 	}
 	return words;

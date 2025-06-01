@@ -8,11 +8,11 @@ GRAMMAR:
 <...>	: prev element is repeatable
 <END>	: ";"
 
-<listen>	:= "listen" (<host_port> | ([":"] <port>)) <END> # Default: listen *:80 | *:8080
-<host_port>	:= <host> [":" <port>]
+<listen>	:= "listen" (<host_port> | <port_only>) <END> # Default: listen *:80 | *:8080
+<host_port>	:= <host> [":" <port_only>]
 <host>		:= <ipv4> | "localhost" | "*"
 <ipv4>		:= <digit>+ "." <digit>+ "." <digit>+ "." <digit>+
-<port>		:= <digit>{1,5}
+<port_only>		:= <digit>{1,5}
 
 <server_name>	:= "server_name" <names> <END> # Default: server_name "";
 <names>			:= <name> | <name> <names>
@@ -36,7 +36,7 @@ GRAMMAR:
 
 <limit_except>	:= "limit_except" <methods> "{" <directives> "}" <END>
 <methods>		:= <method> | <method> <methods>
-<method>		:= "GET" | "POST" | "PUT" | "DELETE"
+<method>		:= "GET" | "POST" | "DELETE"
 <directives>	:= <directive> | <directive> <directives>
 <directive>		:= <deny> | <allow>
 

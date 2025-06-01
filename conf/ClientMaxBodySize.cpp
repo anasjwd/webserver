@@ -1,8 +1,6 @@
-#pragma once
+#include "ClientMaxBodySize.hpp"
 
-#include "cfg_parser.hpp"
-
-ClientMaxBodySize::ClientMaxBodySize(unsigned int size) : size(size)
+ClientMaxBodySize::ClientMaxBodySize(void)
 {}
 
 ClientMaxBodySize::~ClientMaxBodySize(void)
@@ -13,3 +11,7 @@ DIRTYPE ClientMaxBodySize::getType(void) const
 	return CLIENT_MAX_BODY_SIZE;
 }
 
+void ClientMaxBodySize::setSize(unsigned int value)
+{
+	size = value;
+}

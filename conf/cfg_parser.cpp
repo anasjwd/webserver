@@ -27,24 +27,18 @@ int main(int ac, char** av)
 	std::vector<t_token*> tokens;
 	unsigned int tokensNum;
 
-	(void)ac;
+	if (ac < 2)
+	{
+		std::cout << "config file\n";
+		return 1;
+	}
 	char* content = readCfgFileContent(av[1]);
 	tokens = tokenize(content);
 	tokensNum = tokens.size();
+	Http* http = parser(tokens);
+	delete http;
 	for (unsigned int i = 0; i < tokensNum; i++)
 	{
-		if (tokens[i]->type == STRING)
-			std::cout << "STRING: " << tokens[i]->data << std::endl;
-		else if (tokens[i]->type == DIR_START)
-			std::cout << "DIR_START: {" << std::endl;
-		else if (tokens[i]->type == DIR_END)
-			std::cout << "DIR_END: }" << std::endl;
-		else if (tokens[i]->type == BLOCK_END)
-			std::cout << "BLOCK_END: ;" << std::endl;
-		else if (tokens[i]->type == COLON)
-			std::cout << "COLON: :" << std::endl;
-		else if (tokens[i]->type == EQUAL)
-			std::cout << "EQUAL: =" << std::endl;
 		delete[] tokens[i]->data;
 		delete tokens[i];
 	}

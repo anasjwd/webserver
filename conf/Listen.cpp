@@ -1,19 +1,26 @@
-#pragma once
+#include "Listen.hpp"
 
-#include "cfg_parser.hpp"
-
-Listen:Listen(void)
+Listen::Listen(void)
 {
-	
+	host = NULL;
 }
 
-Listen:~Listen(void)
+Listen::~Listen(void)
 {
-	
+	free(host);
 }
 
-DIRTYPE Listen:getType(void) const
+DIRTYPE Listen::getType(void) const
 {
-	return ;
+	return LISTEN;
 }
 
+void Listen::setHost(char* value)
+{
+	host = value;
+}
+
+void Listen::setPort(unsigned int value)
+{
+	port = value;
+}

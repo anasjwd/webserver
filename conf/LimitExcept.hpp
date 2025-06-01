@@ -1,20 +1,20 @@
 #pragma once
 
-#include "IDirective.hpp"
+#include "BlockDirective.hpp"
+#include <cstdlib>
 
-class LimitExcept : public IDirective {
+class LimitExcept : public BlockDirective {
 	private:
 		char** methods;
-		std::vector<IDirective*> directives;
 
-		LimitExcept(void);
 		LimitExcept(const LimitExcept& other);
 		LimitExcept& operator=(const LimitExcept& other);
 
 	public:
-		LimitExcept(char** methods);
+		LimitExcept(void);
 		~LimitExcept(void);
 		DIRTYPE getType(void) const;
-		void addDirective(IDirective* dir);
+		void setMethods(char** value);
+		void setMethod(char* value, unsigned int idx);
 };
 

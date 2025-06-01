@@ -1,15 +1,13 @@
 #pragma once
 
-#include "IDirective.hpp"
+#include "BlockDirective.hpp"
 
-class Http : public IDirective {
+class Http : public BlockDirective {
 	private:
-		std::vector<IDirective*> directives;
 		Http(const Http& other);
 		Http& operator=(const Http& other);
 	public:
 		Http(void);
 		~Http(void);
 		DIRTYPE getType(void) const;
-		void addDirective(IDirective* dir);
 };

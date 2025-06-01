@@ -1,15 +1,15 @@
-#pragma once
+#include "LimitExcept.hpp"
 
-#include "cfg_parser.hpp"
-
-LimitExcept::LimitExcept(char** methods) : methods(methods)
-{}
+LimitExcept::LimitExcept(void)
+{
+	methods = NULL;
+}
 
 LimitExcept::~LimitExcept(void)
 {
 	for (unsigned int i = 0; methods[i] != NULL; i++)
-		delete[] methods[i];
-	delete[] methods[i];
+		free(methods[i]);
+	delete[] methods;
 }
 
 DIRTYPE LimitExcept::getType(void) const
@@ -17,7 +17,12 @@ DIRTYPE LimitExcept::getType(void) const
 	return LIMIT_EXCEPT;
 }
 
-void LimitExcept::addDirective(IDirective* dir)
+void LimitExcept::setMethods(char** value)
 {
-	directives.push_back(dir);
+	methods = value;
+}
+
+void LimitExcept::setMethod(char* value, unsigned int idx)
+{
+	methods[idx] = value;
 }

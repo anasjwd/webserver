@@ -1,8 +1,8 @@
 #pragma once
 
-#include "IDirective.hpp"
+#include "BlockDirective.hpp"
 
-class Server : public IDirective {
+class Server : public BlockDirective {
 	private:
 		bool isDefaultServer;
 		std::vector<IDirective*> directives;
@@ -14,5 +14,6 @@ class Server : public IDirective {
 		Server(void);
 		~Server(void);
 		DIRTYPE getType(void) const;
-		void addDirective(IDirective* dir);
+
+		void setIsDefaultServer(bool value);
 };
