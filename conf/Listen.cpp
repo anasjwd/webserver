@@ -24,3 +24,13 @@ void Listen::setPort(unsigned int value)
 {
 	port = value;
 }
+
+unsigned int getPort(void) const
+{
+	return ( port );
+}
+
+char* getHost(void) const
+{
+	return ( host );
+}

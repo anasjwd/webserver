@@ -22,17 +22,12 @@ char* readCfgFileContent(const char* filename)
 	return content;
 }
 
-int main(int ac, char** av)
+Http* parseConfig(char* fileName)
 {
+	char* content = readCfgFileContent(av[1]);
 	std::vector<t_token*> tokens;
 	unsigned int tokensNum;
 
-	if (ac < 2)
-	{
-		std::cout << "config file\n";
-		return 1;
-	}
-	char* content = readCfgFileContent(av[1]);
 	tokens = tokenize(content);
 	tokensNum = tokens.size();
 	Http* http = parser(tokens);
@@ -43,5 +38,5 @@ int main(int ac, char** av)
 		delete tokens[i];
 	}
 	delete[] content;
-	return 0;
+	return ( http );
 }

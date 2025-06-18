@@ -8,10 +8,8 @@ class BlockDirective : public IDirective {
 		BlockDirective(const BlockDirective& other);
 		BlockDirective& operator=(const BlockDirective& other);
 
-	protected:
-		std::vector<IDirective*> directives;
-
 	public:
+		std::vector<IDirective*> directives;
 		BlockDirective(void);
 		~BlockDirective(void);
 		virtual void addDirective(IDirective* dir);

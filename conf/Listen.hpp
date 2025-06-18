@@ -16,5 +16,7 @@ class Listen : public IDirective {
 		DIRTYPE getType(void) const;
 		void setHost(char* value);
 		void setPort(unsigned int value);
+		unsigned int getPort(void) const;
+		char* getHost(void) const;
 };
 
