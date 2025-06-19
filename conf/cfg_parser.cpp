@@ -24,14 +24,15 @@ char* readCfgFileContent(const char* filename)
 
 Http* parseConfig(char* fileName)
 {
-	char* content = readCfgFileContent(av[1]);
+	char* content = readCfgFileContent(fileName);
+	if (content == NULL)
+		return ( NULL );
 	std::vector<t_token*> tokens;
 	unsigned int tokensNum;
 
 	tokens = tokenize(content);
 	tokensNum = tokens.size();
 	Http* http = parser(tokens);
-	delete http;
 	for (unsigned int i = 0; i < tokensNum; i++)
 	{
 		delete[] tokens[i]->data;

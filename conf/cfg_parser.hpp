@@ -58,6 +58,8 @@ typedef struct s_token {
 #include "Allow.hpp"
 #include "Deny.hpp"
 
+Http* parseConfig(char* fileName);
+
 std::vector<t_token*> tokenize(char* content);
 
 Http* parser(std::vector<t_token*>& tokens);

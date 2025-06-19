@@ -25,12 +25,12 @@ void Listen::setPort(unsigned int value)
 	port = value;
 }
 
-unsigned int getPort(void) const
+unsigned int Listen::getPort(void) const
 {
 	return ( port );
 }
 
-char* getHost(void) const
+char* Listen::getHost(void) const
 {
 	return ( host );
 }
