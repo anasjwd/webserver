@@ -12,7 +12,6 @@
 #include <vector>
 #include <sstream>
 #include "conf/cfg_parser.hpp"
-#include "request/incs/Defines.hpp"
 #include "request/incs/Request.hpp"
 #include <algorithm>
 #include <string>
