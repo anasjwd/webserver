@@ -17,3 +17,8 @@ void Deny::setDenied(char* value)
 {
 	denied = value;
 }
+
+char* Deny::getDenied(void) const
+{
+	return ( denied );
+}

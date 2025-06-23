@@ -17,3 +17,8 @@ void Allow::setAllowed(char* value)
 {
 	allowed = value;
 }
+
+char* Allow::getAllowed(void) const
+{
+	return ( allowed );
+}

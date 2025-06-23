@@ -14,5 +14,6 @@ class Allow : public IDirective {
 		~Allow(void);
 		DIRTYPE getType(void) const;
 		void setAllowed(char* value);
+		char* getAllowed(void) const;
 };
 

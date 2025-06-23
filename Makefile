@@ -1,25 +1,20 @@
-NAME		=	Webserv
+CXX = c++ -std=c++98
+CXXFLAGS = -Wall -Wextra -Werror -g3 -fsanitize=address
+TARGET = webserv
+SRCS     = $(wildcard conf/*.cpp) server_core.cpp
+OBJS     = $(SRCS:.cpp=.o)
 
-CXX			=	c++ -std=c++98
-CFLAGS		=	-Wall -Wextra -Werror
+all: $(TARGET)
 
-RM			=	rm -f
-
-SRC			=	$(wildcard */*.cpp *.cpp)
-OBJ			=	$(SRC:.cpp=.o)
-
-all:		$(NAME)
-
-$(NAME):	$(OBJ)
-	$(CXX) $(CXXFLAGS) $(OBJ) -o $(NAME)
+$(TARGET): $(OBJS)
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)
 
 clean:
-	$(RM) $(OBJ)
+	rm -f $(OBJS)
 
-fclean:	clean
-	$(RM) $(NAME)
+fclean: clean
+	rm -f $(TARGET)
 
-re:	fclean all
+re: fclean all
 
-test:
-	@echo "=>" $(SRC);
+.PHONY: all clean fclean re

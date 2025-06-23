@@ -14,5 +14,6 @@ class Deny : public IDirective {
 		~Deny(void);
 		DIRTYPE getType(void) const;
 		void setDenied(char* value);
+		char* getDenied(void) const;
 };
 
