@@ -1,3 +1,4 @@
+#include <ostream>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <sys/epoll.h>
@@ -191,10 +192,12 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	std::vector<int>::iterator it;
 	char buff[EIGHT_KB];
 	ssize_t bytes;
+	Request request;
 
 	(void)http;
 	while (true)
 	{
+		std::cout << "State => " << ev.events << "\n";
 		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, -1);
 		for (int i = 0; i < numberOfEvents; i++)
 		{
@@ -227,23 +230,53 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				else
 				{
 					std::cout.write(buff, bytes) << std::endl;
-					Request request;
+					// TODO: CREATE LINKED LIST OF CONNECTIONS.
+
 
 					request.appendToBuffer(buff, bytes);
 					if (request.isRequestDone())
+					{
+						std::cout << "Request is done, processing response..." << std::endl;
 						ev.events = EPOLLOUT;
+						ev.data.fd = events[i].data.fd;
+						if (epoll_ctl(epollFd, EPOLL_CTL_MOD, events[i].data.fd, &ev) == -1) {
+							close(events[i].data.fd);
+						}
+					}
 					//call request parsing
 					//when parsing is done call response builder
 					//when the response is built change to EPOLLOUT
 				}
 			}
-			/*else if (events[i].events & EPOLLOUT)
+			else if (events[i].events & EPOLLOUT)
 			{
+				std::cout << "We in response state\n";
 				//send 8kb each time
 				//keep track of how write wrote
 				//if the number of written character exceeds the size
 				//of the WRITE_FROM buffer delete it from epoll and close fd
-			}*/
+				ev.events = 0;
+				ev.data.fd = events[i].data.fd;
+				if (epoll_ctl(epollFd, EPOLL_CTL_MOD, events[i].data.fd, &ev) == -1)
+					close(events[i].data.fd);
+				std::string body = "<!DOCTYPE html>\n"
+                   "<html>\n"
+                   "<head><title>Test Page</title></head>\n"
+                   "<body>\n"
+                   "  <h1>Hello from my C++ server!</h1>\n"
+                   "  <p>This is a test web page.</p>\n"
+                   "</body>\n"
+                   "</html>\n";
+
+				std::ostringstream response;
+				response << "HTTP/1.1 200 OK\r\n"
+						<< "Content-Type: text/html\r\n"
+						<< "Content-Length: " << body.size() << "\r\n"
+						<< "\r\n"
+						<< body;
+
+				send(events[i].data.fd, response.str().c_str(), response.str().size(), 0);
+			}
 		}
 	}
 }

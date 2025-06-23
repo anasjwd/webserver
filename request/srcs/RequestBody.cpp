@@ -238,7 +238,6 @@ static std::string	urlDecode(const std::string& str)
 
 bool    RequestBody::_parseUrlEncoded()
 {
-	std::cout << "Parsing URL-encoded data: " << _rawData << std::endl;
 	if (_rawData.empty())
 		return true;
 
