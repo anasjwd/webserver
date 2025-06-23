@@ -22,32 +22,22 @@ char* readCfgFileContent(const char* filename)
 	return content;
 }
 
-int main(int ac, char** av)
+Http* parseConfig(char* fileName)
 {
+	char* content = readCfgFileContent(fileName);
+	if (content == NULL)
+		return ( NULL );
 	std::vector<t_token*> tokens;
 	unsigned int tokensNum;
 
-	(void)ac;
-	char* content = readCfgFileContent(av[1]);
 	tokens = tokenize(content);
 	tokensNum = tokens.size();
+	Http* http = parser(tokens);
 	for (unsigned int i = 0; i < tokensNum; i++)
 	{
-		if (tokens[i]->type == STRING)
-			std::cout << "STRING: " << tokens[i]->data << std::endl;
-		else if (tokens[i]->type == DIR_START)
-			std::cout << "DIR_START: {" << std::endl;
-		else if (tokens[i]->type == DIR_END)
-			std::cout << "DIR_END: }" << std::endl;
-		else if (tokens[i]->type == BLOCK_END)
-			std::cout << "BLOCK_END: ;" << std::endl;
-		else if (tokens[i]->type == COLON)
-			std::cout << "COLON: :" << std::endl;
-		else if (tokens[i]->type == EQUAL)
-			std::cout << "EQUAL: =" << std::endl;
 		delete[] tokens[i]->data;
 		delete tokens[i];
 	}
 	delete[] content;
-	return 0;
+	return ( http );
 }

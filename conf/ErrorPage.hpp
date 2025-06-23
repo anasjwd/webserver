@@ -4,16 +4,21 @@
 
 class ErrorPage : public IDirective {
 	private:
-		unsigned int code;
-		unsigned int responseCode;
+		int code;
+		int responseCode;
 		char* uri;
 
-		ErrorPage(void);
 		ErrorPage(const ErrorPage& other);
 		ErrorPage operator=(const ErrorPage& other);
 
 	public:
-		ErrorPage(unsigned int code, unsigned int responseCode, char* uri);
+		ErrorPage(void);
 		~ErrorPage(void);
 		DIRTYPE getType(void) const;
+		void setCode(int value);
+		void setResponseCode(int value);
+		void setUri(char* value);
+		int getCode(void) const;
+		int getResponseCode(void) const;
+		char* getUri(void) const;
 };

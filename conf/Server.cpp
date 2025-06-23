@@ -1,17 +1,10 @@
-#pragma once
+#include "Server.hpp"
 
-#include "cfg_parser.hpp"
-
-Server::Server(bool isDefaultServer) : isDefaultServer(isDefaultServer)
+Server::Server() : isDefaultServer(false)
 {}
 
 Server::~Server(void)
 {
-	unsigned int size;
-
-	size = directives.size();
-	for (unsigned int i = 0; i < size; i++)
-		delete directives[i];
 }
 
 DIRTYPE Server::getType(void) const
@@ -19,7 +12,7 @@ DIRTYPE Server::getType(void) const
 	return SERVER;
 }
 
-void Server::addDirective(IDirective* dir)
+void Server::setIsDefaultServer(bool value)
 {
-	directives.puch_back(dir);
+	isDefaultServer = value;
 }

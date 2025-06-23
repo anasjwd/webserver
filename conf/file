@@ -1,0 +1,15 @@
+
+=================================================================
+==66420==ERROR: LeakSanitizer: detected memory leaks
+
+Direct leak of 1 byte(s) in 1 object(s) allocated from:
+    #0 0x7f5c74ee7d4b in operator new[](unsigned long) (/lib64/libasan.so.8+0xe7d4b) (BuildId: 6a82bb83b1f19d3f3a2118085acf79daa3b52371)
+    #1 0x00000040f516 in grabWord(char*, int&) /home/ajawad/Desktop/webserver/conf/tokenizer.cpp:44
+    #2 0x00000040fc15 in splitString(char*) /home/ajawad/Desktop/webserver/conf/tokenizer.cpp:86
+    #3 0x00000040fec4 in tokenize(char*) /home/ajawad/Desktop/webserver/conf/tokenizer.cpp:101
+    #4 0x000000402b81 in main /home/ajawad/Desktop/webserver/conf/cfg_parser.cpp:36
+    #5 0x7f5c748115f4 in __libc_start_call_main (/lib64/libc.so.6+0x35f4) (BuildId: 2b3c02fe7e4d3811767175b6f323692a10a4e116)
+    #6 0x7f5c748116a7 in __libc_start_main@@GLIBC_2.34 (/lib64/libc.so.6+0x36a7) (BuildId: 2b3c02fe7e4d3811767175b6f323692a10a4e116)
+    #7 0x0000004007b4 in _start (/home/ajawad/Desktop/webserver/conf/conf+0x4007b4) (BuildId: c13a2b09bbc09f9294cbee985755a778900cb2f1)
+
+SUMMARY: AddressSanitizer: 1 byte(s) leaked in 1 allocation(s).

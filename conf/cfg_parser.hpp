@@ -5,18 +5,20 @@
 #include <fstream>
 #include <vector>
 #include <cstring>
+#include <sstream>
+#include "Exceptions.hpp"
 #define NONE '\0'
 
 enum TOKEN {
 	STRING,
-	DIR_START,
-	DIR_END,
+	BLOCK_START,
 	BLOCK_END,
+	DIR_END,
 	COLON,
 	EQUAL
 };
 
-enum DIRTYPE {
+/*enum DIRTYPE {
 	HTTP,
 	SERVER,
 	LISTEN,
@@ -31,7 +33,7 @@ enum DIRTYPE {
 	AUTOINDEX,
 	DENY,
 	ALLOW
-};
+};*/
 
 typedef struct s_token {
 	TOKEN type;
@@ -39,6 +41,8 @@ typedef struct s_token {
 } t_token;
 
 #include "IDirective.hpp"
+#include "BlockDirective.hpp"
+
 #include "Http.hpp"
 #include "Server.hpp"
 #include "Listen.hpp"
@@ -50,9 +54,27 @@ typedef struct s_token {
 #include "LimitExcept.hpp"
 #include "Return.hpp"
 #include "Index.hpp"
+#include "AutoIndex.hpp"
 #include "Allow.hpp"
 #include "Deny.hpp"
 
+Http* parseConfig(char* fileName);
+
 std::vector<t_token*> tokenize(char* content);
+
+Http* parser(std::vector<t_token*>& tokens);
+
+void consumeDirectives(
+		BlockDirective* block,
+		std::vector<t_token*>& tokens,
+		unsigned int& pos,
+		unsigned int tokensSize);
+
+bool isValidURI(char* uri);
+bool isHostAndPort(std::vector<t_token*>& tokens, unsigned int pos, unsigned int tokensSize);
+bool isPortOnly(std::vector<t_token*>& tokens, unsigned int pos);
+bool isIPv4(const char* addr);
+bool isValidMethod(char* method);
+bool isValidURL(char* url);
 
 #endif

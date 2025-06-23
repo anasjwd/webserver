@@ -84,6 +84,11 @@ std::vector<char*> splitString(char* content)
 			wordHolder = grabComment(content, idx);
 		else
 			wordHolder = grabWord(content, idx);
+		if (wordHolder[0] == '\0')
+		{
+			delete[] wordHolder;
+			break;
+		}
 		words.push_back(wordHolder);
 	}
 	return words;
@@ -109,15 +114,15 @@ std::vector<t_token*> tokenize(char* content)
 		token->data = NULL;
 		switch (words[i][0]) {
 			case ';':
-				token->type = BLOCK_END;
+				token->type = DIR_END;
 				delete[] words[i];
 				break;
 			case '{':
-				token->type = DIR_START;
+				token->type = BLOCK_START;
 				delete[] words[i];
 				break;
 			case '}':
-				token->type = DIR_END;
+				token->type = BLOCK_END;
 				delete[] words[i];
 				break;
 			case ':':

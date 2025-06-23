@@ -6,13 +6,13 @@ class AutoIndex : public IDirective {
 	private:
 		bool state;
 
-		AutoIndex(void);
 		AutoIndex(const AutoIndex& other);
 		AutoIndex& operator=(const AutoIndex& other);
 
 	public:
-		AutoIndex(bool state);
+		AutoIndex(void);
 		~AutoIndex(void);
 		DIRTYPE getType(void) const;
+		void setState(bool value);
 };
 

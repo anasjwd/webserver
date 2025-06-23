@@ -1,13 +1,11 @@
-#pragma once
+#include "Root.hpp"
 
-#include "cfg_parser.hpp"
-
-Root::Root(char* path) : path(path)
+Root::Root(void)
 {}
 
 Root::~Root(void)
 {
-	delete[] path;
+	free(path);
 }
 
 DIRTYPE Root::getType(void) const
@@ -15,3 +13,7 @@ DIRTYPE Root::getType(void) const
 	return ROOT;
 }
 
+void Root::setPath(char* value)
+{
+	path = value;
+}

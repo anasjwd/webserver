@@ -1,13 +1,11 @@
-#pragma once
+#include "Allow.hpp"
 
-#include "cfg_parser.hpp"
-
-Allow::Allow(char* allowed) : allowed(allowed)
+Allow::Allow(void)
 {}
 
 Allow::~Allow(void)
 {
-	delete[] allowed;
+	free(allowed);
 }
 
 DIRTYPE Allow::getType(void) const
@@ -15,3 +13,12 @@ DIRTYPE Allow::getType(void) const
 	return ALLOW;
 }
 
+void Allow::setAllowed(char* value)
+{
+	allowed = value;
+}
+
+char* Allow::getAllowed(void) const
+{
+	return ( allowed );
+}

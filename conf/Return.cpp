@@ -1,13 +1,11 @@
-#pragma once
+#include "Return.hpp"
 
-#include "cfg_parser.hpp"
-
-Return::Return(unsigned int code, char* url) : code(code), url(url)
+Return::Return(void)
 {}
 
 Return::~Return(void)
 {
-	delete[] url;
+	free(url);
 }
 
 DIRTYPE Return::getType(void) const
@@ -15,3 +13,12 @@ DIRTYPE Return::getType(void) const
 	return RETURN;
 }
 
+void Return::setCode(unsigned int value)
+{
+	code = value;
+}
+
+void Return::setUrl(char* value)
+{
+	url = value;
+}

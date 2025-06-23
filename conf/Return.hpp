@@ -1,19 +1,20 @@
 #pragma once
 
-#include "IDirective.hpp"j
+#include "IDirective.hpp"
 
 class Return : public IDirective {
 	private:
 		unsigned int code;
 		char* url;
 
-		Return(void);
 		Return(const Return& other);
 		Return& operator=(const Return& other);
 
 	public:
-		Return(unsigned int code, char* url);
+		Return(void);
 		~Return(void);
 		DIRTYPE getType(void) const;
+		void setCode(unsigned int value);
+		void setUrl(char* value);
 };
 
