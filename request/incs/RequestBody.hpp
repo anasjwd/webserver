@@ -21,7 +21,6 @@ class	RequestBody
 		size_t				_bytesReceived;
 
 		size_t				_currentChunkSize;
-		bool				_chunkSizeExpected;
 		size_t				_bytesReceivedInChunk;
 
 		std::string			_rawData;

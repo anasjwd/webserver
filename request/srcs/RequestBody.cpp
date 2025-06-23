@@ -6,7 +6,7 @@
 RequestBody::RequestBody()
 	:	_bodyType(RAW), _isParsed(false), _isChunked(false),
 		_isCompleted(false), _contentLength(0), _bytesReceived(0), 
-		_chunkSizeExpected(true), _currentChunkSize(0), _bytesReceivedInChunk(0)
+		_currentChunkSize(0), _bytesReceivedInChunk(0)
 {
 	char temp[] = "/tmp/webserv_body_XXXXXX";
 	int fd = mkstemp(temp);
@@ -362,7 +362,6 @@ void	RequestBody::clear()
 	_isCompleted = false;
 	_currentChunkSize = 0;
 	_urlEncodedData.clear();
-	_chunkSizeExpected = true;
 	_bytesReceivedInChunk = 0;
 }
 

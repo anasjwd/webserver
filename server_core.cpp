@@ -12,6 +12,8 @@
 #include <vector>
 #include <sstream>
 #include "conf/cfg_parser.hpp"
+#include "request/incs/Defines.hpp"
+#include "request/incs/Request.hpp"
 #include <algorithm>
 #include <string>
 
@@ -226,6 +228,11 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				else
 				{
 					std::cout.write(buff, bytes) << std::endl;
+					Request request;
+
+					request.appendToBuffer(buff, bytes);
+					if (request.isRequestDone())
+						ev.events = EPOLLOUT;
 					//call request parsing
 					//when parsing is done call response builder
 					//when the response is built change to EPOLLOUT
