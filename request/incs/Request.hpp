@@ -9,6 +9,7 @@
 class	Request
 {
 	private:
+		int				_fd;
 		RequestLine		_rl;
 		RequestHeaders	_rh;
 		RequestBody		_rb;
@@ -26,10 +27,14 @@ class	Request
 
 	public:
 		Request();
+		Request(int);
 
 		void					clear();
 		bool					stateChecker() const;
 		bool					isRequestDone() const;
+
+		void					setFd(int);
+		const int&				getFd() const;
 
 		const RequestState&		getState() const;
 		const HttpStatusCode&	getStatusCode() const;

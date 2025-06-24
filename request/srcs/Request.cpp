@@ -5,12 +5,23 @@
 # include "../incs/Request.hpp"
 
 Request::Request()
-	:	_rl(""), _rh(""), _rb(), _state(BEGIN), _statusCode(START), _buffer(), _requestDone(false)
+	:	_fd(-1), _rl(""), _rh(""), _rb(), _state(BEGIN), _statusCode(START),
+		_buffer(), _requestDone(false)
+{
+}
+
+Request::Request(int fd)
+	:	_fd(fd), _rl(""), _rh(""), _rb(), _state(BEGIN), _statusCode(START),
+		_buffer(), _requestDone(false)
 {
 }
 
 bool	Request::_processBodyHeaders()
 {
+	std::string contentType = _rh.getHeaderValue("content-type");
+	if (!contentType.empty())
+		_rb.setContentType(contentType);
+
 	std::string contentLengthStr = _rh.getHeaderValue("content-length");
 	std::string transferEncoding = _rh.getHeaderValue("transfer-encoding");
 
@@ -22,13 +33,14 @@ bool	Request::_processBodyHeaders()
 	else if (!transferEncoding.empty())
 	{
 		_rb.setChunked(_isChunkedTransferEncoding(transferEncoding));
-		if (_rb.isChunked() && contentLengthStr.empty())
+		if (_rb.isChunked())
+		{
+			if (!_processChunkedTransfer())
+				return false;
 			return true;
+		}
 		return setState(false, BAD_REQUEST);
 	}
-	std::string contentType = _rh.getHeaderValue("content-type");
-	if (!contentType.empty())
-		_rb.setContentType(contentType);
 		
 	return true;
 }
@@ -127,6 +139,16 @@ bool	Request::isRequestDone() const
 	return false;
 }
 
+void	Request::setFd(int fd)
+{
+	_fd = fd;
+}
+
+const int&	Request::getFd() const
+{
+	return _fd;
+}
+
 const RequestState&	Request::getState() const
 {
 	return _state;
@@ -200,8 +222,7 @@ bool	Request::headerSection()
 		return false;
 
 	const std::string& method = _rl.getMethod();
-	if ((method == "GET" || (method == "DELETE" && _rb.getContentLength() == 0 && !_rb.isChunked()))
-		&& _buffer.empty())
+	if ((method == "GET" || method == "DELETE") && _rb.getContentLength() == 0 && !_rb.isChunked() && _buffer.empty())
 	{
 		_state = COMPLETE;
 		return setState(true, OK);
@@ -221,9 +242,6 @@ bool	Request::bodySection()
 
 	if (_rb.isCompleted() || _buffer.empty())
 	{
-		if (!_rb.parse())
-			return setState(false, _rb.getStatusCode());
-
 		_state = COMPLETE;
 		return setState(true, OK);
 	}

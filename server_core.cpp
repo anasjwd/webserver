@@ -13,6 +13,7 @@
 #include <vector>
 #include <sstream>
 #include "conf/cfg_parser.hpp"
+#include "request/incs/Defines.hpp"
 #include "request/incs/Request.hpp"
 #include <algorithm>
 #include <string>
@@ -185,6 +186,54 @@ void closeSockets(std::vector<int>& sockets)
 		close(sockets[idx]);
 }
 
+Request* findRequestByFd(int fd, std::vector<Request*>& requests)
+{
+	std::vector<Request*>::iterator it = requests.begin();
+    for (; it != requests.end(); it++)
+	{
+        if ((*it)->getFd() == fd)
+            return *it;
+    }
+	return NULL;
+}
+
+void	printRequest(Request* req)
+{
+	std::cout << "Request is done, processing response...\nStatus is => " << req->getStatusCode() << std::endl;
+	std::cout << "Request fd: " << req->getFd() << "\n";
+
+	std::cout << "RequestLine:\n";
+	std::cout << "Method: " << req->getRequestLine().getMethod() << "\n";
+	std::cout << "URI: " << req->getRequestLine().getUri() << "\n";
+	std::cout << "Version: " << req->getRequestLine().getVersion() << "\n\n";
+	std::cout << "RequestHeaders:\n";
+	std::map<std::string, std::string>::const_iterator it;
+	for (it = req->getRequestHeaders().getHeadersMap().begin(); it != req->getRequestHeaders().getHeadersMap().end(); it++)
+	{
+		std::cout << "\t" << it->first << ": " << it->second << "\n";
+	}
+	std::cout << "\nRequestBody: " << req->getRequestBody().getBodyType() << "\n";
+	if (req->getRequestBody().getBodyType() == URL_ENCODED)
+	{
+		std::cout << "URL Encoded Body:\n";
+		std::map<std::string, std::string>::const_iterator bodyIt;
+		for (bodyIt = req->getRequestBody().getUrlEncodedData().begin(); bodyIt != req->getRequestBody().getUrlEncodedData().end(); bodyIt++)
+		{
+			std::cout << "\t" << bodyIt->first << ": " << bodyIt->second << "\n";
+		}
+	}
+	// else if (req->getRequestBody().getBodyType() == MULTIPART_FORM_DATA)
+	// {
+	// 	std::cout << "Multipart Form Data Body:\n";
+	// 	std::vector<MultipartPart>::const_iterator partIt;
+	// 	for (partIt = req->getRequestBody().getMultipartFormDataBody().begin(); partIt != req->getRequestBody().getMultipartFormDataBody().end(); partIt++)
+	// 	{
+	// 		std::cout << "\tPart Name: " << partIt->name << ", File Name: " << partIt->fileName << ", Content Type: " << partIt->contentType << "\n";
+	// 		std::cout << "\tContent: " << partIt->content << "\n";
+	// 	}
+	// }
+}
+
 void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 {
 	struct epoll_event ev, events[MAX_EVENTS];
@@ -192,13 +241,17 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	std::vector<int>::iterator it;
 	char buff[EIGHT_KB];
 	ssize_t bytes;
-	Request request;
+	std::vector<Request*> requests;
+	Request* req;
+	time_t currentTime;
+	int client_fd;
 
 	(void)http;
 	while (true)
 	{
 		std::cout << "State => " << ev.events << "\n";
 		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, -1);
+		std::cout << "Number of events: " << numberOfEvents << std::endl;
 		for (int i = 0; i < numberOfEvents; i++)
 		{
 			it = find(sockets.begin(), sockets.end(), events[i].data.fd);
@@ -229,19 +282,26 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				}
 				else
 				{
-					std::cout.write(buff, bytes) << std::endl;
-					// TODO: CREATE LINKED LIST OF CONNECTIONS.
-
-
-					request.appendToBuffer(buff, bytes);
-					if (request.isRequestDone())
+					client_fd = events[i].data.fd;
+					currentTime = time(NULL);
+					std::cout << "Current time: " << currentTime << std::endl;
+					req = findRequestByFd(client_fd, requests);
+					if (req == NULL)
 					{
-						std::cout << "Request is done, processing response..." << std::endl;
+						std::cout << "Creating new request for fd: " << client_fd << std::endl;
+						requests.push_back(new Request(client_fd));
+						req = requests.back();
+					}
+					
+					req->appendToBuffer(buff, bytes);
+
+					if (req->isRequestDone())
+					{
+						printRequest(req);
 						ev.events = EPOLLOUT;
-						ev.data.fd = events[i].data.fd;
-						if (epoll_ctl(epollFd, EPOLL_CTL_MOD, events[i].data.fd, &ev) == -1) {
-							close(events[i].data.fd);
-						}
+						ev.data.fd = client_fd;
+						if (epoll_ctl(epollFd, EPOLL_CTL_MOD, client_fd, &ev) == -1)
+							close(client_fd);
 					}
 					//call request parsing
 					//when parsing is done call response builder
@@ -268,14 +328,27 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
                    "</body>\n"
                    "</html>\n";
 
+				Request* req = findRequestByFd(events[i].data.fd, requests);
 				std::ostringstream response;
-				response << "HTTP/1.1 200 OK\r\n"
+				response << "HTTP/1.1 " << req->getStatusCode() << " OK\r\n"
 						<< "Content-Type: text/html\r\n"
 						<< "Content-Length: " << body.size() << "\r\n"
 						<< "\r\n"
 						<< body;
 
 				send(events[i].data.fd, response.str().c_str(), response.str().size(), 0);
+			}
+			else
+			{
+				if (time(NULL) - currentTime > 10)
+				{
+					req->setState(false, REQUEST_TIMEOUT);
+					std::cout << "Request timed out for fd: " << client_fd << std::endl;
+					ev.events = 0;
+					ev.data.fd = client_fd;
+					if (epoll_ctl(epollFd, EPOLL_CTL_MOD, client_fd, &ev) == -1)
+						close(client_fd);
+				}
 			}
 		}
 	}
