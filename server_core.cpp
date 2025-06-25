@@ -14,6 +14,7 @@
 #include <sstream>
 #include "conf/cfg_parser.hpp"
 #include "request/incs/Request.hpp"
+#include "response/include/Response.hpp"
 #include <algorithm>
 #include <string>
 
@@ -268,14 +269,12 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
                    "</body>\n"
                    "</html>\n";
 
-				std::ostringstream response;
-				response << "HTTP/1.1 200 OK\r\n"
-						<< "Content-Type: text/html\r\n"
-						<< "Content-Length: " << body.size() << "\r\n"
-						<< "\r\n"
-						<< body;
-
-				send(events[i].data.fd, response.str().c_str(), response.str().size(), 0);
+				Response res;
+				res.setStatus(200);
+				res.addHeader("Content-Type", "text/html");
+				res.setBody(body);
+				std::string responseStr = res.build();
+				send(events[i].data.fd, responseStr.c_str(), responseStr.size(), 0);
 			}
 		}
 	}
