@@ -212,26 +212,29 @@ void	printRequest(Request* req)
 	{
 		std::cout << "\t" << it->first << ": " << it->second << "\n";
 	}
-	std::cout << "\nRequestBody: " << req->getRequestBody().getBodyType() << "\n";
-	if (req->getRequestBody().getBodyType() == URL_ENCODED)
-	{
-		std::cout << "URL Encoded Body:\n";
-		std::map<std::string, std::string>::const_iterator bodyIt;
-		for (bodyIt = req->getRequestBody().getUrlEncodedData().begin(); bodyIt != req->getRequestBody().getUrlEncodedData().end(); bodyIt++)
-		{
-			std::cout << "\t" << bodyIt->first << ": " << bodyIt->second << "\n";
-		}
-	}
-	// else if (req->getRequestBody().getBodyType() == MULTIPART_FORM_DATA)
-	// {
-	// 	std::cout << "Multipart Form Data Body:\n";
-	// 	std::vector<MultipartPart>::const_iterator partIt;
-	// 	for (partIt = req->getRequestBody().getMultipartFormDataBody().begin(); partIt != req->getRequestBody().getMultipartFormDataBody().end(); partIt++)
-	// 	{
-	// 		std::cout << "\tPart Name: " << partIt->name << ", File Name: " << partIt->fileName << ", Content Type: " << partIt->contentType << "\n";
-	// 		std::cout << "\tContent: " << partIt->content << "\n";
-	// 	}
-	// }
+	req->getRequestBody().isChunked() ? std::cout << "RequestBody is chunked, with filename: " << req->getRequestBody().getTempFilename() << "\n" : std::cout << "\nRequestBody: " << req->getRequestBody().getBodyType() << ", with filename: " << req->getRequestBody().getTempFilename() << "\n";
+}
+
+void sendTimeoutResponse(int client_fd)
+{
+    std::string body = "<!DOCTYPE html>\n"
+                      "<html>\n"
+                      "<head><title>408 Request Timeout</title></head>\n"
+                      "<body>\n"
+                      "  <h1>408 Request Timeout</h1>\n"
+                      "  <p>The server timed out waiting for the request.</p>\n"
+                      "</body>\n"
+                      "</html>\n";
+
+    std::ostringstream response;
+    response << "HTTP/1.1 408 Request Timeout\r\n"
+             << "Content-Type: text/html\r\n"
+             << "Content-Length: " << body.size() << "\r\n"
+             << "Connection: close\r\n"
+             << "\r\n"
+             << body;
+
+    send(client_fd, response.str().c_str(), response.str().size(), 0);
 }
 
 void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
@@ -243,7 +246,6 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	ssize_t bytes;
 	std::vector<Request*> requests;
 	Request* req;
-	time_t currentTime;
 	int client_fd;
 
 	(void)http;
@@ -283,17 +285,28 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				else
 				{
 					client_fd = events[i].data.fd;
-					currentTime = time(NULL);
-					std::cout << "Current time: " << currentTime << std::endl;
 					req = findRequestByFd(client_fd, requests);
 					if (req == NULL)
 					{
-						std::cout << "Creating new request for fd: " << client_fd << std::endl;
+						std::cout << "Creating new request" << std::endl;
 						requests.push_back(new Request(client_fd));
 						req = requests.back();
 					}
-					
 					req->appendToBuffer(buff, bytes);
+					// currentTime = time(NULL);
+					// if (currentTime - req->getLastActivityTime() > 10)
+					// {
+					// 	std::cout << "Request timed out for fd: " << client_fd << std::endl;
+					// 	req->setState(false, REQUEST_TIMEOUT);
+					// 	ev.events = 0;
+					// 	ev.data.fd = client_fd;
+					// 	if (epoll_ctl(epollFd, EPOLL_CTL_MOD, client_fd, &ev) == -1)
+					// 		close(client_fd);
+					// }
+					// else
+					// {
+					// 	req->setLastActivityTime(currentTime);
+					// }
 
 					if (req->isRequestDone())
 					{
@@ -340,14 +353,18 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 			}
 			else
 			{
-				if (time(NULL) - currentTime > 10)
+				if (req->checkForTimeout() == false)
 				{
+					std::cout << "Request timed out for fd: " << events[i].data.fd << std::endl;
 					req->setState(false, REQUEST_TIMEOUT);
-					std::cout << "Request timed out for fd: " << client_fd << std::endl;
 					ev.events = 0;
-					ev.data.fd = client_fd;
-					if (epoll_ctl(epollFd, EPOLL_CTL_MOD, client_fd, &ev) == -1)
-						close(client_fd);
+					ev.data.fd = events[i].data.fd;
+					if (epoll_ctl(epollFd, EPOLL_CTL_MOD, events[i].data.fd, &ev) == -1)
+						close(events[i].data.fd);
+				}
+				else
+				{
+					std::cout << "Unknown event for fd: " << events[i].data.fd << std::endl;
 				}
 			}
 		}

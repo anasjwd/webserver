@@ -41,6 +41,8 @@ bool	Request::_processBodyHeaders()
 		}
 		return setState(false, BAD_REQUEST);
 	}
+	else
+		return setState(false, BAD_REQUEST);
 		
 	return true;
 }
@@ -149,6 +151,24 @@ const int&	Request::getFd() const
 	return _fd;
 }
 
+bool	Request::checkForTimeout() const
+{
+	time_t currentTime = time(NULL);
+	if (currentTime - _lastActivityTime > 10)
+		return true;
+	return false;
+}
+
+time_t	Request::getLastActivityTime() const
+{
+	return _lastActivityTime;
+}
+
+void	Request::setLastActivityTime(time_t time)
+{
+	_lastActivityTime = time;
+}
+
 const RequestState&	Request::getState() const
 {
 	return _state;
@@ -189,7 +209,7 @@ bool	Request::lineSection()
 	size_t crlf_pos = _buffer.find(CRLF);
 
 	if (crlf_pos == std::string::npos)
-		return true;
+		return false;
 
 	_rl = RequestLine(_buffer.substr(0, crlf_pos));
 	if (!_rl.parse())
@@ -204,7 +224,7 @@ bool	Request::headerSection()
 {
 	size_t end_header = _buffer.find(END_HEADER);
 	if (end_header == std::string::npos)
-		return true;
+		return false;
 
 	std::string headersStr = _buffer.substr(0, end_header + 2);
 	if (headersStr.empty())
@@ -215,6 +235,7 @@ bool	Request::headerSection()
 		return setState(false, _rh.getStatusCode());
 
 	_buffer.erase(0, end_header + 4);
+
 	if (!_processBodyHeaders())
 		return false;
 
@@ -233,6 +254,7 @@ bool	Request::headerSection()
 
 bool	Request::bodySection()
 {
+
 	if (!_buffer.empty())
 	{
 		if (!_rb.receiveData(_buffer.c_str(), _buffer.size()))
@@ -240,7 +262,7 @@ bool	Request::bodySection()
 		_buffer.clear();
 	}
 
-	if (_rb.isCompleted() || _buffer.empty())
+	if (_rb.isCompleted())
 	{
 		_state = COMPLETE;
 		return setState(true, OK);
@@ -252,6 +274,7 @@ bool	Request::bodySection()
 
 bool	Request::appendToBuffer(const char* data, size_t len)
 {
+	setLastActivityTime(time(NULL));
 	_buffer.append(data, len);
 
 	bool progress = true;
