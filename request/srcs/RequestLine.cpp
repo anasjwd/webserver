@@ -108,7 +108,10 @@ bool	RequestLine::parse()
 
 	size_t queryPos = _uri.find('?');
 	if (queryPos != std::string::npos)
+	{
 		_parseQueryString();
+		_uri = _raw.substr(firstSpace + 1, queryPos);
+	}
 
 	return setState(true, OK);
 }

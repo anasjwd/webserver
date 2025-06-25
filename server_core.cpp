@@ -343,6 +343,15 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 
 				Request* req = findRequestByFd(events[i].data.fd, requests);
 				std::ostringstream response;
+				//ajawad
+
+				
+				//alasiqu
+				// req->getStatusCode() 200
+				// req->getRequestLine().getVersion() http/1.1
+				// req->getRequestHeaders().getHeadersMap() headers
+
+				std::cout << req->getRequestLine().getUri() << std::endl;
 				response << "HTTP/1.1 " << req->getStatusCode() << " OK\r\n"
 						<< "Content-Type: text/html\r\n"
 						<< "Content-Length: " << body.size() << "\r\n"
