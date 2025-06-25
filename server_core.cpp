@@ -358,23 +358,8 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 						<< "\r\n"
 						<< body;
 
+				ev.events = 0;
 				send(events[i].data.fd, response.str().c_str(), response.str().size(), 0);
-			}
-			else
-			{
-				if (req->checkForTimeout() == false)
-				{
-					std::cout << "Request timed out for fd: " << events[i].data.fd << std::endl;
-					req->setState(false, REQUEST_TIMEOUT);
-					ev.events = 0;
-					ev.data.fd = events[i].data.fd;
-					if (epoll_ctl(epollFd, EPOLL_CTL_MOD, events[i].data.fd, &ev) == -1)
-						close(events[i].data.fd);
-				}
-				else
-				{
-					std::cout << "Unknown event for fd: " << events[i].data.fd << std::endl;
-				}
 			}
 		}
 	}
