@@ -9,7 +9,6 @@
 class	Request
 {
 	private:
-		int				_fd;
 		RequestLine		_rl;
 		RequestHeaders	_rh;
 		RequestBody		_rb;
@@ -18,7 +17,6 @@ class	Request
 
 		std::string		_buffer;
 		bool			_requestDone;
-		time_t			_lastActivityTime;
 
 		bool			_processBodyHeaders();
 		bool			_processContentLength();
@@ -28,17 +26,10 @@ class	Request
 
 	public:
 		Request();
-		Request(int);
 
 		void					clear();
 		bool					stateChecker() const;
 		bool					isRequestDone() const;
-
-		void					setFd(int);
-		const int&				getFd() const;
-		bool					checkForTimeout() const;
-		time_t					getLastActivityTime() const;
-		void					setLastActivityTime(time_t time);
 
 		const RequestState&		getState() const;
 		const HttpStatusCode&	getStatusCode() const;

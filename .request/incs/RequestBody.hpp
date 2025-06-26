@@ -3,6 +3,7 @@
 # include <map>
 # include <string>
 # include <fstream>
+# include <iostream>
 # include "Defines.hpp"
 
 class	RequestBody
@@ -19,7 +20,6 @@ class	RequestBody
 		size_t				_contentLength;
 		size_t				_bytesReceived;
 
-		size_t				_chunkParsePos;
 		size_t				_currentChunkSize;
 		size_t				_bytesReceivedInChunk;
 
@@ -27,22 +27,27 @@ class	RequestBody
 		std::string			_boundary;
 		std::map<std::string, std::string>	_urlEncodedData;
 
-		bool				_parseChunkSize();
-		bool				_processChunkData();
+		bool				_skipCRLF(size_t&);
+		bool				_parsePartHeaders(size_t&, std::map<std::string, std::string>&);
+		bool				_processPartData(size_t&, const std::string&, const std::map<std::string, std::string>&);
+		bool				_processContentDisposition(const std::map<std::string, std::string>&, const std::string&);
+		bool				_handleFileUpload(const std::string&, const std::string&, const std::string&);
 
-		std::string			_extractBoundary(const std::string&);
-
+		bool				_parseJson();
+		bool				_parseMultipart();
 		void				_cleanupTempFile();
-		void				_reWriteTempFile();
-		void				_readTempFileData();
-		bool				_validateMultipartBoundaries();
+		bool				_parseUrlEncoded();
+		void				_determineBodyType();
+		std::string			_extractBoundary(const std::string&);
 		bool				_writeToTempFile(const char*, size_t);
+		bool				_processChunkedData(const char*, size_t);
 
 	public:
 		RequestBody();
 		~RequestBody();
 		
 		void				clear();
+		bool				parse();
 
 		bool				isParsed() const;
 		bool				isChunked() const;
@@ -52,8 +57,8 @@ class	RequestBody
 		void				setCompleted();
 		void				setChunked(bool);
 		void				setContentLength(size_t);
-		bool				setState(bool, HttpStatusCode);
 		void				setContentType(const std::string&);
+		bool				setState(bool, HttpStatusCode);
 
 		const std::string&	getRawData() const;
 		BodyType			getBodyType() const;
@@ -61,5 +66,8 @@ class	RequestBody
 		const std::string&	getTempFilename() const;
 		size_t				getContentLength() const;
 		size_t				getBytesReceived() const;
+		const std::map<std::string, std::string>&	getUrlEncodedData() const;
 
+        bool				parseBodyContent();
+		void				setHeadersContext(const std::string&, const std::string&);
 };

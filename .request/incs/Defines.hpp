@@ -1,7 +1,5 @@
 # pragma once
 
-# define	TIMEOUT_SECONDS	60
-
 # define	MAX_HEADER		100
 # define	MAX_URI_LENGTH	4096
 # define	MAX_LINE_LENGTH	8192
