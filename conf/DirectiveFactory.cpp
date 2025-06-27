@@ -35,7 +35,6 @@ IDirective* parseServerBlock(
 	}
 	else
 		++pos;
-	// TODO: iterate through the vector and check if there is any server_name
 	return ( server );
 }
 

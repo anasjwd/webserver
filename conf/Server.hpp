@@ -4,8 +4,6 @@
 
 class Server : public BlockDirective {
 	private:
-		bool isDefaultServer;
-
 		Server(const Server& other);
 		Server& operator=(const Server& other);
 
