@@ -182,7 +182,7 @@ IDirective* parseLimitExceptBlock(
 
 	LimitExcept* limitExcept = new LimitExcept();
 	unsigned int idx = pos;
-	while (idx < tokensSize && tokens[idx]->type != BLOCK_START)
+	while (idx < tokensSize && tokens[idx]->type != DIR_END)
 	{
 		if (isValidMethod(tokens[idx]->data) == false)
 			throw DirectiveException("invalid content for limit_except directive - invalid method");
@@ -191,12 +191,12 @@ IDirective* parseLimitExceptBlock(
 	if (idx >= tokensSize)
 	{
 		delete limitExcept;
-		throw DirectiveException("incomplete limit_except block - missing \"{\"");
+		throw DirectiveException("incomplete limit_except directive - missing \";\"");
 	}
 	else if (idx == 0)
 	{
 		delete limitExcept;
-		throw DirectiveException("incomplete limit_except block - missing argument");
+		throw DirectiveException("incomplete limit_except directive - missing argument");
 	}
 	unsigned int size = idx - pos + 1;
 	limitExcept->setMethods(new char*[size + 1]);
@@ -204,28 +204,13 @@ IDirective* parseLimitExceptBlock(
 	while (idx <= size)
 		limitExcept->setMethod(NULL, idx++);
 	idx = 0;
-	while (pos < tokensSize && tokens[pos]->type != BLOCK_START)
+	while (pos < tokensSize && tokens[pos]->type != DIR_END)
 	{
 		limitExcept->setMethod(strdup(tokens[pos]->data), idx);
 		++pos;
 		++idx;
 	}
 	++pos;
-	try {
-		consumeDirectives(limitExcept, tokens, pos, tokensSize);
-	}
-	catch (std::exception& e)
-	{
-		delete limitExcept;
-		throw;
-	}
-	if (pos >= tokensSize || tokens[pos]->type != BLOCK_END)
-	{
-		delete limitExcept;
-		throw DirectiveException("incomplete location block - missing \"}\"");
-	}
-	else
-		++pos;
 	return ( limitExcept );
 }
 
