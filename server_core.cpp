@@ -325,48 +325,103 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 			}
 			else if (events[i].events & EPOLLOUT)
 			{
-				std::cout << "We in response state\n";
-				//send 8kb each time
-				//keep track of how write wrote
-				//if the number of written character exceeds the size
-				//of the WRITE_FROM buffer delete it from epoll and close fd
-				ev.events = 0;
-				ev.data.fd = events[i].data.fd;
-				if (epoll_ctl(epollFd, EPOLL_CTL_MOD, events[i].data.fd, &ev) == -1)
-					close(events[i].data.fd);
+				// std::cout << "We in response state\n";
+				// //send 8kb each time
+				// //keep track of how write wrote
+				// //if the number of written character exceeds the size
+				// //of the WRITE_FROM buffer delete it from epoll and close fd
+				// ev.events = 0;
+				// ev.data.fd = events[i].data.fd;
+				// if (epoll_ctl(epollFd, EPOLL_CTL_MOD, events[i].data.fd, &ev) == -1)
+				// 	close(events[i].data.fd);
 				
-					////////////////////////////////////
+				// 	////////////////////////////////////
 
 
 
 
 
 
-					//////////////////////////////////////
-				Response res;
-				std::string uri = req->getRequestLine().getUri();       // e.g. "/index.html"
-				std::cout << "XXXXXXXXXXXXXXXXXXXX URI IS --------------> " << uri << std::endl;
-				std::string root = "/home/ahanaf/Desktop/webserver/www"   ;      // from config, e.g. "www"
-				std::string path = root + uri;                          // "www/index.html"
-				std::cout << "XXXXXXXXXXXXXXXXXXXX Finla path IS --------------> " << path << std::endl;
+				// 	//////////////////////////////////////
+				// Response res;
+				// std::string uri = req->getRequestLine().getUri();       // e.g. "/index.html"
+				// std::cout << "XXXXXXXXXXXXXXXXXXXX URI IS --------------> " << uri << std::endl;
+				// std::string root = "/home/ahanaf/Desktop/webserver/www"   ;      // from config, e.g. "www"
+				// std::string path = root + uri;                          // "www/index.html"
+				// std::cout << "XXXXXXXXXXXXXXXXXXXX Finla path IS --------------> " << path << std::endl;
 
-				std::string body = loadFile(path);
-				if (body.empty()) {
-					res.setStatus(404);
-					res.setBody("<h1>404 Not Found</h1>");
-					res.addHeader("Content-Type", "text/html");
-				} else {
-					res.setStatus(200);
-					res.setBody(body);
-					res.addHeader("Content-Type", getMimeType(path));
-					res.addHeader("Content-Length", toString(body.size()));
-				}
-				std::string responseStr = res.build();
-				// res.setStatus(request.getStatusCode());
-				// res.addHeader("Content-Type", "text/html");
-				// res.setBody(body);
+				// std::string body = loadFile(path);
+				// if (body.empty()) {
+				// 	res.setStatus(404);
+				// 	res.setBody("<h1>404 Not Found</h1>");
+				// 	res.addHeader("Content-Type", "text/html");
+				// } else {
+				// 	res.setStatus(200);
+				// 	res.setBody(body);
+				// 	res.addHeader("Content-Type", getMimeType(path));
+				// 	res.addHeader("Content-Length", toString(body.size()));
+				// }
 				// std::string responseStr = res.build();
-				send(events[i].data.fd, responseStr.c_str(), responseStr.size(), 0);
+				// // res.setStatus(request.getStatusCode());
+				// // res.addHeader("Content-Type", "text/html");
+				// // res.setBody(body);
+				// // std::string responseStr = res.build();
+				// send(events[i].data.fd, responseStr.c_str(), responseStr.size(), 0);
+				client_fd = events[i].data.fd;
+				req = findRequestByFd(client_fd, requests);
+				
+				if (req)
+				{
+					Response res;
+					std::string uri = req->getRequestLine().getUri();
+					std::string root = "/home/alassiqu/1337-projects/hanaf/hanaf-vers/www";
+					if (uri == "/")
+						uri = "/index.html";
+					std::string path = root + uri;
+					
+					// Handle the request
+					std::cout << "We in response state, with file: " << path << "\n";
+					std::string body = loadFile(path);
+					if (body.empty()) {
+						res.setStatus(404);
+						res.setBody("<h1>404 Not Found</h1>");
+						res.addHeader("Content-Type", "text/html");
+					} else {
+						res.setStatus(200);
+						res.setBody(body);
+						res.addHeader("Content-Type", getMimeType(path));
+						res.addHeader("Content-Length", toString(body.size()));
+					}
+
+					bool keepAlive = false;
+					if (req->getRequestLine().getVersion() == "HTTP/1.1") {
+						std::string connectionHeader = req->getRequestHeaders().getHeaderValue("connection");
+						if (connectionHeader.empty() || connectionHeader != "close")
+						{
+							keepAlive = true;
+							res.addHeader("Connection", "keep-alive");
+						}
+					}
+
+					std::string responseStr = res.build();
+					send(client_fd, responseStr.c_str(), responseStr.size(), 0);
+					
+					if (keepAlive)
+					{
+						req->clear();
+						struct epoll_event ev;
+						ev.events = EPOLLIN;
+						ev.data.fd = client_fd;
+						epoll_ctl(epollFd, EPOLL_CTL_MOD, client_fd, &ev);
+					}
+					else
+					{
+						epoll_ctl(epollFd, EPOLL_CTL_DEL, client_fd, NULL);
+						close(client_fd);
+						requests.erase(std::remove(requests.begin(), requests.end(), req), requests.end());
+						delete req;
+					}
+				}
 			}
 		}
 	}
