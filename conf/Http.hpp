@@ -10,4 +10,5 @@ class Http : public BlockDirective {
 		Http(void);
 		~Http(void);
 		DIRTYPE getType(void) const;
+		bool validate(void);
 };

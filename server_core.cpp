@@ -294,6 +294,8 @@ int main(int ac, char** av)
 		return ( 1 );
 	}
 	http = parseConfig(av[1]);
+	if (http == NULL)
+		return ( 1 );
 	getSockAddr(http, sockAddr);
 	epollFd = epoll_create(1);
 	if (epollFd == -1)

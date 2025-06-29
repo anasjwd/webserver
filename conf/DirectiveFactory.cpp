@@ -163,6 +163,7 @@ IDirective* parseServerName(
 	idx = 0;
 	while (tokens[pos]->type != DIR_END)
 	{
+		std::cout << ">> " << tokens[pos]->type << std::endl;
 		serverName->setServerName(strdup(tokens[pos]->data), idx);
 		++pos;
 		++idx;
@@ -284,6 +285,7 @@ IDirective* parseErrorPage(
 		delete errorPage;
 		throw DirectiveException("invalid content for error_page directive - code must be between 300 and 599");
 	}
+	std::cout << ">> " << tokens[pos]->data << std::endl;
 	errorPage->setUri(strdup(tokens[pos++]->data));
 	if (pos >= tokensSize || tokens[pos]->type != DIR_END)
 	{

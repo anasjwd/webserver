@@ -115,23 +115,28 @@ std::vector<t_token*> tokenize(char* content)
 		switch (words[i][0]) {
 			case ';':
 				token->type = DIR_END;
-				delete[] words[i];
+				token->data = words[i];
+				//delete[] words[i];
 				break;
 			case '{':
 				token->type = BLOCK_START;
-				delete[] words[i];
+				token->data = words[i];
+				//delete[] words[i];
 				break;
 			case '}':
 				token->type = BLOCK_END;
-				delete[] words[i];
+				token->data = words[i];
+				//delete[] words[i];
 				break;
 			case ':':
 				token->type = COLON;
-				delete[] words[i];
+				token->data = words[i];
+				//delete[] words[i];
 				break;
 			case '=':
 				token->type = EQUAL;
-				delete[] words[i];
+				token->data = words[i];
+				//delete[] words[i];
 				break;
 			default:
 				token->type = STRING;

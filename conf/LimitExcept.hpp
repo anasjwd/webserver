@@ -16,5 +16,6 @@ class LimitExcept : public IDirective {
 		DIRTYPE getType(void) const;
 		void setMethods(char** value);
 		void setMethod(char* value, unsigned int idx);
+		bool validate(void);
 };
 

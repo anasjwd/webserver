@@ -2,6 +2,7 @@
 
 #include "IDirective.hpp"
 #include <vector>
+#include <iostream>
 
 class BlockDirective : public IDirective {
 	private:
@@ -13,4 +14,5 @@ class BlockDirective : public IDirective {
 		BlockDirective(void);
 		~BlockDirective(void);
 		virtual void addDirective(IDirective* dir);
+		virtual bool validate(void);
 };

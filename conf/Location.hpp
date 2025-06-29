@@ -16,5 +16,6 @@ class Location : public BlockDirective {
 		DIRTYPE getType(void) const;
 		void setUri(char* uri);
 		void setExactMatch(bool value);
+		bool validate(void);
 };
 

@@ -13,4 +13,5 @@ class Server : public BlockDirective {
 		DIRTYPE getType(void) const;
 
 		void setIsDefaultServer(bool value);
+		bool validate(void);
 };
