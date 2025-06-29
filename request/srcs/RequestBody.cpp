@@ -1,12 +1,13 @@
 # include <cstdlib>
-# include <unistd.h>
 # include <sstream>
+# include <unistd.h>
 # include "../incs/RequestBody.hpp"
 
 RequestBody::RequestBody()
-	:	_bodyType(RAW), _isParsed(false), _isChunked(false),
-		_isCompleted(false), _contentLength(0), _bytesReceived(0), 
-		_chunkParsePos(0), _currentChunkSize(0), _bytesReceivedInChunk(0)
+	:	_isParsed(false), _isChunked(false), _statusCode(START),
+		_isMultipart(false), _isCompleted(false),
+		_contentLength(0), _bytesReceived(0), _chunkParsePos(0),
+		_currentChunkSize(0), _bytesReceivedInChunk(0)
 {
 	char temp[] = "/tmp/webserv_body_XXXXXX";
 	int fd = mkstemp(temp);
@@ -78,24 +79,6 @@ void	RequestBody::_cleanupTempFile()
 		remove(_tempFilename.c_str());
 		_tempFilename.clear();
 	}
-}
-
-std::string	RequestBody::_extractBoundary(const std::string& contentType)
-{
-	size_t boundaryPos = contentType.find("boundary=");
-	if (boundaryPos == std::string::npos)
-		return "";
-
-	boundaryPos += 9;
-	std::string boundary = contentType.substr(boundaryPos);
-	
-	// Trim whitespace and quotes
-	size_t start = boundary.find_first_not_of(" \t\"");
-	if (start == std::string::npos)
-		return "";
-	
-	size_t end = boundary.find_last_not_of(" \t\"");
-	return boundary.substr(start, end - start + 1);
 }
 
 void	RequestBody::_reWriteTempFile()
@@ -192,7 +175,6 @@ void	RequestBody::clear()
 		close(fd);
 	}
 
-	_bodyType = RAW;
 	_rawData.clear();
 	_boundary.clear();
 	_isParsed = false;
@@ -202,7 +184,6 @@ void	RequestBody::clear()
 	_chunkParsePos = 0;
 	_isCompleted = false;
 	_currentChunkSize = 0;
-	_urlEncodedData.clear();
 	_bytesReceivedInChunk = 0;
 }
 
@@ -216,47 +197,91 @@ bool	RequestBody::isChunked() const
 	return _isChunked;
 }
 
+bool	RequestBody::isExpected() const
+{
+	return _expected;
+}
+
+bool	RequestBody::isMultipart() const
+{
+	return _isMultipart;
+}
+
 bool	RequestBody::isCompleted() const
 {
 	return _isCompleted;
 }
+# include <iostream>
+
+bool RequestBody::_extractFileFromMultipart()
+{
+    if (!_isMultipart || _boundary.empty())
+	{
+		std::cout << "Multipart: " << isMultipart() << " | boundary: " << _boundary << std::endl;
+        std::cerr << "Upload failed: Not multipart or missing boundary\n";
+        return false;
+    }
+
+    _readTempFileData();
+    
+    std::string boundary = "--" + _boundary;
+    size_t file_start = _rawData.find("filename=\"", _rawData.find(boundary));
+    if (file_start == std::string::npos) {
+        std::cerr << "Upload failed: No filename found in multipart data\n";
+        return false;
+    }
+    
+    file_start += 10;
+    size_t file_end = _rawData.find("\"", file_start);
+    std::string filename = _rawData.substr(file_start, file_end - file_start);
+
+    size_t content_start = _rawData.find(END_HEADER, file_end) + 4;
+    if (content_start == std::string::npos + 4) return false;
+    
+    size_t content_end = _rawData.find(boundary, content_start) - 2;
+    if (content_end == std::string::npos - 2) return false;
+    
+    std::string file_content = _rawData.substr(content_start, content_end - content_start);
+
+    std::string upload_path = "/tmp/uploads/" + filename;
+    std::ofstream out(upload_path.c_str(), std::ios::binary);
+    if (!out.is_open()) {
+        std::cerr << "Upload failed: Could not create file " << upload_path << "\n";
+        return false;
+    }
+
+    out.write(file_content.data(), file_content.size());
+    out.close();
+    
+    std::cerr << "File uploaded successfully: " << upload_path 
+              << " (" << file_content.size() << " bytes)\n";
+    return true;
+}
 
 bool	RequestBody::receiveData(const char* data, size_t length)
 {
-	if (_isCompleted)
+	if (isCompleted())
 		return false;
-
-	if (length == 0)
-	{
-		if (getBodyType() == MULTIPART)
-		{
-			if (!_validateMultipartBoundaries())
-				return false;
-			setCompleted();
-			return true;
-		}
-		else if (_isChunked)
-		{
-			_readTempFileData();
-			if (!_processChunkData())
-				return false;
-			_reWriteTempFile();
-		}
-		setCompleted();
-		return true;
-	}
 
 	if (!_writeToTempFile(data, length))
 		return false;
 
-	if (getBodyType() == MULTIPART)
+	if (isMultipart() && isCompleted())
 	{
-		if (!_validateMultipartBoundaries())
+		// if (!_validateMultipartBoundaries())
+		// {
+		// 	std::cerr << "Invalid multipart boundaries\n";
+		// 	return false;
+		// }
+		if (!_extractFileFromMultipart())
+		{
+			std::cerr << "Failed to extract file from multipart data\n";
 			return false;
+		}
 		setCompleted();
 		return true;
 	}
-	else if (_isChunked)
+	else if (isChunked())
 	{
 		_readTempFileData();
 		if (!_processChunkData())
@@ -269,6 +294,11 @@ bool	RequestBody::receiveData(const char* data, size_t length)
 	return true;
 }
 
+void	RequestBody::setExpected()
+{
+	_expected = true;
+}
+
 void	RequestBody::setCompleted()
 {
 	_isCompleted = true;
@@ -277,6 +307,11 @@ void	RequestBody::setCompleted()
 void	RequestBody::setChunked(bool isChunked)
 {
 	_isChunked = isChunked;
+}
+
+void	RequestBody::setMultipart(bool tof)
+{
+	_isMultipart = tof;
 }
 
 void	RequestBody::setContentLength(size_t length)
@@ -300,11 +335,6 @@ const std::string&	RequestBody::getRawData() const
 	return _rawData;
 }
 
-BodyType	RequestBody::getBodyType() const
-{
-	return _bodyType;
-}
-
 HttpStatusCode	RequestBody::getStatusCode() const
 {
 	return _statusCode;
@@ -323,4 +353,24 @@ size_t	RequestBody::getContentLength() const
 size_t	RequestBody::getBytesReceived() const
 {
 	return _bytesReceived;
+}
+
+std::string	RequestBody::extractBoundary(const std::string& contentType)
+{
+	std::cout << "Extracting boundary!\n";
+	size_t boundaryPos = contentType.find("boundary=");
+	if (boundaryPos == std::string::npos)
+		return "";
+
+	boundaryPos += 9;
+	std::string boundary = contentType.substr(boundaryPos);
+	
+	// Trim whitespace and quotes
+	size_t start = boundary.find_first_not_of(" \t\"");
+	if (start == std::string::npos)
+		return "";
+	
+	size_t end = boundary.find_last_not_of(" \t\"");
+	_boundary = boundary.substr(start, end - start + 1);
+	return _boundary;
 }

@@ -10,7 +10,7 @@ RequestLine::RequestLine(const std::string& raw)
 
 bool	RequestLine::_validateMethod()
 {
-	// TODO: Function that gets the allowed methods should be defined and used here.
+	// TODO: Function that gets the allowed methods. Maybe it couldn't be here because of there's no host till now, which mean there no specific server to search in.
 	const std::string allowedMethods[] = {"GET", "POST", "DELETE"};
 	const size_t count = sizeof(allowedMethods)/sizeof(allowedMethods[0]);
 

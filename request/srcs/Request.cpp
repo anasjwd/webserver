@@ -2,18 +2,29 @@
 # include <climits>
 # include <cstddef>
 # include <cstdlib>
+#include <ctime>
 # include "../incs/Request.hpp"
 
 Request::Request()
 	:	_fd(-1), _rl(""), _rh(""), _rb(), _state(BEGIN), _statusCode(START),
-		_buffer(), _requestDone(false)
+		_buffer(), _requestDone(false), _lastActivityTime(time(NULL))
 {
 }
 
 Request::Request(int fd)
 	:	_fd(fd), _rl(""), _rh(""), _rb(), _state(BEGIN), _statusCode(START),
-		_buffer(), _requestDone(false)
+		_buffer(), _requestDone(false), _lastActivityTime(time(NULL))
 {
+}
+
+bool	Request::isMultipart(const std::string& contentType)
+{
+	if (contentType == "")
+		return false;
+	size_t semi_colon = contentType.find(";");
+	if (semi_colon != std::string::npos && contentType.substr(0, semi_colon) == "multipart/form-data")
+		return true;
+	return false;
 }
 
 bool	Request::_processBodyHeaders()
@@ -21,16 +32,16 @@ bool	Request::_processBodyHeaders()
 	std::string contentType = _rh.getHeaderValue("content-type");
 	if (!contentType.empty())
 		_rb.setContentType(contentType);
+	if (isMultipart(contentType))
+	{
+		_rb.setMultipart(true);
+		_rb.extractBoundary(contentType);
+	}
 
 	std::string contentLengthStr = _rh.getHeaderValue("content-length");
 	std::string transferEncoding = _rh.getHeaderValue("transfer-encoding");
 
-	if (!contentLengthStr.empty())
-	{
-		if (!_processContentLength())
-			return false;
-	}
-	else if (!transferEncoding.empty())
+	if (!transferEncoding.empty())
 	{
 		_rb.setChunked(_isChunkedTransferEncoding(transferEncoding));
 		if (_rb.isChunked())
@@ -41,8 +52,17 @@ bool	Request::_processBodyHeaders()
 		}
 		return setState(false, BAD_REQUEST);
 	}
+	else if (!contentLengthStr.empty())
+		return _processContentLength();
 	else
-		return setState(false, BAD_REQUEST);
+	{
+		// TODO: Should be developped to fix all cases.
+		std::string method = _rl.getMethod();
+		if (method == "POST")
+			return setState(false, LENGTH_REQUIRED);
+		else if (method == "GET" || method == "DELETE")
+			return setState(true, OK);
+	}
 		
 	return true;
 }
@@ -59,11 +79,11 @@ bool	Request::_processContentLength()
 	if (*end != '\0' || contentLengthStr.empty())
 		return setState(false, BAD_REQUEST);
 
-	if (contentLength > MAX_BODY_SIZE || (contentLength == ULLONG_MAX && errno == ERANGE))
+	if (contentLength > MAX_BODY_SIZE)
 		return setState(false, PAYLOAD_TOO_LARGE);
 
 	if (contentLength == 0 && (_rl.getMethod() == "GET" || _rl.getMethod() == "DELETE"))
-		_state = COMPLETE;
+		return setState(true, OK);
 
 	_rb.setContentLength(contentLength);
 	return true;
@@ -71,7 +91,7 @@ bool	Request::_processContentLength()
 
 bool	Request::_processChunkedTransfer()
 {
-	std::string	transferEncoding = _rh.getHeaderValue("content-length");
+	std::string	transferEncoding = _rh.getHeaderValue("transfer-encoding");
 	if (transferEncoding.empty())
 		return false;
 
@@ -83,18 +103,18 @@ bool	Request::_processChunkedTransfer()
 
 bool	Request::_validateMethodBodyCompatibility()
 {
+	// TODO: Should be developped to fix all cases (Second check).
 	const std::string& method = _rl.getMethod();
 	bool hasBody = _rb.getContentLength() > 0 || _rb.isChunked();
 
-	if (method == "GET" && hasBody)
-		return setState(false, BAD_REQUEST);
-
-	if (method == "POST" && !hasBody)
+	if (!hasBody && method == "POST")
 		return setState(false, LENGTH_REQUIRED);
 
-	if (method == "DELETE" && hasBody &&
-	   (_rb.isChunked() && _rb.getContentLength() > 0))
-		return setState(false, BAD_REQUEST);
+	if (!hasBody && (method == "GET" || method == "DELETE"))
+		return setState(true, OK);
+
+	if (hasBody)
+		_rb.setExpected();
 
 	return true;
 }
@@ -200,6 +220,8 @@ bool	Request::setState(bool tof, HttpStatusCode code)
 
 	if (stateChecker() == false)
 		_state = ERROR;
+	else if (_statusCode == OK)
+		_state = COMPLETE;
 
 	return tof;
 }
@@ -223,6 +245,7 @@ bool	Request::lineSection()
 bool	Request::headerSection()
 {
 	size_t end_header = _buffer.find(END_HEADER);
+
 	if (end_header == std::string::npos)
 		return false;
 
@@ -236,24 +259,20 @@ bool	Request::headerSection()
 
 	_buffer.erase(0, end_header + 4);
 
-	if (!_processBodyHeaders())
+	if (!_processBodyHeaders() || !_validateMethodBodyCompatibility())
 		return false;
 
-	if (!_validateMethodBodyCompatibility())
-		return false;
-
-	const std::string& method = _rl.getMethod();
-	if ((method == "GET" || method == "DELETE") && _rb.getContentLength() == 0 && !_rb.isChunked() && _buffer.empty())
+	if (_state != COMPLETE)
 	{
-		_state = COMPLETE;
-		return setState(true, OK);
+		_state = BODY;
 	}
-	_state = BODY;
 	return true;
 }
 
 bool	Request::bodySection()
 {
+	if (!_rb.isExpected() && !_buffer.empty())
+		return setState(false, BAD_REQUEST);
 
 	if (!_buffer.empty())
 	{
@@ -263,23 +282,22 @@ bool	Request::bodySection()
 	}
 
 	if (_rb.isCompleted())
-	{
-		_state = COMPLETE;
 		return setState(true, OK);
-	}
-	return true;
+
+	return false;
 }
 
 // TODO: TIMEOUT CHECK FROM CORE SERVER.
 
 bool	Request::appendToBuffer(const char* data, size_t len)
 {
-	setLastActivityTime(time(NULL));
 	_buffer.append(data, len);
 
 	bool progress = true;
 	while (progress && !isRequestDone())
 	{
+		if (progress)
+			setLastActivityTime(time(NULL));
 		progress = false;
 		switch (_state)
 		{

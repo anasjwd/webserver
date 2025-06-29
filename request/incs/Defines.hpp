@@ -11,14 +11,6 @@
 # define	END_HEADER		"\r\n\r\n"
 # define	HTTP_VERSION	"HTTP/1.1"
 
-enum BodyType
-{
-	RAW,
-	JSON,
-	MULTIPART,
-	URL_ENCODED
-};
-
 enum RequestState
 {
 	BEGIN,
@@ -27,16 +19,6 @@ enum RequestState
 	BODY,
 	COMPLETE,
 	ERROR
-};
-
-enum BodyState
-{
-	BS_START,
-	BS_CHUNK_SIZE,
-	BS_CHUNK_DATA,
-	BS_CHUNK_END,
-	BS_TRAILERS,
-	BS_COMPLETE
 };
 
 enum HttpStatusCode

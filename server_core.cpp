@@ -1,3 +1,4 @@
+#include <ctime>
 #include <ostream>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -15,6 +16,8 @@
 #include "conf/cfg_parser.hpp"
 #include "request/incs/Defines.hpp"
 #include "request/incs/Request.hpp"
+#include "response/include/Response.hpp"
+#include "response/include/utils.hpp"
 #include <algorithm>
 #include <string>
 
@@ -212,7 +215,7 @@ void	printRequest(Request* req)
 	{
 		std::cout << "\t" << it->first << ": " << it->second << "\n";
 	}
-	req->getRequestBody().isChunked() ? std::cout << "RequestBody is chunked, with filename: " << req->getRequestBody().getTempFilename() << "\n" : std::cout << "\nRequestBody: " << req->getRequestBody().getBodyType() << ", with filename: " << req->getRequestBody().getTempFilename() << "\n";
+	// req->getRequestBody().isChunked() ? std::cout << "RequestBody is chunked, with filename: " << req->getRequestBody().getTempFilename() << "\n" : std::cout << "\nRequestBody: " << req->getRequestBody().getBodyType() << ", with filename: " << req->getRequestBody().getTempFilename() << "\n";
 }
 
 void sendTimeoutResponse(int client_fd)
@@ -237,6 +240,30 @@ void sendTimeoutResponse(int client_fd)
     send(client_fd, response.str().c_str(), response.str().size(), 0);
 }
 
+void checkForTimeouts(std::vector<Request*>& requests, int epollFd)
+{
+    time_t currentTime = time(NULL);
+    std::vector<Request*>::iterator it = requests.begin();
+    
+    while (it != requests.end())
+    {
+        Request* req = *it;
+        if (currentTime - req->getLastActivityTime() > REQUEST_TIMEOUT)
+        {
+            std::cout << "Timeout detected for fd " << req->getFd() << std::endl;
+            sendTimeoutResponse(req->getFd());
+            epoll_ctl(epollFd, EPOLL_CTL_DEL, req->getFd(), NULL);
+            close(req->getFd());
+            it = requests.erase(it);
+            delete req;
+        }
+        else
+        {
+            ++it;
+        }
+    }
+}
+
 void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 {
 	struct epoll_event ev, events[MAX_EVENTS];
@@ -244,16 +271,21 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	std::vector<int>::iterator it;
 	char buff[EIGHT_KB];
 	ssize_t bytes;
-	std::vector<Request*> requests;
-	Request* req;
-	int client_fd;
+	// Alassiqu variables:
+	Request*				req;
+	std::vector<Request*>	requests;
+	int						client_fd;
+	time_t					lastTimeoutCheck = time(NULL);
 
 	(void)http;
 	while (true)
 	{
-		std::cout << "State => " << ev.events << "\n";
-		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, -1);
-		std::cout << "Number of events: " << numberOfEvents << std::endl;
+		if (time(NULL) - lastTimeoutCheck >= 1)
+        {
+            checkForTimeouts(requests, epollFd);
+            lastTimeoutCheck = time(NULL);
+        }
+		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000);
 		for (int i = 0; i < numberOfEvents; i++)
 		{
 			it = find(sockets.begin(), sockets.end(), events[i].data.fd);
@@ -288,29 +320,14 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					req = findRequestByFd(client_fd, requests);
 					if (req == NULL)
 					{
-						std::cout << "Creating new request" << std::endl;
 						requests.push_back(new Request(client_fd));
 						req = requests.back();
 					}
 					req->appendToBuffer(buff, bytes);
-					// currentTime = time(NULL);
-					// if (currentTime - req->getLastActivityTime() > 10)
-					// {
-					// 	std::cout << "Request timed out for fd: " << client_fd << std::endl;
-					// 	req->setState(false, REQUEST_TIMEOUT);
-					// 	ev.events = 0;
-					// 	ev.data.fd = client_fd;
-					// 	if (epoll_ctl(epollFd, EPOLL_CTL_MOD, client_fd, &ev) == -1)
-					// 		close(client_fd);
-					// }
-					// else
-					// {
-					// 	req->setLastActivityTime(currentTime);
-					// }
 
 					if (req->isRequestDone())
 					{
-						printRequest(req);
+						// printRequest(req);
 						ev.events = EPOLLOUT;
 						ev.data.fd = client_fd;
 						if (epoll_ctl(epollFd, EPOLL_CTL_MOD, client_fd, &ev) == -1)
@@ -323,43 +340,102 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 			}
 			else if (events[i].events & EPOLLOUT)
 			{
-				std::cout << "We in response state\n";
-				//send 8kb each time
-				//keep track of how write wrote
-				//if the number of written character exceeds the size
-				//of the WRITE_FROM buffer delete it from epoll and close fd
-				ev.events = 0;
-				ev.data.fd = events[i].data.fd;
-				if (epoll_ctl(epollFd, EPOLL_CTL_MOD, events[i].data.fd, &ev) == -1)
-					close(events[i].data.fd);
-				std::string body = "<!DOCTYPE html>\n"
-                   "<html>\n"
-                   "<head><title>Test Page</title></head>\n"
-                   "<body>\n"
-                   "  <h1>Hello from my C++ server!</h1>\n"
-                   "  <p>This is a test web page.</p>\n"
-                   "</body>\n"
-                   "</html>\n";
-
-				Request* req = findRequestByFd(events[i].data.fd, requests);
-				std::ostringstream response;
-				//ajawad
-
+				// std::cout << "We in response state\n";
+				// //send 8kb each time
+				// //keep track of how write wrote
+				// //if the number of written character exceeds the size
+				// //of the WRITE_FROM buffer delete it from epoll and close fd
+				// ev.events = 0;
+				// ev.data.fd = events[i].data.fd;
+				// if (epoll_ctl(epollFd, EPOLL_CTL_MOD, events[i].data.fd, &ev) == -1)
+				// 	close(events[i].data.fd);
 				
-				//alasiqu
-				// req->getStatusCode() 200
-				// req->getRequestLine().getVersion() http/1.1
-				// req->getRequestHeaders().getHeadersMap() headers
+				// 	////////////////////////////////////
 
-				std::cout << req->getRequestLine().getUri() << std::endl;
-				response << "HTTP/1.1 " << req->getStatusCode() << " OK\r\n"
-						<< "Content-Type: text/html\r\n"
-						<< "Content-Length: " << body.size() << "\r\n"
-						<< "\r\n"
-						<< body;
 
-				ev.events = 0;
-				send(events[i].data.fd, response.str().c_str(), response.str().size(), 0);
+
+
+
+
+				// 	//////////////////////////////////////
+				// Response res;
+				// std::string uri = req->getRequestLine().getUri();       // e.g. "/index.html"
+				// std::cout << "XXXXXXXXXXXXXXXXXXXX URI IS --------------> " << uri << std::endl;
+				// std::string root = "/home/ahanaf/Desktop/webserver/www"   ;      // from config, e.g. "www"
+				// std::string path = root + uri;                          // "www/index.html"
+				// std::cout << "XXXXXXXXXXXXXXXXXXXX Finla path IS --------------> " << path << std::endl;
+
+				// std::string body = loadFile(path);
+				// if (body.empty()) {
+				// 	res.setStatus(404);
+				// 	res.setBody("<h1>404 Not Found</h1>");
+				// 	res.addHeader("Content-Type", "text/html");
+				// } else {
+				// 	res.setStatus(200);
+				// 	res.setBody(body);
+				// 	res.addHeader("Content-Type", getMimeType(path));
+				// 	res.addHeader("Content-Length", toString(body.size()));
+				// }
+				// std::string responseStr = res.build();
+				// // res.setStatus(request.getStatusCode());
+				// // res.addHeader("Content-Type", "text/html");
+				// // res.setBody(body);
+				// // std::string responseStr = res.build();
+				// send(events[i].data.fd, responseStr.c_str(), responseStr.size(), 0);
+				client_fd = events[i].data.fd;
+				req = findRequestByFd(client_fd, requests);
+				
+				if (req)
+				{
+					Response res;
+					std::string uri = req->getRequestLine().getUri();
+					std::string root = "/home/alassiqu/1337-projects/webserver/www";
+					if (uri == "/")
+						uri = "/index.html";
+					std::string path = root + uri;
+					
+					// Handle the request
+					std::string body = loadFile(path);
+					if (body.empty()) {
+						res.setStatus(404);
+						res.setBody("<h1>404 Not Found</h1>");
+						res.addHeader("Content-Type", "text/html");
+					} else {
+						res.setStatus(200);
+						res.setBody(body);
+						res.addHeader("Content-Type", getMimeType(path));
+						res.addHeader("Content-Length", toString(body.size()));
+					}
+
+					bool keepAlive = false;
+					if (req->getRequestLine().getVersion() == "HTTP/1.1") {
+						std::string connectionHeader = req->getRequestHeaders().getHeaderValue("connection");
+						if (connectionHeader.empty() || connectionHeader != "close")
+						{
+							keepAlive = true;
+							res.addHeader("Connection", "keep-alive");
+						}
+					}
+
+					std::string responseStr = res.build();
+					send(client_fd, responseStr.c_str(), responseStr.size(), 0);
+					
+					if (keepAlive)
+					{
+						req->clear();
+						struct epoll_event ev;
+						ev.events = EPOLLIN;
+						ev.data.fd = client_fd;
+						epoll_ctl(epollFd, EPOLL_CTL_MOD, client_fd, &ev);
+					}
+					else
+					{
+						epoll_ctl(epollFd, EPOLL_CTL_DEL, client_fd, NULL);
+						close(client_fd);
+						requests.erase(std::remove(requests.begin(), requests.end(), req), requests.end());
+						delete req;
+					}
+				}
 			}
 		}
 	}
