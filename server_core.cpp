@@ -16,6 +16,7 @@
 #include "request/incs/Defines.hpp"
 #include "request/incs/Request.hpp"
 #include "response/include/Response.hpp"
+#include "response/include/ResponseHandler.hpp"
 #include "response/include/utils.hpp"
 #include <algorithm>
 #include <string>
@@ -241,6 +242,7 @@ void sendTimeoutResponse(int client_fd)
 
 void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 {
+	(void)http; // Suppress unused parameter warning
 	struct epoll_event ev, events[MAX_EVENTS];
 	int numberOfEvents;
 	std::vector<int>::iterator it;
@@ -249,8 +251,12 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	std::vector<Request*> requests;
 	Request* req;
 	int client_fd;
+	ResponseHandler responseHandler;
 
-	(void)http;
+	// Configure response handler based on server config
+	// This would need to be implemented based on the actual config structure
+	responseHandler.setAutoIndex(true);
+
 	while (true)
 	{
 		std::cout << "State => " << ev.events << "\n";
@@ -295,20 +301,6 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 						req = requests.back();
 					}
 					req->appendToBuffer(buff, bytes);
-					// currentTime = time(NULL);
-					// if (currentTime - req->getLastActivityTime() > 10)
-					// {
-					// 	std::cout << "Request timed out for fd: " << client_fd << std::endl;
-					// 	req->setState(false, REQUEST_TIMEOUT);
-					// 	ev.events = 0;
-					// 	ev.data.fd = client_fd;
-					// 	if (epoll_ctl(epollFd, EPOLL_CTL_MOD, client_fd, &ev) == -1)
-					// 		close(client_fd);
-					// }
-					// else
-					// {
-					// 	req->setLastActivityTime(currentTime);
-					// }
 
 					if (req->isRequestDone())
 					{
@@ -318,93 +310,34 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 						if (epoll_ctl(epollFd, EPOLL_CTL_MOD, client_fd, &ev) == -1)
 							close(client_fd);
 					}
-					//call request parsing
-					//when parsing is done call response builder
-					//when the response is built change to EPOLLOUT
 				}
 			}
 			else if (events[i].events & EPOLLOUT)
 			{
-				// std::cout << "We in response state\n";
-				// //send 8kb each time
-				// //keep track of how write wrote
-				// //if the number of written character exceeds the size
-				// //of the WRITE_FROM buffer delete it from epoll and close fd
-				// ev.events = 0;
-				// ev.data.fd = events[i].data.fd;
-				// if (epoll_ctl(epollFd, EPOLL_CTL_MOD, events[i].data.fd, &ev) == -1)
-				// 	close(events[i].data.fd);
-				
-				// 	////////////////////////////////////
-
-
-
-
-
-
-				// 	//////////////////////////////////////
-				// Response res;
-				// std::string uri = req->getRequestLine().getUri();       // e.g. "/index.html"
-				// std::cout << "XXXXXXXXXXXXXXXXXXXX URI IS --------------> " << uri << std::endl;
-				// std::string root = "/home/ahanaf/Desktop/webserver/www"   ;      // from config, e.g. "www"
-				// std::string path = root + uri;                          // "www/index.html"
-				// std::cout << "XXXXXXXXXXXXXXXXXXXX Finla path IS --------------> " << path << std::endl;
-
-				// std::string body = loadFile(path);
-				// if (body.empty()) {
-				// 	res.setStatus(404);
-				// 	res.setBody("<h1>404 Not Found</h1>");
-				// 	res.addHeader("Content-Type", "text/html");
-				// } else {
-				// 	res.setStatus(200);
-				// 	res.setBody(body);
-				// 	res.addHeader("Content-Type", getMimeType(path));
-				// 	res.addHeader("Content-Length", toString(body.size()));
-				// }
-				// std::string responseStr = res.build();
-				// // res.setStatus(request.getStatusCode());
-				// // res.addHeader("Content-Type", "text/html");
-				// // res.setBody(body);
-				// // std::string responseStr = res.build();
-				// send(events[i].data.fd, responseStr.c_str(), responseStr.size(), 0);
 				client_fd = events[i].data.fd;
 				req = findRequestByFd(client_fd, requests);
 				
 				if (req)
 				{
-					Response res;
-					std::string uri = req->getRequestLine().getUri();
-					std::string root = "/home/alassiqu/1337-projects/hanaf/hanaf-vers/www";
-					if (uri == "/")
-						uri = "/index.html";
-					std::string path = root + uri;
+					// Use ResponseHandler to handle the request
+					Response response = responseHandler.handleRequest(*req, NULL, NULL);
+					std::string responseStr = response.build();
 					
-					// Handle the request
-					std::cout << "We in response state, with file: " << path << "\n";
-					std::string body = loadFile(path);
-					if (body.empty()) {
-						res.setStatus(404);
-						res.setBody("<h1>404 Not Found</h1>");
-						res.addHeader("Content-Type", "text/html");
-					} else {
-						res.setStatus(200);
-						res.setBody(body);
-						res.addHeader("Content-Type", getMimeType(path));
-						res.addHeader("Content-Length", toString(body.size()));
-					}
-
+					// Add keep-alive headers for HTTP/1.1
 					bool keepAlive = false;
 					if (req->getRequestLine().getVersion() == "HTTP/1.1") {
 						std::string connectionHeader = req->getRequestHeaders().getHeaderValue("connection");
 						if (connectionHeader.empty() || connectionHeader != "close")
 						{
 							keepAlive = true;
-							res.addHeader("Connection", "keep-alive");
 						}
 					}
 
-					std::string responseStr = res.build();
-					send(client_fd, responseStr.c_str(), responseStr.size(), 0);
+					// Send response
+					ssize_t sent = send(client_fd, responseStr.c_str(), responseStr.size(), 0);
+					if (sent == -1) {
+						std::cout << "Error sending response to client " << client_fd << std::endl;
+					}
 					
 					if (keepAlive)
 					{
