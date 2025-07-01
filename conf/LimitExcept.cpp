@@ -7,9 +7,12 @@ LimitExcept::LimitExcept(void)
 
 LimitExcept::~LimitExcept(void)
 {
-	for (unsigned int i = 0; methods[i] != NULL; i++)
-		free(methods[i]);
-	delete[] methods;
+	if (methods != NULL)
+	{
+		for (unsigned int i = 0; methods[i] != NULL; i++)
+			free(methods[i]);
+		delete[] methods;
+	}
 }
 
 DIRTYPE LimitExcept::getType(void) const
@@ -25,20 +28,4 @@ void LimitExcept::setMethods(char** value)
 void LimitExcept::setMethod(char* value, unsigned int idx)
 {
 	methods[idx] = value;
-}
-
-bool LimitExcept::validate(void)
-{
-	unsigned int size = directives.size();
-
-	for (unsigned int i = 0; i < size; i++)
-	{
-		if (directives[i]->getType() != ALLOW
-				&& directives[i]->getType() != DENY)
-		{
-			std::cerr << "Error: Invlaid directive inside of limit_except block\n";
-			return ( false );
-		}
-	}
-	return ( true );
 }
