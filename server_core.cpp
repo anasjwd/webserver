@@ -13,6 +13,7 @@
 #include <map>
 #include <vector>
 #include <sstream>
+#include "Connection.hpp"
 #include "conf/cfg_parser.hpp"
 #include "request/incs/Defines.hpp"
 #include "request/incs/Request.hpp"
@@ -277,6 +278,8 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	std::vector<Request*>	requests;
 	int						client_fd;
 	time_t					lastTimeoutCheck = time(NULL);
+
+	std::vector<Connection* > conn;
 
 	(void)http;
 	while (true)
