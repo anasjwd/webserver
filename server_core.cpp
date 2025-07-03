@@ -18,6 +18,7 @@
 #include "request/incs/Defines.hpp"
 #include "request/incs/Request.hpp"
 #include "response/include/Response.hpp"
+#include "response/include/ResponseHandler.hpp"
 #include "response/include/utils.hpp"
 #include <algorithm>
 #include <string>
@@ -193,6 +194,7 @@ void closeSockets(std::vector<int>& sockets)
 Request* findRequestByFd(int fd, std::vector<Request*>& requests)
 {
 	std::vector<Request*>::iterator it = requests.begin();
+
 	for (; it != requests.end(); it++)
 	{
 		if ((*it)->getFd() == fd)
@@ -216,7 +218,9 @@ void	printRequest(Request* req)
 	{
 		std::cout << "\t" << it->first << ": " << it->second << "\n";
 	}
+
 	// req->getRequestBody().isChunked() ? std::cout << "RequestBody is chunked, with filename: " << req->getRequestBody().getTempFilename() << "\n" : std::cout << "\nRequestBody: " << req->getRequestBody().getBodyType() << ", with filename: " << req->getRequestBody().getTempFilename() << "\n";
+
 }
 
 void sendTimeoutResponse(int client_fd)
@@ -263,15 +267,22 @@ void checkForTimeouts(std::vector<Request*>& requests, int epollFd)
 			++it;
 		}
 	}
+
 }
 
 void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 {
+	(void)http; // Suppress unused parameter warning
 	struct epoll_event ev, events[MAX_EVENTS];
 	int numberOfEvents;
 	std::vector<int>::iterator it;
 	char buff[EIGHT_KB];
 	ssize_t bytes;
+	ResponseHandler responseHandler;
+
+	// Configure response handler based on server config
+	// This would need to be implemented based on the actual config structure
+	responseHandler.setAutoIndex(true);
 
 	// Alassiqu variables:
 	Request*				req;
@@ -284,12 +295,14 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	(void)http;
 	while (true)
 	{
+
 		if (time(NULL) - lastTimeoutCheck >= 1)
 		{
 			checkForTimeouts(requests, epollFd);
 			lastTimeoutCheck = time(NULL);
 		}
 		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000);
+
 		for (int i = 0; i < numberOfEvents; i++)
 		{
 			it = find(sockets.begin(), sockets.end(), events[i].data.fd);
@@ -324,6 +337,7 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					req = findRequestByFd(client_fd, requests);
 					if (req == NULL)
 					{
+
 						requests.push_back(new Request(client_fd));
 						req = requests.back();
 					}
@@ -345,42 +359,27 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				
 				if (req)
 				{
-					Response res;
-					std::string uri = req->getRequestLine().getUri();
-					std::string root = "/home/alassiqu/1337-projects/webserver/www";
-					if (uri == "/")
-						uri = "/index.html";
-					std::string path = root + uri;
-					
-					std::string body = loadFile(path);
-					if (body.empty())
-					{
-						res.setStatus(404);
-						res.setBody("<h1>404 Not Found</h1>");
-						res.addHeader("Content-Type", "text/html");
-					}
-					else
-					{
-						res.setStatus(200);
-						res.setBody(body);
-						res.addHeader("Content-Type", getMimeType(path));
-						res.addHeader("Content-Length", toString(body.size()));
-					}
 
+					// Use ResponseHandler to handle the request
+					Response response = responseHandler.handleRequest(*req, NULL, NULL);
+					std::string responseStr = response.build();
+					
+					// Add keep-alive headers for HTTP/1.1
 					bool keepAlive = false;
-					if (req->getRequestLine().getVersion() == "HTTP/1.1")
-					{
+					if (req->getRequestLine().getVersion() == "HTTP/1.1") {
 						std::string connectionHeader = req->getRequestHeaders().getHeaderValue("connection");
 						if (connectionHeader.empty() || connectionHeader != "close")
 						{
 							keepAlive = true;
-							res.addHeader("Connection", "keep-alive");
+
 						}
 					}
 
-					std::string responseStr = res.build();
-					send(client_fd, responseStr.c_str(), responseStr.size(), 0);
-					
+					// Send response
+					ssize_t sent = send(client_fd, responseStr.c_str(), responseStr.size(), 0);
+					if (sent == -1) {
+						std::cout << "Error sending response to client " << client_fd << std::endl;
+					}
 					if (keepAlive)
 					{
 						req->clear();
