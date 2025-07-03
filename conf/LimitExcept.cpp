@@ -7,9 +7,12 @@ LimitExcept::LimitExcept(void)
 
 LimitExcept::~LimitExcept(void)
 {
-	for (unsigned int i = 0; methods[i] != NULL; i++)
-		free(methods[i]);
-	delete[] methods;
+	if (methods != NULL)
+	{
+		for (unsigned int i = 0; methods[i] != NULL; i++)
+			free(methods[i]);
+		delete[] methods;
+	}
 }
 
 DIRTYPE LimitExcept::getType(void) const

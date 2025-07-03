@@ -24,6 +24,7 @@ class	Request
 		bool			_processContentLength();
 		bool			_processChunkedTransfer();
 		bool			_validateMethodBodyCompatibility();
+		std::string		_extractBoundary(const std::string&);
 		bool			_isChunkedTransferEncoding(const std::string&);
 
 	public:
@@ -47,6 +48,7 @@ class	Request
 		const RequestHeaders&	getRequestHeaders() const;
 		bool					setState(bool, HttpStatusCode);
 
+		bool					isMultipart(const std::string&);
 		bool					contentLength(const std::string&);
 
 		bool					bodySection();

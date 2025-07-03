@@ -1,6 +1,6 @@
 #include "Server.hpp"
 
-Server::Server() : isDefaultServer(false)
+Server::Server()
 {}
 
 Server::~Server(void)
@@ -12,7 +12,26 @@ DIRTYPE Server::getType(void) const
 	return SERVER;
 }
 
-void Server::setIsDefaultServer(bool value)
+bool Server::validate(void)
 {
-	isDefaultServer = value;
+	unsigned int size = directives.size();
+	DIRTYPE validTypes[] = {LISTEN, SERVER_NAME, ERROR_PAGE,
+		CLIENT_MAX_BODY_SIZE, LOCATION, ROOT, RETURN, INDEX, AUTOINDEX, ALLOW,
+		DENY};
+	unsigned int j;
+
+	for (unsigned int i = 0; i < size; i++)
+	{
+		for (j = 0; j < 11; j++)
+		{
+			if (directives[i]->getType() == validTypes[j])
+				break;
+		}
+		if (j == 11)
+		{
+			std::cerr << "Error: Invalid directive inside of server block\n";
+			return ( false );
+		}
+	}
+	return ( true );
 }

@@ -1,3 +1,4 @@
+#include <ctime>
 #include <ostream>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -192,11 +193,12 @@ void closeSockets(std::vector<int>& sockets)
 Request* findRequestByFd(int fd, std::vector<Request*>& requests)
 {
 	std::vector<Request*>::iterator it = requests.begin();
-    for (; it != requests.end(); it++)
+
+	for (; it != requests.end(); it++)
 	{
-        if ((*it)->getFd() == fd)
-            return *it;
-    }
+		if ((*it)->getFd() == fd)
+			return *it;
+	}
 	return NULL;
 }
 
@@ -215,29 +217,56 @@ void	printRequest(Request* req)
 	{
 		std::cout << "\t" << it->first << ": " << it->second << "\n";
 	}
-	req->getRequestBody().isChunked() ? std::cout << "RequestBody is chunked, with filename: " << req->getRequestBody().getTempFilename() << "\n" : std::cout << "\nRequestBody: " << req->getRequestBody().getBodyType() << ", with filename: " << req->getRequestBody().getTempFilename() << "\n";
+
+	// req->getRequestBody().isChunked() ? std::cout << "RequestBody is chunked, with filename: " << req->getRequestBody().getTempFilename() << "\n" : std::cout << "\nRequestBody: " << req->getRequestBody().getBodyType() << ", with filename: " << req->getRequestBody().getTempFilename() << "\n";
+
 }
 
 void sendTimeoutResponse(int client_fd)
 {
-    std::string body = "<!DOCTYPE html>\n"
-                      "<html>\n"
-                      "<head><title>408 Request Timeout</title></head>\n"
-                      "<body>\n"
-                      "  <h1>408 Request Timeout</h1>\n"
-                      "  <p>The server timed out waiting for the request.</p>\n"
-                      "</body>\n"
-                      "</html>\n";
+	std::string body = "<!DOCTYPE html>\n"
+					  "<html>\n"
+					  "<head><title>408 Request Timeout</title></head>\n"
+					  "<body>\n"
+					  "  <h1>408 Request Timeout</h1>\n"
+					  "  <p>The server timed out waiting for the request.</p>\n"
+					  "</body>\n"
+					  "</html>\n";
 
-    std::ostringstream response;
-    response << "HTTP/1.1 408 Request Timeout\r\n"
-             << "Content-Type: text/html\r\n"
-             << "Content-Length: " << body.size() << "\r\n"
-             << "Connection: close\r\n"
-             << "\r\n"
-             << body;
+	std::ostringstream response;
+	response << "HTTP/1.1 408 Request Timeout\r\n"
+			 << "Content-Type: text/html\r\n"
+			 << "Content-Length: " << body.size() << "\r\n"
+			 << "Connection: close\r\n"
+			 << "\r\n"
+			 << body;
 
-    send(client_fd, response.str().c_str(), response.str().size(), 0);
+	send(client_fd, response.str().c_str(), response.str().size(), 0);
+}
+
+void checkForTimeouts(std::vector<Request*>& requests, int epollFd)
+{
+	time_t currentTime = time(NULL);
+	std::vector<Request*>::iterator it = requests.begin();
+	
+	while (it != requests.end())
+	{
+		Request* req = *it;
+		if (currentTime - req->getLastActivityTime() > REQUEST_TIMEOUT)
+		{
+			std::cout << "Timeout detected for fd " << req->getFd() << std::endl;
+			sendTimeoutResponse(req->getFd());
+			epoll_ctl(epollFd, EPOLL_CTL_DEL, req->getFd(), NULL);
+			close(req->getFd());
+			it = requests.erase(it);
+			delete req;
+		}
+		else
+		{
+			++it;
+		}
+	}
+
 }
 
 void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
@@ -248,20 +277,28 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	std::vector<int>::iterator it;
 	char buff[EIGHT_KB];
 	ssize_t bytes;
-	std::vector<Request*> requests;
-	Request* req;
-	int client_fd;
 	ResponseHandler responseHandler;
 
 	// Configure response handler based on server config
 	// This would need to be implemented based on the actual config structure
 	responseHandler.setAutoIndex(true);
 
+	// Alassiqu variables:
+	Request*				req;
+	std::vector<Request*>	requests;
+	int						client_fd;
+	time_t					lastTimeoutCheck = time(NULL);
+
 	while (true)
 	{
-		std::cout << "State => " << ev.events << "\n";
+
+		if (time(NULL) - lastTimeoutCheck >= 1)
+		{
+			checkForTimeouts(requests, epollFd);
+			lastTimeoutCheck = time(NULL);
+		}
 		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000);
-		std::cout << "Number of events: " << numberOfEvents << std::endl;
+
 		for (int i = 0; i < numberOfEvents; i++)
 		{
 			it = find(sockets.begin(), sockets.end(), events[i].data.fd);
@@ -296,7 +333,7 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					req = findRequestByFd(client_fd, requests);
 					if (req == NULL)
 					{
-						std::cout << "Creating new request" << std::endl;
+
 						requests.push_back(new Request(client_fd));
 						req = requests.back();
 					}
@@ -304,7 +341,6 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 
 					if (req->isRequestDone())
 					{
-						printRequest(req);
 						ev.events = EPOLLOUT;
 						ev.data.fd = client_fd;
 						if (epoll_ctl(epollFd, EPOLL_CTL_MOD, client_fd, &ev) == -1)
@@ -319,6 +355,7 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				
 				if (req)
 				{
+
 					// Use ResponseHandler to handle the request
 					Response response = responseHandler.handleRequest(*req, NULL, NULL);
 					std::string responseStr = response.build();
@@ -330,6 +367,7 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 						if (connectionHeader.empty() || connectionHeader != "close")
 						{
 							keepAlive = true;
+
 						}
 					}
 
@@ -338,7 +376,6 @@ void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					if (sent == -1) {
 						std::cout << "Error sending response to client " << client_fd << std::endl;
 					}
-					
 					if (keepAlive)
 					{
 						req->clear();
@@ -373,6 +410,8 @@ int main(int ac, char** av)
 		return ( 1 );
 	}
 	http = parseConfig(av[1]);
+	if (http == NULL)
+		return ( 1 );
 	getSockAddr(http, sockAddr);
 	epollFd = epoll_create(1);
 	if (epollFd == -1)

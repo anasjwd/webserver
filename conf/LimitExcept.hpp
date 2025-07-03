@@ -3,7 +3,7 @@
 #include "BlockDirective.hpp"
 #include <cstdlib>
 
-class LimitExcept : public BlockDirective {
+class LimitExcept : public IDirective {
 	private:
 		char** methods;
 

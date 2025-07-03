@@ -15,3 +15,8 @@ void BlockDirective::addDirective(IDirective* dir)
 {
 	directives.push_back(dir);
 }
+
+bool BlockDirective::validate(void)
+{
+	return ( true );
+}

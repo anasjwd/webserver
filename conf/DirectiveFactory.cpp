@@ -1,5 +1,5 @@
 #include "cfg_parser.hpp"
-#define NUM_OF_DIRECTIVES 13
+#define NUM_OF_DIRECTIVES 11
 
 IDirective* createNode(std::vector<t_token*>&,unsigned int&);
 void consumeDirectives(
@@ -19,7 +19,10 @@ IDirective* parseServerBlock(
 	Server* server = new Server();
 	++pos;
 	if (pos >= tokensSize)
+	{
+		delete server;
 		throw DirectiveException("incomplete server block - missing \"}\"");
+	}
 	try {
 		consumeDirectives(server, tokens, pos, tokensSize);
 	}
@@ -35,7 +38,6 @@ IDirective* parseServerBlock(
 	}
 	else
 		++pos;
-	// TODO: iterate through the vector and check if there is any server_name
 	return ( server );
 }
 
@@ -53,16 +55,22 @@ IDirective* parseLocationBlock(
 		location->setExactMatch(true);
 		++pos;
 		if (pos >= tokensSize)
+		{
+			delete location;
 			throw DirectiveException("incomplete location block - missing URI");
+		}	
 	}
-	if (isValidURI(tokens[pos]->data) == false)
+	if (isValidURI(tokens[pos]->data) == false || tokens[pos]->type != STRING)
 	{
 		delete location;
 		throw DirectiveException("invalid listen's content - invalid URI");
 	}
 	location->setUri(strdup(tokens[pos++]->data));
 	if (pos >= tokensSize || tokens[pos]->type != BLOCK_START)
+	{
+		delete location;
 		throw DirectiveException("incomplete location block - missing \"{\"");
+	}
 	++pos;
 	try {
 		consumeDirectives(location, tokens, pos, tokensSize);
@@ -138,6 +146,20 @@ IDirective* parseListenDirective(
 	return ( listen );
 }
 
+bool isDirective(char* str)
+{
+	char dirs[][21] = {"server", "listen", "server_name", "error_page",
+		"client_max_body_size", "location", "root", "limit_except",
+		"return", "index", "autoindex"};
+
+	for (unsigned int i = 0; i < NUM_OF_DIRECTIVES; i++)
+	{
+		if (strcmp(str, dirs[i]) == 0)
+			return ( true );
+	}
+	return ( false );
+}
+
 IDirective* parseServerName(
 		std::vector<t_token*>& tokens,
 		unsigned int& pos,
@@ -164,6 +186,11 @@ IDirective* parseServerName(
 	idx = 0;
 	while (tokens[pos]->type != DIR_END)
 	{
+		if (isDirective(tokens[pos]->data) == true)
+		{
+			delete serverName;
+			throw DirectiveException("incomplete server_name directive - missing \";\"");
+		}
 		serverName->setServerName(strdup(tokens[pos]->data), idx);
 		++pos;
 		++idx;
@@ -182,21 +209,24 @@ IDirective* parseLimitExceptBlock(
 
 	LimitExcept* limitExcept = new LimitExcept();
 	unsigned int idx = pos;
-	while (idx < tokensSize && tokens[idx]->type != BLOCK_START)
+	while (idx < tokensSize && tokens[idx]->type != DIR_END)
 	{
 		if (isValidMethod(tokens[idx]->data) == false)
+		{
+			delete limitExcept;
 			throw DirectiveException("invalid content for limit_except directive - invalid method");
+		}
 		idx++;
 	}
 	if (idx >= tokensSize)
 	{
 		delete limitExcept;
-		throw DirectiveException("incomplete limit_except block - missing \"{\"");
+		throw DirectiveException("incomplete limit_except directive - missing \";\"");
 	}
 	else if (idx == 0)
 	{
 		delete limitExcept;
-		throw DirectiveException("incomplete limit_except block - missing argument");
+		throw DirectiveException("incomplete limit_except directive - missing argument");
 	}
 	unsigned int size = idx - pos + 1;
 	limitExcept->setMethods(new char*[size + 1]);
@@ -204,28 +234,13 @@ IDirective* parseLimitExceptBlock(
 	while (idx <= size)
 		limitExcept->setMethod(NULL, idx++);
 	idx = 0;
-	while (pos < tokensSize && tokens[pos]->type != BLOCK_START)
+	while (pos < tokensSize && tokens[pos]->type != DIR_END)
 	{
 		limitExcept->setMethod(strdup(tokens[pos]->data), idx);
 		++pos;
 		++idx;
 	}
 	++pos;
-	try {
-		consumeDirectives(limitExcept, tokens, pos, tokensSize);
-	}
-	catch (std::exception& e)
-	{
-		delete limitExcept;
-		throw;
-	}
-	if (pos >= tokensSize || tokens[pos]->type != BLOCK_END)
-	{
-		delete limitExcept;
-		throw DirectiveException("incomplete location block - missing \"}\"");
-	}
-	else
-		++pos;
 	return ( limitExcept );
 }
 
@@ -300,6 +315,7 @@ IDirective* parseErrorPage(
 		delete errorPage;
 		throw DirectiveException("invalid content for error_page directive - code must be between 300 and 599");
 	}
+	std::cout << ">> " << tokens[pos]->data << std::endl;
 	errorPage->setUri(strdup(tokens[pos++]->data));
 	if (pos >= tokensSize || tokens[pos]->type != DIR_END)
 	{
@@ -336,6 +352,11 @@ IDirective* parseIndexDirective(
 	idx = 0;
 	while (tokens[pos]->type != DIR_END)
 	{
+		if (isDirective(tokens[pos]->data) == true)
+		{
+			delete index;
+			throw DirectiveException("incomplete index directive - missing \";\"");
+		}
 		index->setFile(strdup(tokens[pos]->data), idx);
 		++pos;
 		++idx;
