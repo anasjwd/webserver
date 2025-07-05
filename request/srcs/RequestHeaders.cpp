@@ -1,3 +1,4 @@
+#include <cstdlib>
 # include <string>
 # include <cctype>
 # include <sstream>
@@ -15,6 +16,35 @@ std::string	RequestHeaders::_trimWhitespace(const std::string& str)
 		return "";
 	size_t	last = str.find_last_not_of(" \t");
 	return str.substr(first, (last - first + 1));
+}
+# include <iostream>
+bool	RequestHeaders::_parseHostHeader(const std::string& value)
+{
+	if (value.empty() || value.find(' ') != std::string::npos)
+		return false;
+	
+	size_t colon_pos = value.find(':');
+	_hostPort = 0;
+	_hostName = value.substr(0, colon_pos);
+
+	if (colon_pos != std::string::npos)
+	{
+		std::string port_str = value.substr(colon_pos + 1);
+
+		if (!port_str.empty())
+		{
+			for (size_t i = 0; i < port_str.size(); ++i)
+			{
+				if (!isdigit(port_str[i]))
+					return false;
+			}
+			unsigned long port = strtoul(port_str.c_str(), NULL, 10);
+			_hostPort = static_cast<unsigned int>(port);
+		}
+		else
+			return false;
+	}
+	return true;
 }
 
 bool	RequestHeaders::_isValidHeaderName(const std::string& name)
@@ -117,9 +147,19 @@ bool	RequestHeaders::parse()
 	}
 	if (!_hasHost)
 		return setState(false, BAD_REQUEST);
+	// Check MAX_BODY_SIZE
 	return setState(true, OK);
 }
 
+const std::string&	RequestHeaders::getHostName() const
+{
+	return _hostName;
+}
+
+unsigned int	RequestHeaders::getHostPort() const
+{
+	return _hostPort;
+}
 
 HttpStatusCode	RequestHeaders::getStatusCode() const
 {
@@ -146,8 +186,9 @@ bool	RequestHeaders::checkAndStore(std::string& line, size_t colonPos)
 
 	if (lowerName == "host")
 	{
-		if (value.empty() || value.find(' ') != std::string::npos)
+		if (!_parseHostHeader(value))
 			return setState(false, BAD_REQUEST);
+
 		_hasHost = true;
 	}
 
