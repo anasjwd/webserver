@@ -1,6 +1,7 @@
 # include <cstdlib>
 # include <sstream>
 # include <unistd.h>
+# include <sys/stat.h>
 # include "../incs/RequestBody.hpp"
 
 RequestBody::RequestBody()
@@ -213,49 +214,73 @@ bool	RequestBody::isCompleted() const
 }
 # include <iostream>
 
+bool	ensureUploadDirExists(const std::string& dir)
+{
+	static bool created = false;
+	if (created)
+		return true;
+
+	struct stat st;
+	if (stat(dir.c_str(), &st) != 0)
+	{
+		if (mkdir(dir.c_str(), 0755) != 0)
+		{
+			std::cerr << "Failed to create upload directory!" << std::endl;
+			return false;
+		}
+	}
+	else if (!S_ISDIR(st.st_mode))
+	{
+		std::cerr << dir << " exists but is not a directory!" << std::endl;
+		return false;
+	}
+	created = true;
+	return true;
+}
+
 bool RequestBody::_extractFileFromMultipart()
 {
-    if (!_isMultipart || _boundary.empty())
+	if (!_isMultipart || _boundary.empty())
 	{
 		std::cout << "Multipart: " << isMultipart() << " | boundary: " << _boundary << std::endl;
-        std::cerr << "Upload failed: Not multipart or missing boundary\n";
-        return false;
-    }
+		std::cerr << "Upload failed: Not multipart or missing boundary\n";
+		return false;
+	}
 
-    _readTempFileData();
-    
-    std::string boundary = "--" + _boundary;
-    size_t file_start = _rawData.find("filename=\"", _rawData.find(boundary));
-    if (file_start == std::string::npos) {
-        std::cerr << "Upload failed: No filename found in multipart data\n";
-        return false;
-    }
-    
-    file_start += 10;
-    size_t file_end = _rawData.find("\"", file_start);
-    std::string filename = _rawData.substr(file_start, file_end - file_start);
+	_readTempFileData();
+	
+	std::string boundary = "--" + _boundary;
+	size_t file_start = _rawData.find("filename=\"", _rawData.find(boundary));
+	if (file_start == std::string::npos) {
+		std::cerr << "Upload failed: No filename found in multipart data\n";
+		return false;
+	}
+	
+	file_start += 10;
+	size_t file_end = _rawData.find("\"", file_start);
+	std::string filename = _rawData.substr(file_start, file_end - file_start);
 
-    size_t content_start = _rawData.find(END_HEADER, file_end) + 4;
-    if (content_start == std::string::npos + 4) return false;
-    
-    size_t content_end = _rawData.find(boundary, content_start) - 2;
-    if (content_end == std::string::npos - 2) return false;
-    
-    std::string file_content = _rawData.substr(content_start, content_end - content_start);
+	size_t content_start = _rawData.find(END_HEADER, file_end) + 4;
+	if (content_start == std::string::npos + 4) return false;
+	
+	size_t content_end = _rawData.find(boundary, content_start) - 2;
+	if (content_end == std::string::npos - 2) return false;
+	
+	std::string file_content = _rawData.substr(content_start, content_end - content_start);
 
-    std::string upload_path = "/tmp/uploads/" + filename;
-    std::ofstream out(upload_path.c_str(), std::ios::binary);
-    if (!out.is_open()) {
-        std::cerr << "Upload failed: Could not create file " << upload_path << "\n";
-        return false;
-    }
+	if (!ensureUploadDirExists("/tmp/uploads"))
+		return false;
+	std::string upload_path = "/tmp/uploads/" + filename;
+	std::ofstream out(upload_path.c_str(), std::ios::binary);
+	if (!out.is_open())
+		return false;
 
-    out.write(file_content.data(), file_content.size());
-    out.close();
-    
-    std::cerr << "File uploaded successfully: " << upload_path 
-              << " (" << file_content.size() << " bytes)\n";
-    return true;
+	out.write(file_content.data(), file_content.size());
+	out.close();
+	
+	std::cerr << "File uploaded successfully: " << upload_path 
+			  << " (" << file_content.size() << " bytes)\n";
+	return true;
 }
 
 bool	RequestBody::receiveData(const char* data, size_t length)

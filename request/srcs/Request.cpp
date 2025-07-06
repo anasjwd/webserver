@@ -175,8 +175,11 @@ const int&	Request::getFd() const
 bool	Request::checkForTimeout() const
 {
 	time_t currentTime = time(NULL);
-	if (currentTime - _lastActivityTime > 10)
+	if (currentTime - _lastActivityTime > TIMEOUT_SECONDS)
+	{
+		std::cout << "Timeout detected for fd " << _fd << std::endl;
 		return true;
+	}
 	return false;
 }
 

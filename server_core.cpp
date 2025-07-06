@@ -193,48 +193,42 @@ void closeSockets(std::vector<int>& sockets)
 		close(sockets[idx]);
 }
 
-// void	checkForTimeouts(std::vector<Connection*>& connections, int epollFd)
-// {
-// 	(void)epollFd;
-// 	time_t currentTime = time(NULL);
-// 	std::vector<Connection*>::iterator it = connections.begin();
+void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event ev, int epollFd)
+{
+	std::vector<Connection*>::iterator it = connections.begin();
 	
-// 	while (it != connections.end())
-// 	{
-// 		Connection* conn = *it;
-// 		if (currentTime - conn->req->getLastActivityTime() > REQUEST_TIMEOUT)
-// 		{
-// 			std::cout << "Timeout detected for fd " << conn->fd << std::endl;
-// 			// TODO: Handle timeout logic, e.g., send a timeout response.
-// 			conn->req->setState(true, REQUEST_TIMEOUT);
-// 			// conn->res.build();
-// 			// TODO: Remove the connection from epoll and close it.
-// 		}
-// 		else
-// 			++it;
-// 	}
-// }
+	while (it != connections.end())
+	{
+		Connection* conn = *it;
+		if (conn->req && conn->req->checkForTimeout())
+		{
+			conn->req->setState(false, REQUEST_TIMEOUT);
+			ev.events = EPOLLOUT;
+			ev.data.fd = conn->fd;
+			epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
+		}
+		++it;
+	}
+}
 
 void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 {
-	(void)http;
-	struct epoll_event ev, events[MAX_EVENTS];
-	int numberOfEvents;
-	char buff[EIGHT_KB];
-	ssize_t bytes;
 	Connection*					conn;
+	ssize_t						bytes;
 	std::vector<Connection*>	connections;
+	char						buff[EIGHT_KB];
+	int							numberOfEvents;
 	ResponseHandler				responseHandler;
-	// time_t lastTimeoutCheck = time(NULL);
+	struct epoll_event			ev, events[MAX_EVENTS];
+	time_t						lastTimeoutCheck = time(NULL);
 
 	while (true)
 	{
-		// TODO: Handle timeout.
- 		// if (time(NULL) - lastTimeoutCheck >= 1)
-		// {
-		// 	checkForTimeouts(connections, epollFd);
-		// 	lastTimeoutCheck = time(NULL);
-		// }
+ 		if (time(NULL) - lastTimeoutCheck >= 1)
+		{
+			checkForTimeouts(connections, ev, epollFd);
+			lastTimeoutCheck = time(NULL);
+		}
 		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000);
 
 		for (int i = 0; i < numberOfEvents; i++)
@@ -273,16 +267,16 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 
 						conn->req->appendToBuffer(buff, bytes);
 						std::cout << "State in req : " << conn->req->getStatusCode() << "\n";
+						if (!conn->conServer)
+							conn->findServer(http);
+						if (!conn->checkMaxBodySize())
+						{
+							std::cout << "PAYLOAD_TOO_LARGE\n";
+							conn->req->setState(true, PAYLOAD_TOO_LARGE);
+						}
 
 						if (conn->req->isRequestDone())
 						{
-							conn->findServer(http);
-							if (!conn->checkMaxBodySize())
-							{
-								std::cout << "PAYLOAD_TOO_LARGE\n";
-								conn->req->setState(true, PAYLOAD_TOO_LARGE);
-								std::cout << "State in req after check: " << conn->req->getStatusCode() << "\n";
-							}
 							ev.events = EPOLLOUT;
 							ev.data.fd = conn->fd;
 							epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
@@ -293,7 +287,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				{
 					if (conn->req)
 					{
-						std::cout << "State in res : " << conn->req->getStatusCode() << "\n";
+						std::cout << "State in res : " << conn->req->getStatusCode() << "\n-----------------------------------\n";
 						conn->res = responseHandler.handleRequest((*conn->req), NULL, NULL);
 						std::string responseStr = conn->res.build();
 						
@@ -361,4 +355,3 @@ int main(int ac, char** av)
 	delete http;
 	return ( 0 );
 }
-

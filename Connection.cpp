@@ -57,6 +57,8 @@ bool	Connection::findServer(Http *http)
 {
 	if (req->getState() < HEADERS || !req->getRequestHeaders().hasHeader("host"))
 		return false;
+	if (req->getState() >= HEADERS && !req->getRequestHeaders().hasHeader("host"))
+		return false;
 
 	unsigned int port = req->getRequestHeaders().getHostPort();
 	std::string hostname = req->getRequestHeaders().getHostName();
@@ -174,13 +176,17 @@ void	Connection::closeConnection(Connection* conn, std::vector<Connection*>& con
 		close(conn->fd);
 
 	if (conn->req)
+	{
 		delete conn->req;
+		conn->req = NULL;
+	}
 	// if (conn.res)
 	// 	delete conn.res;
 
 	for (std::vector<Connection*>::iterator it = connections.begin(); it != connections.end(); ++it)
 	{
-		if (*it == conn) {
+		if (*it == conn)
+		{
 			connections.erase(it);
 			break;
 		}
