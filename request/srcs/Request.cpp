@@ -2,6 +2,7 @@
 # include <climits>
 # include <cstddef>
 # include <cstdlib>
+#include <iostream>
 # include "../incs/Request.hpp"
 
 Request::Request()
@@ -78,8 +79,9 @@ bool	Request::_processContentLength()
 	if (*end != '\0' || contentLengthStr.empty())
 		return setState(false, BAD_REQUEST);
 
-	if (contentLength > MAX_BODY_SIZE)
-		return setState(false, PAYLOAD_TOO_LARGE);
+	// TODO: IS THIS SHOULD BE HERE!
+	// if (contentLength > MAX_BODY_SIZE)
+	// 	return setState(false, PAYLOAD_TOO_LARGE);
 
 	if (contentLength == 0 && (_rl.getMethod() == "GET" || _rl.getMethod() == "DELETE"))
 		return setState(true, OK);
@@ -173,8 +175,11 @@ const int&	Request::getFd() const
 bool	Request::checkForTimeout() const
 {
 	time_t currentTime = time(NULL);
-	if (currentTime - _lastActivityTime > 10)
+	if (currentTime - _lastActivityTime > TIMEOUT_SECONDS)
+	{
+		std::cout << "Timeout detected for fd " << _fd << std::endl;
 		return true;
+	}
 	return false;
 }
 
@@ -248,7 +253,7 @@ bool	Request::headerSection()
 	if (end_header == std::string::npos)
 		return false;
 
-	std::string headersStr = _buffer.substr(0, end_header + 2);
+	const std::string headersStr = _buffer.substr(0, end_header + 2);
 	if (headersStr.empty())
 		return setState(false, BAD_REQUEST);
 

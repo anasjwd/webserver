@@ -14,5 +14,6 @@ class Root : public IDirective {
 		~Root(void);
 		DIRTYPE getType(void) const;
 		void setPath(char* value);
+		char* getPath() const { return path; }
 };
 

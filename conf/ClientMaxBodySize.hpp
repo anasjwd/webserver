@@ -14,5 +14,8 @@ class ClientMaxBodySize : public IDirective {
 		~ClientMaxBodySize(void);
 		DIRTYPE getType(void) const;
 		void setSize(unsigned int value);
+
+		// TODO: Added by achraf!
+		unsigned int getSize() {return size;}
 };
 
