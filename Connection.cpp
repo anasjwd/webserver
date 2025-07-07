@@ -197,11 +197,11 @@ Root*	Connection::getRoot()
 	Root*	root = static_cast<Root*>(getDirective(ROOT));
 	if (root)
 		return root;
-	Location*	location = getLocation();
+	const Location*	location = getLocation();
 	if (location == NULL)
 		return NULL;
 	
-	for (std::vector<IDirective*>::iterator dit = location->directives.begin(); 
+	for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); 
 	dit != location->directives.end(); ++dit) 
 	{
 		if ((*dit)->getType() == ROOT)
