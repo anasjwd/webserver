@@ -11,7 +11,6 @@ RequestLine::RequestLine(const std::string& raw)
 
 bool	RequestLine::_validateMethod()
 {
-	// TODO: Function that gets the allowed methods. Maybe it couldn't be here because of there's no host till now, which mean there no specific server to search in.
 	const std::string allowedMethods[] = {"GET", "POST", "DELETE"};
 	const size_t count = sizeof(allowedMethods)/sizeof(allowedMethods[0]);
 
@@ -19,6 +18,7 @@ bool	RequestLine::_validateMethod()
 		if (_method == allowedMethods[i])
 			return true;
 
+	std::cerr << "Invalid method: " << _method << std::endl;
 	return setState(false, METHOD_NOT_ALLOWED);
 }
 
@@ -100,11 +100,8 @@ bool	RequestLine::parse()
 		return setState(false, BAD_REQUEST);
 
 	_method = _raw.substr(0, firstSpace);
-	std::cout << "Method: " << _method << std::endl;
 	_uri = _raw.substr(firstSpace + 1, secondSpace - firstSpace - 1);
-	std::cout << "Uri: " << _uri << std::endl;
 	_version = _raw.substr(secondSpace + 1);
-	std::cout << "Version: " << _version << std::endl;
 
 	
 	if (!_validateMethod() || !_validateUri() || !_validateVersion())

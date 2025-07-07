@@ -60,6 +60,7 @@ bool	Connection::findServer(Http *http)
 	if (req->getState() >= HEADERS && !req->getRequestHeaders().hasHeader("host"))
 		return false;
 
+	uri = req->getRequestLine().getUri();
 	unsigned int port = req->getRequestHeaders().getHostPort();
 	std::string hostname = req->getRequestHeaders().getHostName();
 	std::vector<Server*> servers = getServersFromHttp(http);
@@ -112,11 +113,11 @@ IDirective*	Connection::getDirective(DIRTYPE type)
 
 LimitExcept*	Connection::getLimitExcept()
 {
-	Location*	location = getLocation();
+	const Location*	location = getLocation();
 	if (location == NULL)
 		return NULL;
 	
-	for (std::vector<IDirective*>::iterator dit = location->directives.begin(); 
+	for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); 
 	dit != location->directives.end(); ++dit) 
 	{
 		if ((*dit)->getType() == LIMIT_EXCEPT)
@@ -127,17 +128,19 @@ LimitExcept*	Connection::getLimitExcept()
 
 bool	Connection::checkMaxBodySize()
 {
-	// unsigned int defaultSize = ;
+	unsigned int defaultSize = DEFAULT_MAX_BODY_SIZE;
 	ClientMaxBodySize* max = getClientMaxBodySize();
 	std::string str = req->getRequestHeaders().getHeaderValue("content-length");
 	unsigned int actualSize = strtoull(str.c_str(), NULL, 10);
-	if (max == NULL)
-		return true;
-	// {
-	// 	if (defaultSize)
-	// }
 
-	if (max->getSize() < actualSize)
+	if (max == NULL)
+	{
+		if (actualSize > defaultSize)
+			return false;
+		return true;
+	}
+
+	if (max && max->getSize() < actualSize)
 		return false;
 
 	return true;
@@ -148,9 +151,45 @@ ClientMaxBodySize*	Connection::getClientMaxBodySize()
 	return static_cast<ClientMaxBodySize*>(getDirective(CLIENT_MAX_BODY_SIZE));
 }
 
-Location*	Connection::getLocation()
+const Location*	Connection::getLocation()
 {
-	return static_cast<Location*>(getDirective(LOCATION));
+	matchedLocation = NULL;
+	size_t bestMatchLen = 0;
+	const Location* bestLoc = NULL;
+
+	if (conServer)
+	{
+		for (std::vector<IDirective*>::const_iterator it = conServer->directives.begin(); it != conServer->directives.end(); ++it)
+		{
+			if ((*it)->getType() != LOCATION)
+				continue;
+			const Location* loc = static_cast<const Location*>(*it);
+			char* locUri = loc->getUri();
+			bool exact = loc->isExactMatch();
+			if (!locUri)
+				continue;
+			std::string locUriStr(locUri);
+			if (exact)
+			{
+				if (uri == locUriStr)
+				{
+					matchedLocation = loc;
+					return matchedLocation;
+				}
+			}
+			else
+			{
+				if (uri.find(locUriStr) == 0 && locUriStr.length() > bestMatchLen)
+				{
+					bestMatchLen = locUriStr.length();
+					bestLoc = loc;
+				}
+			}
+		}
+		if (bestLoc)
+			matchedLocation = bestLoc;
+	}
+	return matchedLocation;
 }
 
 Root*	Connection::getRoot()

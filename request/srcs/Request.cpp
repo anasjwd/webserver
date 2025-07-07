@@ -104,7 +104,6 @@ bool	Request::_processChunkedTransfer()
 
 bool	Request::_validateMethodBodyCompatibility()
 {
-	// TODO: Should be developped to fix all cases (Second check).
 	const std::string& method = _rl.getMethod();
 	bool hasBody = _rb.getContentLength() > 0 || _rb.isChunked();
 
@@ -237,6 +236,7 @@ bool	Request::lineSection()
 	if (crlf_pos == std::string::npos)
 		return false;
 
+	std::cout << "Request line: " << _buffer.substr(0, crlf_pos) << std::endl;
 	_rl = RequestLine(_buffer.substr(0, crlf_pos));
 	if (!_rl.parse())
 		return setState(false, _rl.getStatusCode());
@@ -257,6 +257,7 @@ bool	Request::headerSection()
 	if (headersStr.empty())
 		return setState(false, BAD_REQUEST);
 
+	std::cout << "Request headers:\n" << _buffer.substr(0, end_header) << std::endl;
 	_rh = RequestHeaders(headersStr);
 	if (!_rh.parse())
 		return setState(false, _rh.getStatusCode());
@@ -266,10 +267,9 @@ bool	Request::headerSection()
 	if (!_processBodyHeaders() || !_validateMethodBodyCompatibility())
 		return false;
 
-	if (_state != COMPLETE)
-	{
+	if (_rb.isExpected())
 		_state = BODY;
-	}
+
 	return true;
 }
 

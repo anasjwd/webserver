@@ -203,6 +203,7 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 		if (conn->req && conn->req->checkForTimeout())
 		{
 			conn->req->setState(false, REQUEST_TIMEOUT);
+			conn->shouldKeepAlive = false;
 			ev.events = EPOLLOUT;
 			ev.data.fd = conn->fd;
 			epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
@@ -266,7 +267,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 							conn->req = new Request(conn->fd);
 
 						conn->req->appendToBuffer(buff, bytes);
-						std::cout << "State in req : " << conn->req->getStatusCode() << "\n";
+						std::cout << "-----------------------------------\nState in req " << conn->fd << " : " << conn->req->getStatusCode() << "\n";
 						if (!conn->conServer)
 							conn->findServer(http);
 						if (!conn->checkMaxBodySize())
@@ -287,14 +288,14 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				{
 					if (conn->req)
 					{
-						std::cout << "State in res : " << conn->req->getStatusCode() << "\n-----------------------------------\n";
+						std::cout << "State in res " << conn->fd << " : " << conn->req->getStatusCode() << "\n-----------------------------------\n";
 						conn->res = responseHandler.handleRequest((*conn->req), NULL, NULL);
 						std::string responseStr = conn->res.build();
 						
-						if (conn->req->getRequestLine().getVersion() == "HTTP/1.1")
+						if (conn->req->getStatusCode() == OK)
 						{
 							std::string connectionHeader = conn->req->getRequestHeaders().getHeaderValue("connection");
-							if (connectionHeader.empty() || connectionHeader != "close")
+							if (!connectionHeader.empty() && connectionHeader != "close")
 								conn->shouldKeepAlive = true;
 						}
 
@@ -311,7 +312,10 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 							epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
 						}
 						else
+						{
+							std::cout << "Closing connection for client " << conn->fd << std::endl;
 							conn->closeConnection(conn, connections, epollFd);
+						}
 					}
 				}
 			}

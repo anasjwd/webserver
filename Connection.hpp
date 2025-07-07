@@ -15,13 +15,16 @@
 class   Connection
 {
 	public:
-		int			fd;
-		Response	res;
-		Request		*req;
-		bool		connect;
-		Server		*conServer;
-		bool		shouldKeepAlive;
-		time_t		lastTimeoutCheck;
+		int				fd;
+		Response		res;
+		std::string		uri;
+		Request			*req;
+		bool			connect;
+		Server			*conServer;
+		bool			shouldKeepAlive;
+		time_t			lastTimeoutCheck;
+		const Location	*matchedLocation;
+
 
 		Connection();
 		Connection(int);
@@ -39,7 +42,7 @@ class   Connection
 
 		// ahanaf
 		Root*				getRoot();
-		Location*			getLocation();
+		const Location*		getLocation();
 		AutoIndex*			getAutoIndex();
 		ErrorPage*			getErrorPage();
 		
