@@ -1,4 +1,5 @@
 # include <cctype>
+#include <iostream>
 # include <sstream>
 # include <cstdlib>
 # include "../incs/RequestLine.hpp"
@@ -99,8 +100,11 @@ bool	RequestLine::parse()
 		return setState(false, BAD_REQUEST);
 
 	_method = _raw.substr(0, firstSpace);
+	std::cout << "Method: " << _method << std::endl;
 	_uri = _raw.substr(firstSpace + 1, secondSpace - firstSpace - 1);
+	std::cout << "Uri: " << _uri << std::endl;
 	_version = _raw.substr(secondSpace + 1);
+	std::cout << "Version: " << _version << std::endl;
 
 	
 	if (!_validateMethod() || !_validateUri() || !_validateVersion())

@@ -17,7 +17,7 @@ std::string	RequestHeaders::_trimWhitespace(const std::string& str)
 	size_t	last = str.find_last_not_of(" \t");
 	return str.substr(first, (last - first + 1));
 }
-# include <iostream>
+
 bool	RequestHeaders::_parseHostHeader(const std::string& value)
 {
 	if (value.empty() || value.find(' ') != std::string::npos)
@@ -120,8 +120,6 @@ void	RequestHeaders::clear()
 	_multiHeaders.clear();
 }
 
-// TODO: Check for method, limit_except
-
 bool	RequestHeaders::parse()
 {
 	std::string			line;
@@ -147,7 +145,6 @@ bool	RequestHeaders::parse()
 	}
 	if (!_hasHost)
 		return setState(false, BAD_REQUEST);
-	// Check MAX_BODY_SIZE
 	return setState(true, OK);
 }
 
@@ -188,7 +185,6 @@ bool	RequestHeaders::checkAndStore(std::string& line, size_t colonPos)
 	{
 		if (!_parseHostHeader(value))
 			return setState(false, BAD_REQUEST);
-
 		_hasHost = true;
 	}
 

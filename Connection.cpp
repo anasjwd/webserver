@@ -127,12 +127,15 @@ LimitExcept*	Connection::getLimitExcept()
 
 bool	Connection::checkMaxBodySize()
 {
+	// unsigned int defaultSize = ;
 	ClientMaxBodySize* max = getClientMaxBodySize();
-	if (max == NULL)
-		return true;
-
 	std::string str = req->getRequestHeaders().getHeaderValue("content-length");
 	unsigned int actualSize = strtoull(str.c_str(), NULL, 10);
+	if (max == NULL)
+		return true;
+	// {
+	// 	if (defaultSize)
+	// }
 
 	if (max->getSize() < actualSize)
 		return false;
