@@ -88,23 +88,18 @@ bool	RequestHeaders::_isValidHeaderValue(const std::string& value)
 	return true;
 }
 
-bool	RequestHeaders::_isDuplicated(std::string& f_name, std::string& val)
+bool	RequestHeaders::_storeHeader(std::string& f_name, std::string& val)
 {
-	std::map<std::string, std::string>::iterator it = _headers.find(f_name);
-
 	if (f_name == "set-cookie" || f_name == "warning")
 	{
 		_multiHeaders[f_name].push_back(val);
 		return true;
 	}
 
+	std::map<std::string, std::string>::iterator it = _headers.find(f_name);
+
 	if (it != _headers.end())
-	{
-		if (f_name == "host" || f_name == "content-length" || f_name == "content-type")
-			return setState(false, BAD_REQUEST);
-		else
-			it->second += ", " + val;
-	}
+		it->second += ", " + val;
 	else
 		_headers[f_name] = val;
 
@@ -178,7 +173,7 @@ bool	RequestHeaders::checkAndStore(std::string& line, size_t colonPos)
 		return setState(false, BAD_REQUEST);
 
 	std::string lowerName = _toLowercase(name);
-	if (!_isDuplicated(lowerName, value))
+	if (!_storeHeader(lowerName, value))
 		return setState(false, BAD_REQUEST);
 
 	if (lowerName == "host")
