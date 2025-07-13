@@ -2,6 +2,7 @@
 # include <ctime>
 # include <unistd.h>
 # include <sys/epoll.h>
+#include <vector>
 # include "conf/Http.hpp"
 # include "conf/Root.hpp"
 # include "Connection.hpp"
@@ -29,17 +30,6 @@ Connection::Connection(int clientFd)
 void	Connection::updateTime()
 {
 	lastTimeoutCheck = time(NULL);
-}
-
-Connection* Connection::findConnectionByFd(int fd, std::vector<Connection*>& connections)
-{
-	for (std::vector<Connection*>::iterator it = connections.begin(); 
-		 it != connections.end(); ++it)
-	{
-		if ((*it)->fd == fd)
-			return *it;
-	}
-	return NULL;
 }
 
 static std::vector<Server*> getServersFromHttp(Http* http)
@@ -210,6 +200,39 @@ Root*	Connection::getRoot()
 	return NULL;
 }
 
+void	Connection::freeConnections(std::vector<Connection*>& conn)
+{
+	for (std::vector<Connection*>::iterator it = conn.begin(); it != conn.end(); ++it)
+	{
+		Connection* connection = *it;
+		if (connection->fd != -1)
+		{
+			close(connection->fd);
+			connection->fd = -1;
+		}
+		
+		if (connection->req)
+		{
+			delete connection->req;
+			connection->req = NULL;
+		}
+		
+		delete connection;
+	}
+	conn.clear();
+}
+
+Connection* Connection::findConnectionByFd(int fd, std::vector<Connection*>& connections)
+{
+	for (std::vector<Connection*>::iterator it = connections.begin(); 
+		 it != connections.end(); ++it)
+	{
+		if ((*it)->fd == fd)
+			return *it;
+	}
+	return NULL;
+}
+
 void	Connection::closeConnection(Connection* conn, std::vector<Connection*>& connections, int epollFd)
 {
 	epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, NULL);
@@ -222,8 +245,6 @@ void	Connection::closeConnection(Connection* conn, std::vector<Connection*>& con
 		delete conn->req;
 		conn->req = NULL;
 	}
-	// if (conn.res)
-	// 	delete conn.res;
 
 	for (std::vector<Connection*>::iterator it = connections.begin(); it != connections.end(); ++it)
 	{
