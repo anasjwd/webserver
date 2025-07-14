@@ -16,6 +16,7 @@
 #include "request/incs/Request.hpp"
 #include <algorithm>
 #include <string>
+#include <signal.h>
 
 #define MAX_EVENTS 512
 #define BACKLOG 511
@@ -293,6 +294,7 @@ int main(int ac, char** av)
 		std::cerr << "Error: config file missing.\n";
 		return ( 1 );
 	}
+	signal(SIGHUP, SIG_IGN);
 	http = parseConfig(av[1]);
 	if (http == NULL)
 		return ( 1 );
