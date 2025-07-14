@@ -1,27 +1,34 @@
-#include <ostream>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <sys/epoll.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/types.h>
-#include <iostream>
-#include <unistd.h>
-#include <utility>
-#include <cstring>
-#include <map>
-#include <vector>
-#include <sstream>
-#include "conf/cfg_parser.hpp"
-#include "request/incs/Request.hpp"
-#include <algorithm>
-#include <string>
-#include <signal.h>
+# include <map>
+# include <ctime>
+# include <string>
+# include <vector>
+# include <sstream>
+# include <cstddef>
+# include <ostream>
+# include <netdb.h>
+# include <utility>
+# include <cstring>
+# include <iostream>
+# include <unistd.h>
+# include <algorithm>
+# include <sys/types.h>
+# include <arpa/inet.h>
+# include <sys/epoll.h>
+# include <sys/socket.h>
+# include <netinet/in.h>
+# include "Connection.hpp"
+# include "conf/Server.hpp"
+# include "conf/IDirective.hpp"
+# include "conf/cfg_parser.hpp"
+# include "request/incs/Defines.hpp"
+# include "request/incs/Request.hpp"
+# include "response/include/Response.hpp"
+# include "response/include/ResponseHandler.hpp"
 
-#define MAX_EVENTS 512
-#define BACKLOG 511
-#define NONESSENTIAL 101
-#define EIGHT_KB 8192
+# define	NONESSENTIAL	101
+# define	MAX_EVENTS		512
+# define	BACKLOG			511
+# define	EIGHT_KB		8192
 
 typedef std::pair<std::string, int> IpPortKey;
 
@@ -186,97 +193,131 @@ void closeSockets(std::vector<int>& sockets)
 		close(sockets[idx]);
 }
 
-void serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
+void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event ev, int epollFd)
 {
-	struct epoll_event ev, events[MAX_EVENTS];
-	int numberOfEvents;
-	std::vector<int>::iterator it;
-	char buff[EIGHT_KB];
-	ssize_t bytes;
-	Request request;
+	std::vector<Connection*>::iterator it = connections.begin();
+	
+	while (it != connections.end())
+	{
+		Connection* conn = *it;
+		if (conn->req && conn->req->checkForTimeout())
+		{
+			conn->req->setState(false, REQUEST_TIMEOUT);
+			conn->shouldKeepAlive = false;
+			ev.events = EPOLLOUT;
+			ev.data.fd = conn->fd;
+			epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
+		}
+		++it;
+	}
+}
 
-	(void)http;
+void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
+{
+	Connection*					conn;
+	ssize_t						bytes;
+	std::vector<Connection*>	connections;
+	char						buff[EIGHT_KB];
+	int							numberOfEvents;
+	ResponseHandler				responseHandler;
+	struct epoll_event			ev, events[MAX_EVENTS];
+	time_t						lastTimeoutCheck = time(NULL);
+
 	while (true)
 	{
-		std::cout << "State => " << ev.events << "\n";
-		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, -1);
+ 		if (time(NULL) - lastTimeoutCheck >= 1)
+		{
+			checkForTimeouts(connections, ev, epollFd);
+			lastTimeoutCheck = time(NULL);
+		}
+		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000);
+
 		for (int i = 0; i < numberOfEvents; i++)
 		{
-			it = find(sockets.begin(), sockets.end(), events[i].data.fd);
-			if (it != sockets.end())
+			if (std::find(sockets.begin(), sockets.end(), events[i].data.fd) != sockets.end())
 			{
-				int clientFd = accept(*it, NULL, NULL);
+				int clientFd = accept(events[i].data.fd, NULL, NULL);
 				if (clientFd == -1)
 				{
 					std::cout << "Error: failed to accept a client\n";
 					continue;
 				}
+				
+				Connection* conn = new Connection(clientFd);
+				connections.push_back(conn);
+				
 				ev.events = EPOLLIN;
 				ev.data.fd = clientFd;
 				epoll_ctl(epollFd, EPOLL_CTL_ADD, clientFd, &ev);
-			}
-			else if (events[i].events & EPOLLIN)
+			} 
+			else
 			{
-				bytes = read(events[i].data.fd, buff, EIGHT_KB);
-				if (bytes == -1)
-				{
-					epoll_ctl(epollFd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
-					close(events[i].data.fd);
-				}
-				else if (bytes == 0)
-				{
-					epoll_ctl(epollFd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
-					close(events[i].data.fd);
-				}
-				else
-				{
-					std::cout.write(buff, bytes) << std::endl;
-					// TODO: CREATE LINKED LIST OF CONNECTIONS.
+				conn = conn->findConnectionByFd(events[i].data.fd, connections);
+				if (!conn)
+					continue;
 
-
-					request.appendToBuffer(buff, bytes);
-					if (request.isRequestDone())
+				if (events[i].events & EPOLLIN)
+				{
+					bytes = read(conn->fd, buff, EIGHT_KB);
+					if (bytes <= 0)
+						conn->closeConnection(conn, connections, epollFd);
+					else
 					{
-						std::cout << "Request is done, processing response..." << std::endl;
-						ev.events = EPOLLOUT;
-						ev.data.fd = events[i].data.fd;
-						if (epoll_ctl(epollFd, EPOLL_CTL_MOD, events[i].data.fd, &ev) == -1) {
-							close(events[i].data.fd);
+						if (!conn->req)
+							conn->req = new Request(conn->fd);
+
+						conn->req->appendToBuffer(buff, bytes);
+						std::cout << "-----------------------------------\nState in req " << conn->fd << " : " << conn->req->getStatusCode() << "\n";
+						if (!conn->conServer)
+							conn->findServer(http);
+						if (!conn->checkMaxBodySize())
+						{
+							std::cout << "PAYLOAD_TOO_LARGE\n";
+							conn->req->setState(true, PAYLOAD_TOO_LARGE);
+						}
+
+						if (conn->req->isRequestDone())
+						{
+							ev.events = EPOLLOUT;
+							ev.data.fd = conn->fd;
+							epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
 						}
 					}
-					//call request parsing
-					//when parsing is done call response builder
-					//when the response is built change to EPOLLOUT
+				} 
+				else if (events[i].events & EPOLLOUT)
+				{
+					if (conn->req)
+					{
+						std::cout << "State in res " << conn->fd << " : " << conn->req->getStatusCode() << "\n-----------------------------------\n";
+						conn->res = responseHandler.handleRequest((*conn->req), NULL, NULL);
+						std::string responseStr = conn->res.build();
+						
+						if (conn->req->getStatusCode() == OK)
+						{
+							std::string connectionHeader = conn->req->getRequestHeaders().getHeaderValue("connection");
+							if (!connectionHeader.empty() && connectionHeader != "close")
+								conn->shouldKeepAlive = true;
+						}
+
+						ssize_t sent = send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
+						if (sent == -1) {
+							std::cout << "Error sending response to client " << conn->fd << std::endl;
+						}
+
+						if (conn->shouldKeepAlive)
+						{
+							conn->req->clear();
+							ev.events = EPOLLIN;
+							ev.data.fd = conn->fd;
+							epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
+						}
+						else
+						{
+							std::cout << "Closing connection for client " << conn->fd << std::endl;
+							conn->closeConnection(conn, connections, epollFd);
+						}
+					}
 				}
-			}
-			else if (events[i].events & EPOLLOUT)
-			{
-				std::cout << "We in response state\n";
-				//send 8kb each time
-				//keep track of how write wrote
-				//if the number of written character exceeds the size
-				//of the WRITE_FROM buffer delete it from epoll and close fd
-				ev.events = 0;
-				ev.data.fd = events[i].data.fd;
-				if (epoll_ctl(epollFd, EPOLL_CTL_MOD, events[i].data.fd, &ev) == -1)
-					close(events[i].data.fd);
-				std::string body = "<!DOCTYPE html>\n"
-                   "<html>\n"
-                   "<head><title>Test Page</title></head>\n"
-                   "<body>\n"
-                   "  <h1>Hello from my C++ server!</h1>\n"
-                   "  <p>This is a test web page.</p>\n"
-                   "</body>\n"
-                   "</html>\n";
-
-				std::ostringstream response;
-				response << "HTTP/1.1 200 OK\r\n"
-						<< "Content-Type: text/html\r\n"
-						<< "Content-Length: " << body.size() << "\r\n"
-						<< "\r\n"
-						<< body;
-
-				send(events[i].data.fd, response.str().c_str(), response.str().size(), 0);
 			}
 		}
 	}
@@ -319,4 +360,3 @@ int main(int ac, char** av)
 	delete http;
 	return ( 0 );
 }
-

@@ -1,4 +1,5 @@
 # include <cctype>
+#include <iostream>
 # include <sstream>
 # include <cstdlib>
 # include "../incs/RequestLine.hpp"
@@ -10,7 +11,6 @@ RequestLine::RequestLine(const std::string& raw)
 
 bool	RequestLine::_validateMethod()
 {
-	// TODO: Function that gets the allowed methods should be defined and used here.
 	const std::string allowedMethods[] = {"GET", "POST", "DELETE"};
 	const size_t count = sizeof(allowedMethods)/sizeof(allowedMethods[0]);
 
@@ -18,6 +18,7 @@ bool	RequestLine::_validateMethod()
 		if (_method == allowedMethods[i])
 			return true;
 
+	std::cerr << "Invalid method: " << _method << std::endl;
 	return setState(false, METHOD_NOT_ALLOWED);
 }
 
@@ -108,7 +109,10 @@ bool	RequestLine::parse()
 
 	size_t queryPos = _uri.find('?');
 	if (queryPos != std::string::npos)
+	{
 		_parseQueryString();
+		_uri = _raw.substr(firstSpace + 1, queryPos);
+	}
 
 	return setState(true, OK);
 }

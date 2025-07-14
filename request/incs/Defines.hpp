@@ -1,21 +1,15 @@
 # pragma once
 
-# define	MAX_HEADER		100
-# define	MAX_URI_LENGTH	4096
-# define	MAX_LINE_LENGTH	8192
-# define	MAX_BODY_SIZE	(2ULL * 1024 * 1024 * 1024)
+# define	TIMEOUT_SECONDS	60
 
-# define	CRLF			"\r\n"
-# define	END_HEADER		"\r\n\r\n"
-# define	HTTP_VERSION	"HTTP/1.1"
+# define	MAX_HEADER				100
+# define	MAX_URI_LENGTH			4096
+# define	MAX_LINE_LENGTH			8192
+# define	DEFAULT_MAX_BODY_SIZE	1048576;
 
-enum BodyType
-{
-	RAW,
-	JSON,
-	MULTIPART,
-	URL_ENCODED
-};
+# define	CRLF					"\r\n"
+# define	END_HEADER				"\r\n\r\n"
+# define	HTTP_VERSION			"HTTP/1.1"
 
 enum RequestState
 {
@@ -25,16 +19,6 @@ enum RequestState
 	BODY,
 	COMPLETE,
 	ERROR
-};
-
-enum BodyState
-{
-	BS_START,
-	BS_CHUNK_SIZE,
-	BS_CHUNK_DATA,
-	BS_CHUNK_END,
-	BS_TRAILERS,
-	BS_COMPLETE
 };
 
 enum HttpStatusCode
