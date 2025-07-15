@@ -31,6 +31,8 @@
 # define	BACKLOG			511
 # define	EIGHT_KB		8192
 
+bool got_singint = false;
+
 typedef std::pair<std::string, int> IpPortKey;
 
 std::string toString(int number)
@@ -226,6 +228,11 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 
 	while (true)
 	{
+		if (got_singint == true)
+		{
+			// do cleanup here
+			return ;
+		}
  		if (time(NULL) - lastTimeoutCheck >= 1)
 		{
 			checkForTimeouts(connections, ev, epollFd);
@@ -324,7 +331,12 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	}
 }
 
-int main(int ac, char** av)
+void sigintHandler(int sig)
+{
+	got_singint = true;
+}
+
+int main(int ac, char** av)Htt
 {
 	Http* http;
 	std::map<IpPortKey, int> sockAddr;
@@ -337,6 +349,7 @@ int main(int ac, char** av)
 		return ( 1 );
 	}
 	signal(SIGHUP, SIG_IGN);
+	signal(SIGINT, sigintHandler);
 	http = parseConfig(av[1]);
 	if (http == NULL)
 		return ( 1 );
@@ -355,7 +368,7 @@ int main(int ac, char** av)
 		delete http;
 		return ( 1 );
 	}
-	serverLoop(http, sockets, epollFd);
+	serverLoop(http, sockets, epollFd) == 1
 	closeSockets(sockets);
 	close(epollFd);
 	delete http;
