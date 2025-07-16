@@ -12,7 +12,7 @@
 # include "conf/ClientMaxBodySize.hpp"
 # include "response/include/Response.hpp"
 
-class   Connection
+class	Connection
 {
 	public:
 		int				fd;
@@ -40,22 +40,15 @@ class   Connection
 		bool				checkMaxBodySize();
 		ClientMaxBodySize*	getClientMaxBodySize();
 
-		// ahanaf
+		// Ahanaf:
 		Root*				getRoot();
 		const Location*		getLocation();
 		AutoIndex*			getAutoIndex();
 		ErrorPage*			getErrorPage();
 		
 		// 
+		void				freeConnections(std::vector<Connection*>&);
 		Connection*			findConnectionByFd(int, std::vector<Connection*>&);
 		void				closeConnection(Connection*, std::vector<Connection*>&, int);
 
-
 };
-
-/*
-	CONNECTION -> CONNECTION HEADER
-			: CLOSE ->
-			: KEEP-ALIVE -> 
-*/
-
