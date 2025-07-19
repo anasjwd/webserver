@@ -15,4 +15,5 @@ class BlockDirective : public IDirective {
 		~BlockDirective(void);
 		virtual void addDirective(IDirective* dir);
 		virtual bool validate(void);
+		IDirective* getDirective(DIRTYPE type) const;
 };

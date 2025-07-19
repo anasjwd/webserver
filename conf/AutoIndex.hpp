@@ -14,5 +14,6 @@ class AutoIndex : public IDirective {
 		~AutoIndex(void);
 		DIRTYPE getType(void) const;
 		void setState(bool value);
+		bool getState() { return state; };
 };
 

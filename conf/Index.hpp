@@ -16,5 +16,6 @@ class Index : public IDirective {
 		DIRTYPE getType(void) const;
 		void setFiles(char** value);
 		void setFile(char* value, unsigned int idx);
+		char** getFiles() const;
 };
 

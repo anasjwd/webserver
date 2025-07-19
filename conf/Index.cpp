@@ -27,3 +27,8 @@ void Index::setFile(char* value, unsigned int idx)
 {
 	files[idx] = value;
 }
+
+char** Index::getFiles() const
+{
+	return files;
+}
