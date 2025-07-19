@@ -273,6 +273,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	ResponseHandler				responseHandler;
 	struct epoll_event			ev, events[MAX_EVENTS];
 	time_t						lastTimeoutCheck = time(NULL);
+	
 	ResponseHandler::initialize();
 	while (true)
 	{
