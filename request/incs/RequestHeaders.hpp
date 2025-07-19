@@ -22,7 +22,7 @@ class	RequestHeaders
 		bool			_isValidHeaderName(const std::string&);
 		std::string		_toLowercase(const std::string&) const;
 		bool			_isValidHeaderValue(const std::string&);
-		bool			_storeHeader(std::string&, std::string&);
+		bool			_isDuplicated(std::string&, std::string&);
 
 	public:
 		RequestHeaders(const std::string&);

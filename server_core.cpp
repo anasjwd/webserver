@@ -9,6 +9,7 @@
 # include <netdb.h>
 # include <utility>
 # include <cstring>
+# include <signal.h>
 # include <iostream>
 # include <unistd.h>
 # include <algorithm>
@@ -270,7 +271,6 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	std::vector<Connection*>	connections;
 	char						buff[EIGHT_KB];
 	int							numberOfEvents;
-	ResponseHandler				responseHandler;
 	struct epoll_event			ev, events[MAX_EVENTS];
 	time_t						lastTimeoutCheck = time(NULL);
 	
@@ -279,9 +279,10 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	{
 		if (got_singint == true)
 		{
+			// free all connections here.
 			return ;
 		}
- 		if (time(NULL) - lastTimeoutCheck >= 1)
+		if (time(NULL) - lastTimeoutCheck >= 1)
 		{
 			checkForTimeouts(connections, ev, epollFd);
 			lastTimeoutCheck = time(NULL);
@@ -466,6 +467,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 
 void sigintHandler(int sig)
 {
+	(void)sig;
 	got_singint = true;
 }
 
