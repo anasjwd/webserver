@@ -1,6 +1,25 @@
 #include "cfg_parser.hpp"
 #define NUM_OF_DIRECTIVES 11
 
+char* removeQuotes(char* str)
+{
+	if (str[0] != '\"' && str[0] != '\'')
+		return ( strdup(str) );
+	char* newStr;
+	unsigned int j = 0;
+	char quoteType;
+
+	newStr = new char[strlen(str) - 1];
+	quoteType = str[0];
+	for (unsigned int i = 1; str[i] != quoteType; i++)
+	{
+		newStr[j] = str[i];
+		++j;
+	}
+	newStr[j] = '\0';
+	return ( newStr );
+}
+
 IDirective* createNode(std::vector<t_token*>&,unsigned int&);
 void consumeDirectives(
 		BlockDirective* block,
@@ -65,7 +84,7 @@ IDirective* parseLocationBlock(
 		delete location;
 		throw DirectiveException("invalid listen's content - invalid URI");
 	}
-	location->setUri(strdup(tokens[pos++]->data));
+	location->setUri(removeQuotes(tokens[pos++]->data));
 	if (pos >= tokensSize || tokens[pos]->type != BLOCK_START)
 	{
 		delete location;
@@ -103,8 +122,13 @@ IDirective* parseListenDirective(
 	{
 		listen->setHost(strdup("0.0.0.0"));
 		std::stringstream ss(tokens[pos++]->data);
-		unsigned int port;
+		unsigned short port;
 		ss >> port;
+		if (ss.fail() || ss.eof() == false)
+		{
+			delete listen;
+			throw DirectiveException("invalid content for listen directive - invalid PORT number");
+		}
 		listen->setPort(port);
 	}
 	else if (isHostAndPort(tokens, pos, tokensSize))
@@ -124,8 +148,13 @@ IDirective* parseListenDirective(
 				throw DirectiveException("incomplete listen directive - missing port");
 			}
 			std::stringstream ss(tokens[pos++]->data);
-			unsigned int port;
+			unsigned short port;
 			ss >> port;
+			if (ss.fail() || ss.eof() == false)
+			{
+				delete listen;
+				throw DirectiveException("invalid content for listen directive - invalid PORT number");
+			}
 			listen->setPort(port);
 		}
 		else
@@ -316,7 +345,7 @@ IDirective* parseErrorPage(
 		throw DirectiveException("invalid content for error_page directive - code must be between 300 and 599");
 	}
 	std::cout << ">> " << tokens[pos]->data << std::endl;
-	errorPage->setUri(strdup(tokens[pos++]->data));
+	errorPage->setUri(removeQuotes(tokens[pos++]->data));
 	if (pos >= tokensSize || tokens[pos]->type != DIR_END)
 	{
 		delete errorPage;
@@ -398,7 +427,7 @@ IDirective* parseReturnDirective(
 		delete return_dir;
 		throw DirectiveException("invalid argument for return directive - invalid url");
 	}
-	return_dir->setUrl(strdup(tokens[pos++]->data));
+	return_dir->setUrl(removeQuotes(tokens[pos++]->data));
 	if (tokens[pos]->type != DIR_END)
 	{
 		delete return_dir;

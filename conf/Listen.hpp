@@ -5,7 +5,7 @@
 class Listen : public IDirective {
 	private:
 		char* host;
-		unsigned int port;
+		unsigned short port;
 		Listen(const Listen& other);
 		Listen& operator=(const Listen& other);
 
