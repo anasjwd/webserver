@@ -2,6 +2,7 @@
 # include <ctime>
 # include <string>
 # include <vector>
+# include <fcntl.h>
 # include <sstream>
 # include <cstddef>
 # include <ostream>
@@ -14,17 +15,21 @@
 # include <sys/types.h>
 # include <arpa/inet.h>
 # include <sys/epoll.h>
-# include <sys/socket.h>
 # include <netinet/in.h>
-# include <signal.h>
+# include <sys/socket.h>
+# include <netinet/tcp.h>
+# include <sys/sendfile.h>
 # include "Connection.hpp"
 # include "conf/Server.hpp"
+# include "conf/Location.hpp"
 # include "conf/IDirective.hpp"
 # include "conf/cfg_parser.hpp"
+# include "conf/LimitExcept.hpp"
 # include "request/incs/Defines.hpp"
 # include "request/incs/Request.hpp"
 # include "response/include/Response.hpp"
 # include "response/include/ResponseHandler.hpp"
+# include "response/include/ErrorResponse.hpp"
 
 # define	NONESSENTIAL	101
 # define	MAX_EVENTS		512
@@ -205,14 +210,57 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 		Connection* conn = *it;
 		if (conn->req && conn->req->checkForTimeout())
 		{
+			std::cout << "Connection timeout for fd " << conn->fd << std::endl;
 			conn->req->setState(false, REQUEST_TIMEOUT);
-			conn->shouldKeepAlive = false;
-			ev.events = EPOLLOUT;
-			ev.data.fd = conn->fd;
-			epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
+			// send(conn->fd, "0\r\n\r\n", 5, 0);  // Final chunk
+			epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, &ev);
+			std::cout << "Closing connection fd " << conn->fd << std::endl;
+			conn->closeConnection(conn, connections, epollFd);
+			// Send timeout response.
+			// ev.events = EPOLLOUT;
+			// ev.data.fd = conn->fd;
+			// epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
+			// close(conn->fd);
 		}
 		++it;
 	}
+}
+
+// void	cleanupStaleConnections(std::vector<Connection*>& connections, int epollFd)
+// {
+// 	std::vector<Connection*>::iterator it = connections.begin();
+	
+// 	while (it != connections.end())
+// 	{
+// 		Connection* conn = *it;
+// 		time_t currentTime = time(NULL);
+		
+// 		// Close connections that have been idle for too long
+// 		if (currentTime - conn->lastTimeoutCheck > 300) // 5 minutes
+// 		{
+// 			std::cout << "Closing stale connection fd " << conn->fd << std::endl;
+// 			conn->closeConnection(conn, connections, epollFd);
+// 			it = connections.begin(); // Reset iterator after removal
+// 		}
+// 		else
+// 		{
+// 			++it;
+// 		}
+// 	}
+// }
+
+void	handleConnectionError(Connection* conn, std::vector<Connection*>& connections, int epollFd, const std::string& error)
+{
+	std::cout << "Connection error for fd " << conn->fd << ": " << error << std::endl;
+	
+	// Send error response if possible
+	if (conn->req) {
+		conn->res = ErrorResponse::createInternalErrorResponse();
+		std::string responseStr = conn->res.build();
+		send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
+	}
+	
+	conn->closeConnection(conn, connections, epollFd);
 }
 
 void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
@@ -225,12 +273,12 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	ResponseHandler				responseHandler;
 	struct epoll_event			ev, events[MAX_EVENTS];
 	time_t						lastTimeoutCheck = time(NULL);
-
+	
+	ResponseHandler::initialize();
 	while (true)
 	{
 		if (got_singint == true)
 		{
-			// do cleanup here
 			return ;
 		}
  		if (time(NULL) - lastTimeoutCheck >= 1)
@@ -238,6 +286,14 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 			checkForTimeouts(connections, ev, epollFd);
 			lastTimeoutCheck = time(NULL);
 		}
+		
+		// // Cleanup stale connections every 30 seconds
+		// if (time(NULL) - lastCleanupCheck >= 30)
+		// {
+		// 	cleanupStaleConnections(connections, epollFd);
+		// 	lastCleanupCheck = time(NULL);
+		// }
+		
 		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000);
 
 		for (int i = 0; i < numberOfEvents; i++)
@@ -247,7 +303,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				int clientFd = accept(events[i].data.fd, NULL, NULL);
 				if (clientFd == -1)
 				{
-					std::cout << "Error: failed to accept a client\n";
+					std::cout << "Error: failed to accept a client" << std::endl;
 					continue;
 				}
 				
@@ -294,49 +350,126 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				} 
 				else if (events[i].events & EPOLLOUT)
 				{
+					// std::cout << "Response: " << &conn << "\n";
 					if (conn->req)
 					{
-						std::cout << "State in res " << conn->fd << " : " << conn->req->getStatusCode() << "\n-----------------------------------\n";
-						conn->res = responseHandler.handleRequest((*conn->req), NULL, NULL);
-						std::string responseStr = conn->res.build();
-						
-						if (conn->req->getStatusCode() == OK)
-						{
-							std::string connectionHeader = conn->req->getRequestHeaders().getHeaderValue("connection");
-							if (!connectionHeader.empty() && connectionHeader != "close")
-								conn->shouldKeepAlive = true;
-						}
-
-						ssize_t sent = send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
-						if (sent == -1) {
-							std::cout << "Error sending response to client " << conn->fd << std::endl;
-						}
-
-						if (conn->shouldKeepAlive)
-						{
-							conn->req->clear();
-							ev.events = EPOLLIN;
-							ev.data.fd = conn->fd;
-							epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
-						}
-						else
-						{
-							std::cout << "Closing connection for client " << conn->fd << std::endl;
-							conn->closeConnection(conn, connections, epollFd);
+						// std::cout << "i am in response" << std::endl;
+						try {
+							if (conn->fileSendState == 0) {
+								conn->res = ResponseHandler::handleRequest(conn);
+								std::string responseStr = conn->res.build();
+							// 	if (conn->req->getStatusCode() == OK) {
+							// 		std::string connectionHeader = conn->req->getRequestHeaders().getHeaderValue("connection");
+							// 		if (!connectionHeader.empty() && connectionHeader != "close")
+							// 		conn->shouldKeepAlive = true;
+							// }
+							ssize_t sent = send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
+							std::cout<<responseStr<<std::endl;
+							std::cout<<"filesendstate: "<<conn->fileSendState<<"contnet-lenght: "<<conn->res.getFileSize()<<std::endl;
+								if (sent == -1) {
+									handleConnectionError(conn, connections, epollFd, "Header send error");
+									conn = NULL;
+									continue;
+								}
+								std::cout << "headers sent succefuly\n";
+								if (!conn->res.getFilePath().empty()) {
+									conn->fileFd = open(conn->res.getFilePath().c_str(), O_RDONLY);
+									if (conn->fileFd == -1) {
+										handleConnectionError(conn, connections, epollFd, "File open error");
+										conn = NULL;
+										continue;
+									}
+									conn->fileSendOffset = 0;
+									conn->fileSendState = 1;
+									break;
+								} else {
+									conn->fileSendState = 3;
+								}
+							}
+							if (conn->fileSendState == 1) {
+							std::cout<<"filesendstate: "<<conn->fileSendState<<std::endl;
+								char fileBuf[EIGHT_KB];
+								if (lseek(conn->fileFd, conn->fileSendOffset, SEEK_SET) == -1) {
+									close(conn->fileFd);
+									conn->fileFd = -1;
+									handleConnectionError(conn, connections, epollFd, "File seek error");
+									conn = NULL;
+									continue;
+								}
+								ssize_t bytesRead = read(conn->fileFd, fileBuf, sizeof(fileBuf));
+								if (bytesRead == 0) {
+									close(conn->fileFd);
+									conn->fileFd = -1;
+									conn->fileSendState = 3;
+								}
+								else if (bytesRead < 0) {
+									close(conn->fileFd);
+									conn->fileFd = -1;
+									handleConnectionError(conn, connections, epollFd, "File send error");
+									conn = NULL;
+									continue;
+								}
+								else {
+									
+									ssize_t bytesSent = send(conn->fd, fileBuf, bytesRead, 0);
+									std::cout << "reads  succefuly  "<<bytesSent<<"\n";
+									if (bytesSent == -1) {
+							std::cout<<"filesendstate: "<<conn->fileSendState<<"contnet-lenght: "<<conn->fileSendOffset<<std::endl;
+										conn->fileSendState = 3;
+										close(conn->fileFd);
+										conn->fileFd = -1;
+										break;
+									}
+									conn->fileSendOffset += bytesSent;
+									if (conn->fileSendOffset >= (ssize_t)conn->res.getFileSize()) {
+										close(conn->fileFd);
+										conn->fileFd = -1;
+										conn->fileSendState = 3;
+									}
+									break;
+								}
+							}
+							if (conn->fileSendState == 3) {
+							std::cout<<"filesendstate: "<<conn->fileSendState<<std::endl;
+							std::cout<<"filesendstate: "<<conn->fileSendState<<"contnet-lenght: "<<conn->fileSendOffset<<std::endl;
+							
+								if (conn->shouldKeepAlive) {
+									conn->req->clear();
+									conn->fileSendState = 0;
+									ev.events = EPOLLIN;
+									ev.data.fd = conn->fd;
+									epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
+								} else {
+									conn->closeConnection(conn, connections, epollFd);
+									conn = NULL;
+								}
+							}
+						} catch (const std::exception& e) {
+							std::cout << RED << "Exception in request handling: " << e.what() << RESET << std::endl;
+							handleConnectionError(conn, connections, epollFd, "Request handling exception");
+							conn = NULL;
+							continue;
 						}
 					}
+				}
+				else if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP)
+				{
+					std::cout << "Connection error or hangup on fd " << conn->fd << std::endl;
+					conn->closeConnection(conn, connections, epollFd);
+					conn = NULL;
 				}
 			}
 		}
 	}
 }
 
+
 void sigintHandler(int sig)
 {
 	got_singint = true;
 }
 
-int main(int ac, char** av)Htt
+int main(int ac, char** av)
 {
 	Http* http;
 	std::map<IpPortKey, int> sockAddr;
@@ -368,7 +501,7 @@ int main(int ac, char** av)Htt
 		delete http;
 		return ( 1 );
 	}
-	serverLoop(http, sockets, epollFd) == 1
+	serverLoop(http, sockets, epollFd);
 	closeSockets(sockets);
 	close(epollFd);
 	delete http;

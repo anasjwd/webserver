@@ -320,14 +320,10 @@ IDirective* parseErrorPage(
 		delete errorPage;
 		throw DirectiveException("invalid content for error_page directive - code must be between 300 and 599");
 	}
-	ss.str(tokens[pos++]->data);
-	ss.clear();
-	ss >> tmp;
-	errorPage->setResponseCode(tmp);
-	if (ss.fail() || ss.eof() == false)
-	{
+	// Accept only <uri> as the next argument
+	if (tokens[pos]->type != STRING) {
 		delete errorPage;
-		throw DirectiveException("invalid content for error_page directive - invalid response code number");
+		throw DirectiveException("invalid content for error_page directive - missing or invalid uri");
 	}
 	if (pos >= tokensSize)
 	{
@@ -349,7 +345,7 @@ IDirective* parseErrorPage(
 	if (pos >= tokensSize || tokens[pos]->type != DIR_END)
 	{
 		delete errorPage;
-		throw DirectiveException("incomplete error_page directive - missing \";\"");
+		throw DirectiveException("incomplete error_page directive - missing ';'");
 	}
 	else
 		++pos;

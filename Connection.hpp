@@ -8,8 +8,10 @@
 # include "conf/ErrorPage.hpp"
 # include "conf/IDirective.hpp"
 # include "conf/LimitExcept.hpp"
+# include "conf/Return.hpp"
 # include "request/incs/Request.hpp"
 # include "conf/ClientMaxBodySize.hpp"
+# include "conf/Index.hpp"
 # include "response/include/Response.hpp"
 
 class	Connection
@@ -23,7 +25,10 @@ class	Connection
 		Server			*conServer;
 		bool			shouldKeepAlive;
 		time_t			lastTimeoutCheck;
-		const Location	*matchedLocation;
+		bool			closed;
+		int fileFd;
+		int fileSendState; // 0: not started, 1: headers sent, 2: sending body, 3: done
+		ssize_t fileSendOffset;
 
 
 		Connection();
@@ -40,15 +45,19 @@ class	Connection
 		bool				checkMaxBodySize();
 		ClientMaxBodySize*	getClientMaxBodySize();
 
-		// Ahanaf:
+		// ahanaf
 		Root*				getRoot();
 		const Location*		getLocation();
+		// const Location*		getLocation() const;
 		AutoIndex*			getAutoIndex();
 		ErrorPage*			getErrorPage();
+		Index*				getIndex();
 		
 		// 
-		void				freeConnections(std::vector<Connection*>&);
 		Connection*			findConnectionByFd(int, std::vector<Connection*>&);
 		void				closeConnection(Connection*, std::vector<Connection*>&, int);
+
+		Return* getReturnDirective();
+		ErrorPage* getErrorPageForCode(int code);
 
 };
