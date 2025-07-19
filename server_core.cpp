@@ -36,6 +36,8 @@
 # define	BACKLOG			511
 # define	EIGHT_KB		8192
 
+bool got_singint = false;
+
 typedef std::pair<std::string, int> IpPortKey;
 
 std::string toString(int number)
@@ -203,7 +205,7 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 {
 	std::vector<Connection*>::iterator it = connections.begin();
 	
-	while (connections.size() > 0 && it != connections.end())
+	while (it != connections.end())
 	{
 		Connection* conn = *it;
 		if (conn->req && conn->req->checkForTimeout())
@@ -268,16 +270,16 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	std::vector<Connection*>	connections;
 	char						buff[EIGHT_KB];
 	int							numberOfEvents;
+	ResponseHandler				responseHandler;
 	struct epoll_event			ev, events[MAX_EVENTS];
 	time_t						lastTimeoutCheck = time(NULL);
-	// time_t						lastCleanupCheck = time(NULL);
-	// const int					MAX_CONNECTIONS = 1000; // Connection limit
-	
-	// Initialize ResponseHandler
 	ResponseHandler::initialize();
-
 	while (true)
 	{
+		if (got_singint == true)
+		{
+			return ;
+		}
  		if (time(NULL) - lastTimeoutCheck >= 1)
 		{
 			checkForTimeouts(connections, ev, epollFd);
@@ -297,12 +299,6 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 		{
 			if (std::find(sockets.begin(), sockets.end(), events[i].data.fd) != sockets.end())
 			{
-				// Check connection limit
-				// if (connections.size() >= MAX_CONNECTIONS) {
-				// 	std::cout << "Connection limit reached, rejecting new connection" << std::endl;
-				// 	continue;
-				// }
-				
 				int clientFd = accept(events[i].data.fd, NULL, NULL);
 				if (clientFd == -1)
 				{
@@ -310,17 +306,8 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					continue;
 				}
 				
-				// Set socket options for better performance
-				int optval = 1;
-				setsockopt(clientFd, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval));
-				
-				// Set non-blocking mode
-				int flags = fcntl(clientFd, F_GETFL, 0);
-				fcntl(clientFd, F_SETFL, flags | O_NONBLOCK);
-				
 				Connection* conn = new Connection(clientFd);
 				connections.push_back(conn);
-				std::cout << "Pushed back connection. Size: " << connections.size() << "\n";
 				
 				ev.events = EPOLLIN;
 				ev.data.fd = clientFd;
@@ -329,9 +316,9 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 			else
 			{
 				conn = conn->findConnectionByFd(events[i].data.fd, connections);
-				if (!conn || conn->closed)
+				if (!conn)
 					continue;
-			
+
 				if (events[i].events & EPOLLIN)
 				{
 					bytes = read(conn->fd, buff, EIGHT_KB);
@@ -343,7 +330,6 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 							conn->req = new Request(conn->fd);
 
 						conn->req->appendToBuffer(buff, bytes);
-
 						std::cout << "-----------------------------------\nState in req " << conn->fd << " : " << conn->req->getStatusCode() << "\n";
 						if (!conn->conServer)
 							conn->findServer(http);
@@ -476,6 +462,12 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	}
 }
 
+
+void sigintHandler(int sig)
+{
+	got_singint = true;
+}
+
 int main(int ac, char** av)
 {
 	Http* http;
@@ -488,6 +480,8 @@ int main(int ac, char** av)
 		std::cerr << "Error: config file missing.\n";
 		return ( 1 );
 	}
+	signal(SIGHUP, SIG_IGN);
+	signal(SIGINT, sigintHandler);
 	http = parseConfig(av[1]);
 	if (http == NULL)
 		return ( 1 );

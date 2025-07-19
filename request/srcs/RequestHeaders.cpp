@@ -1,3 +1,4 @@
+#include <cstdlib>
 # include <string>
 # include <cctype>
 # include <sstream>
@@ -15,6 +16,35 @@ std::string	RequestHeaders::_trimWhitespace(const std::string& str)
 		return "";
 	size_t	last = str.find_last_not_of(" \t");
 	return str.substr(first, (last - first + 1));
+}
+
+bool	RequestHeaders::_parseHostHeader(const std::string& value)
+{
+	if (value.empty() || value.find(' ') != std::string::npos)
+		return false;
+	
+	size_t colon_pos = value.find(':');
+	_hostPort = 0;
+	_hostName = value.substr(0, colon_pos);
+
+	if (colon_pos != std::string::npos)
+	{
+		std::string port_str = value.substr(colon_pos + 1);
+
+		if (!port_str.empty())
+		{
+			for (size_t i = 0; i < port_str.size(); ++i)
+			{
+				if (!isdigit(port_str[i]))
+					return false;
+			}
+			unsigned long port = strtoul(port_str.c_str(), NULL, 10);
+			_hostPort = static_cast<unsigned int>(port);
+		}
+		else
+			return false;
+	}
+	return true;
 }
 
 bool	RequestHeaders::_isValidHeaderName(const std::string& name)
@@ -58,23 +88,18 @@ bool	RequestHeaders::_isValidHeaderValue(const std::string& value)
 	return true;
 }
 
-bool	RequestHeaders::_isDuplicated(std::string& f_name, std::string& val)
+bool	RequestHeaders::_storeHeader(std::string& f_name, std::string& val)
 {
-	std::map<std::string, std::string>::iterator it = _headers.find(f_name);
-
 	if (f_name == "set-cookie" || f_name == "warning")
 	{
 		_multiHeaders[f_name].push_back(val);
 		return true;
 	}
 
+	std::map<std::string, std::string>::iterator it = _headers.find(f_name);
+
 	if (it != _headers.end())
-	{
-		if (f_name == "host" || f_name == "content-length" || f_name == "content-type")
-			return setState(false, BAD_REQUEST);
-		else
-			it->second += ", " + val;
-	}
+		it->second += ", " + val;
 	else
 		_headers[f_name] = val;
 
@@ -89,8 +114,6 @@ void	RequestHeaders::clear()
 	_statusCode = START;
 	_multiHeaders.clear();
 }
-
-// TODO: Check for method, limit_except
 
 bool	RequestHeaders::parse()
 {
@@ -120,6 +143,15 @@ bool	RequestHeaders::parse()
 	return setState(true, OK);
 }
 
+const std::string&	RequestHeaders::getHostName() const
+{
+	return _hostName;
+}
+
+unsigned int	RequestHeaders::getHostPort() const
+{
+	return _hostPort;
+}
 
 HttpStatusCode	RequestHeaders::getStatusCode() const
 {
@@ -141,12 +173,12 @@ bool	RequestHeaders::checkAndStore(std::string& line, size_t colonPos)
 		return setState(false, BAD_REQUEST);
 
 	std::string lowerName = _toLowercase(name);
-	if (!_isDuplicated(lowerName, value))
+	if (!_storeHeader(lowerName, value))
 		return setState(false, BAD_REQUEST);
 
 	if (lowerName == "host")
 	{
-		if (value.empty() || value.find(' ') != std::string::npos)
+		if (!_parseHostHeader(value))
 			return setState(false, BAD_REQUEST);
 		_hasHost = true;
 	}

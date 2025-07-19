@@ -14,7 +14,7 @@
 # include "conf/Index.hpp"
 # include "response/include/Response.hpp"
 
-class   Connection
+class	Connection
 {
 	public:
 		int				fd;

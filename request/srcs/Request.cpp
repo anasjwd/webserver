@@ -2,6 +2,7 @@
 # include <climits>
 # include <cstddef>
 # include <cstdlib>
+#include <iostream>
 # include "../incs/Request.hpp"
 
 Request::Request()
@@ -78,8 +79,9 @@ bool	Request::_processContentLength()
 	if (*end != '\0' || contentLengthStr.empty())
 		return setState(false, BAD_REQUEST);
 
-	if (contentLength > MAX_BODY_SIZE)
-		return setState(false, PAYLOAD_TOO_LARGE);
+	// TODO: IS THIS SHOULD BE HERE!
+	// if (contentLength > MAX_BODY_SIZE)
+	// 	return setState(false, PAYLOAD_TOO_LARGE);
 
 	if (contentLength == 0 && (_rl.getMethod() == "GET" || _rl.getMethod() == "DELETE"))
 		return setState(true, OK);
@@ -102,7 +104,6 @@ bool	Request::_processChunkedTransfer()
 
 bool	Request::_validateMethodBodyCompatibility()
 {
-	// TODO: Should be developped to fix all cases (Second check).
 	const std::string& method = _rl.getMethod();
 	bool hasBody = _rb.getContentLength() > 0 || _rb.isChunked();
 
@@ -173,8 +174,11 @@ const int&	Request::getFd() const
 bool	Request::checkForTimeout() const
 {
 	time_t currentTime = time(NULL);
-	if (currentTime - _lastActivityTime > 10)
+	if (currentTime - _lastActivityTime > TIMEOUT_SECONDS)
+	{
+		std::cout << "Timeout detected for fd " << _fd << std::endl;
 		return true;
+	}
 	return false;
 }
 
@@ -232,6 +236,7 @@ bool	Request::lineSection()
 	if (crlf_pos == std::string::npos)
 		return false;
 
+	std::cout << "Request line: " << _buffer.substr(0, crlf_pos) << std::endl;
 	_rl = RequestLine(_buffer.substr(0, crlf_pos));
 	if (!_rl.parse())
 		return setState(false, _rl.getStatusCode());
@@ -248,10 +253,11 @@ bool	Request::headerSection()
 	if (end_header == std::string::npos)
 		return false;
 
-	std::string headersStr = _buffer.substr(0, end_header + 2);
+	const std::string headersStr = _buffer.substr(0, end_header + 2);
 	if (headersStr.empty())
 		return setState(false, BAD_REQUEST);
 
+	std::cout << "Request headers:\n" << _buffer.substr(0, end_header) << std::endl;
 	_rh = RequestHeaders(headersStr);
 	if (!_rh.parse())
 		return setState(false, _rh.getStatusCode());
@@ -261,10 +267,9 @@ bool	Request::headerSection()
 	if (!_processBodyHeaders() || !_validateMethodBodyCompatibility())
 		return false;
 
-	if (_state != COMPLETE)
-	{
+	if (_rb.isExpected())
 		_state = BODY;
-	}
+
 	return true;
 }
 

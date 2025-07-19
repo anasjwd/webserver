@@ -1,4 +1,5 @@
 # include <cctype>
+#include <iostream>
 # include <sstream>
 # include <cstdlib>
 # include "../incs/RequestLine.hpp"
@@ -10,7 +11,6 @@ RequestLine::RequestLine(const std::string& raw)
 
 bool	RequestLine::_validateMethod()
 {
-	// TODO: Function that gets the allowed methods. Maybe it couldn't be here because of there's no host till now, which mean there no specific server to search in.
 	const std::string allowedMethods[] = {"GET", "POST", "DELETE"};
 	const size_t count = sizeof(allowedMethods)/sizeof(allowedMethods[0]);
 
@@ -18,6 +18,7 @@ bool	RequestLine::_validateMethod()
 		if (_method == allowedMethods[i])
 			return true;
 
+	std::cerr << "Invalid method: " << _method << std::endl;
 	return setState(false, METHOD_NOT_ALLOWED);
 }
 
