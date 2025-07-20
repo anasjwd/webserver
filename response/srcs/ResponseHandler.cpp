@@ -95,7 +95,8 @@ std::vector<std::string> ResponseHandler::_getAllowedMethods(Connection* conn) {
                 methods.push_back(std::string(allowedMethods[i]));
             }
         }
-    }else {std::cout << BRED << "means that limitexcept == NULL" << RESET << std::endl;}
+    }
+    else {std::cout << BRED << "means that limitexcept == NULL" << RESET << std::endl;}
     if (methods.empty()) {
         methods.push_back("GET");
     }
@@ -177,66 +178,6 @@ std::string ResponseHandler::_generateDirectoryListing(const std::string& path, 
     return html;
 }
 
-#include <fstream>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <string>
-#include <cstring>
-#include <cerrno>
-
-
-bool copydir(    const std::string& sourcePath,
-    const std::string& destDir,
-    const std::string& destFilename = ""
-) {
-    // Check if source file exists
-    struct stat sourceStat;
-    if (stat(sourcePath.c_str(), &sourceStat) != 0 || !S_ISREG(sourceStat.st_mode)) {
-        std::cerr << RED << "Source file does not exist: " << sourcePath << RESET << std::endl;
-        return false;
-    }
-
-    // Determine destination filename
-    std::string filename = destFilename;
-    if (filename.empty()) {
-        size_t lastSlash = sourcePath.find_last_of('/');
-        if (lastSlash != std::string::npos) {
-            filename = sourcePath.substr(lastSlash + 1);
-        } else {
-            filename = sourcePath;
-        }
-    }
-
-    std::string destPath = destDir;
-    if (!destPath.empty() && destPath[destPath.size() - 1] != '/') destPath += "/";
-    destPath += filename;
-
-    std::ifstream srcFile(sourcePath.c_str(), std::ios::binary);
-    if (!srcFile.is_open()) {
-        std::cerr << RED << "Failed to open source file: " << sourcePath << RESET << std::endl;
-        return false;
-    }
-
-    // Open destination file
-    std::ofstream dstFile(destPath.c_str(), std::ios::binary | std::ios::trunc);
-    if (!dstFile.is_open()) {
-        std::cerr << RED << "Failed to create destination file: " << destPath << RESET << std::endl;
-        srcFile.close();
-        return false;
-    }
-
-    // Copy file contents
-    dstFile << srcFile.rdbuf();
-
-    // Close files
-    srcFile.close();
-    dstFile.close();
-
-    std::cout << GREEN << "Copied: " << sourcePath << " → " << destPath << RESET << std::endl;
-    return true;
-}
-
-
 Response ResponseHandler::handleRequest(Connection* conn) 
 {
     if (!conn || !conn->req) return ErrorResponse::createInternalErrorResponse();
@@ -315,15 +256,8 @@ Response ResponseHandler::handleRequest(Connection* conn)
     }
     else if (method == "POST")
     {
-        std::string tempPath = conn->req->getRequestBody().uploadpath; // e.g., "/tmp/upload.tmp"
-        std::string destDir = "www/uploads"; // Destination directory
-
-        // Copy the uploaded file
-        if (copydir(tempPath, destDir)) {
-            return FileResponse::serve("www/201.html", "text/html", 201); // Success
-        return ErrorResponse::createInternalErrorResponse(); // Failed to copy
+        return FileResponse::serve("www/201.html", _getMimeType("www/201.html"), 201);
     }
+    return ErrorResponse::createInternalErrorResponse();
 }
-    return ErrorResponse::createNotFoundResponse(conn);
-}
-void ResponseHandler::initialize() {}
+// void ResponseHandler::initialize() {}

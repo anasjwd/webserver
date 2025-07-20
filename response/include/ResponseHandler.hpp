@@ -13,7 +13,7 @@ class Connection;
 
 class ResponseHandler {
 public:
-    static void initialize();
+    // static void initialize();
     static Response handleRequest(Connection* conn);
     static Response createErrorResponse(int statusCode, const std::string& message);
     static Response createMethodNotAllowedResponse(Connection* conn, const std::vector<std::string>& allowedMethods);

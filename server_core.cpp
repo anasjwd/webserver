@@ -214,7 +214,6 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 		{
 			std::cout << "Connection timeout for fd " << conn->fd << std::endl;
 			conn->req->setState(false, REQUEST_TIMEOUT);
-			// send(conn->fd, "0\r\n\r\n", 5, 0);  // Final chunk
 			epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, &ev);
 			std::cout << "Closing connection fd " << conn->fd << std::endl;
 			conn->closeConnection(conn, connections, epollFd);
@@ -270,7 +269,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	struct epoll_event			ev, events[MAX_EVENTS];
 	time_t						lastTimeoutCheck = time(NULL);
 
-	ResponseHandler::initialize();
+	// ResponseHandler::initialize();
 
 	while (true)
 	{
@@ -370,6 +369,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 									conn = NULL;
 									continue;
 								}
+								conn->req->setLastActivityTime(time(NULL));
 								std::cout << "headers sent succefuly\n";
 								if (!conn->res.getFilePath().empty()) {
 									conn->fileFd = open(conn->res.getFilePath().c_str(), O_RDONLY);
@@ -381,6 +381,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 									conn->fileSendOffset = 0;
 									conn->fileSendState = 1;
 									break;
+									// continue;
 								} else {
 									conn->fileSendState = 3;
 								}
@@ -419,6 +420,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 										conn->fileFd = -1;
 										break;
 									}
+									conn->req->setLastActivityTime(time(NULL));
 									conn->fileSendOffset += bytesSent;
 									if (conn->fileSendOffset >= (ssize_t)conn->res.getFileSize()) {
 										close(conn->fileFd);

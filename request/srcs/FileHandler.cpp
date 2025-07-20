@@ -1,11 +1,12 @@
 # include <cstdio>
 # include <cstdlib>
 # include <cstring>
+# include <iostream>
+# include <unistd.h>
 # include <stdexcept>
 # include "../incs/FileHandler.hpp"
 
 const std::string FileHandler::TEMP_DIR = "/tmp";
-const std::string FileHandler::UPLOAD_DIR = "/home/achraf/Desktop/newest/upload";
 
 FileHandler::FileHandler() 
 	:	_fd(-1), _size(0), _offset(0), _isOpen(false), _isTemp(false)
@@ -73,10 +74,16 @@ bool	FileHandler::_createTempResponse()
 
 bool	FileHandler::_createUploadFile(const std::string& filename)
 {
+	std::cout << "Creating upload file named: " << filename << "\n"; 
 	if (filename.empty())
 		throw std::runtime_error("Filename required for upload file");
 
-	if (!exists(UPLOAD_DIR) && !createDirectory(UPLOAD_DIR))
+	char buf[WS_PATH_MAX];
+
+	if (getcwd(buf, WS_PATH_MAX))
+		_uploadDir = std::string(buf) + "/upload";
+
+	if (!exists(_uploadDir) && !createDirectory(_uploadDir))
 		throw std::runtime_error("Failed to create upload directory");
 
 	std::string full_path = getUploadPath(filename);
@@ -89,6 +96,7 @@ bool	FileHandler::_createUploadFile(const std::string& filename)
 	_isOpen = true;
 	_isTemp = false;
 	_path = full_path;
+	std::cout << "Succesfully created!\n"; 
 	return true;
 }
 
@@ -266,5 +274,5 @@ bool	FileHandler::createDirectory(const std::string& path)
 
 std::string	FileHandler::getUploadPath(const std::string& filename)
 {
-	return UPLOAD_DIR + "/" + filename;
+	return _uploadDir + "/" + filename;
 }
