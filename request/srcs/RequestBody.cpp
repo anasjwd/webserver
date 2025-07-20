@@ -1,5 +1,6 @@
 # include <cstdlib>
 # include <sstream>
+# include <iostream>
 # include <unistd.h>
 # include <sys/stat.h>
 # include "../incs/RequestBody.hpp"
@@ -16,6 +17,7 @@ RequestBody::RequestBody()
 RequestBody::~RequestBody()
 {
 	_fileHandler.remove();
+	_uploadHandler.remove();
 }
 
 bool	RequestBody::_parseChunkSize(const std::string& buf)
@@ -78,93 +80,179 @@ bool	RequestBody::_processChunkData(const char* data, size_t len)
 
 	return true;
 }
+
+// bool RequestBody::_processMultipartChunk(const char* data, size_t len)
+// {
+// 	std::cout << "Parsing mutlipart!\n";
+// 	static std::string headerBuffer;
+// 	static bool boundarySeen = false;
+// 	static bool parsingHeaders = true;
+
+// 	size_t i = 0;
+// 	while (i < len)
+// 	{
+// 		_multipartBuffer += data[i];
+// 		i++;
+
+// 		if (!boundarySeen)
+// 		{
+// 			if (_multipartBuffer.find(_boundary) != std::string::npos)
+// 			{
+// 				_multipartBuffer.clear();
+// 				boundarySeen = true;
+// 				std::cout << "Boundary found!\n";
+// 			}
+// 			continue;
+// 		}
+
+// 		if (parsingHeaders)
+// 		{
+// 			std::cout << "Parsing headers!\n";
+// 			headerBuffer += _multipartBuffer;
+// 			_multipartBuffer.clear();
+
+// 			size_t headerEnd = headerBuffer.find(CRLFCRLF);
+// 			if (headerEnd == std::string::npos)
+// 				continue;
+
+// 			std::string headers = headerBuffer.substr(0, headerEnd);
+// 			headerBuffer.erase(0, headerEnd + 4);
+// 			parsingHeaders = false;
+
+// 			// Parse filename
+// 			std::istringstream stream(headers);
+// 			std::string line;
+// 			while (std::getline(stream, line))
+// 			{
+// 				if (line.find("Content-Disposition:") != std::string::npos)
+// 				{
+// 					size_t filenamePos = line.find("filename=\"");
+// 					if (filenamePos != std::string::npos)
+// 					{
+// 						std::cout << "Upload case!\n";
+// 						size_t start = filenamePos + 10;
+// 						size_t end = line.find("\"", start);
+// 						_currentFilename = line.substr(start, end - start);
+
+// 						if (!_uploadHandler.create(UPLOAD_FILE))
+// 							return setState(false, INTERNAL_SERVER_ERROR);
+// 					}
+// 				}
+// 			}
+// 			continue;
+// 		}
+
+// 		if (_multipartBuffer.size() >= _boundary.size() + 6)
+// 		{
+// 			size_t boundaryPos = _multipartBuffer.find("\r\n" + _boundary);
+// 			if (boundaryPos != std::string::npos)
+// 			{
+// 				if (!_currentFilename.empty())
+// 				{
+// 					if (!_uploadHandler.write(_multipartBuffer.c_str(), boundaryPos))
+// 						return setState(false, INTERNAL_SERVER_ERROR);
+// 				}
+// 				_isCompleted = true;
+// 				return true;
+// 			}
+// 		}
+
+// 		if (_multipartBuffer.size() > _boundary.size() + 6)
+// 		{
+// 			size_t safeWriteSize = _multipartBuffer.size() - (_boundary.size() + 6);
+// 			if (!_currentFilename.empty())
+// 			{
+// 				if (!_uploadHandler.write(_multipartBuffer.c_str(), safeWriteSize))
+// 					return setState(false, INTERNAL_SERVER_ERROR);
+// 			}
+// 			_multipartBuffer.erase(0, safeWriteSize);
+// 		}
+// 	}
+
+// 	return true;
+// }
+
 bool RequestBody::_processMultipartChunk(const char* data, size_t len)
 {
-	static std::string headerBuffer;
-	static bool boundarySeen = false;
-	static bool parsingHeaders = true;
+	std::cout << "\n[Multipart] Processing " << len << " bytes\n";
 
-	size_t i = 0;
-	while (i < len)
+	_multipartBuffer.append(data, len);
+
+	if (!_isCurrentPartFile)
 	{
-		_multipartBuffer += data[i];
-		i++;
-
-		if (!boundarySeen)
+		if (!_fileHandler.write(data, len))
 		{
-			if (_multipartBuffer.find(_boundary) != std::string::npos)
-			{
-				_multipartBuffer.clear();
-				boundarySeen = true;
-			}
-			continue;
+			std::cerr << "[Multipart] Failed to write to _fileHandler\n";
+			return setState(false, INTERNAL_SERVER_ERROR);
 		}
+		_bytesReceived += len;
+	}
 
-		if (parsingHeaders)
+	if (!_inPart)
+	{
+		size_t dispPos = _multipartBuffer.find("Content-Disposition: form-data;");
+		if (dispPos == std::string::npos)
+			return true;
+
+		size_t filenamePos = _multipartBuffer.find("filename=\"", dispPos);
+		if (filenamePos != std::string::npos)
 		{
-			headerBuffer += _multipartBuffer;
-			_multipartBuffer.clear();
-
-			size_t headerEnd = headerBuffer.find("\r\n\r\n");
-			if (headerEnd == std::string::npos)
-				continue; // wait for more header data
-
-			std::string headers = headerBuffer.substr(0, headerEnd);
-			headerBuffer.erase(0, headerEnd + 4);
-			parsingHeaders = false;
-
-			// Parse filename
-			std::istringstream stream(headers);
-			std::string line;
-			while (std::getline(stream, line))
+			size_t start = filenamePos + 10;
+			size_t end = _multipartBuffer.find('"', start);
+			if (end != std::string::npos)
 			{
-				if (line.find("Content-Disposition:") != std::string::npos)
+				_currentFilename = _multipartBuffer.substr(start, end - start);
+				_isCurrentPartFile = true;
+				std::cout << "[Multipart] Found file part: " << _currentFilename << "\n";
+
+				if (!_uploadHandler.create(UPLOAD_FILE, _currentFilename))
 				{
-					size_t filenamePos = line.find("filename=\"");
-					if (filenamePos != std::string::npos)
-					{
-						size_t start = filenamePos + 10;
-						size_t end = line.find("\"", start);
-						_currentFilename = line.substr(start, end - start);
-
-						if (!_uploadHandler.create(UPLOAD_FILE))
-							return setState(false, INTERNAL_SERVER_ERROR);
-					}
-				}
-			}
-			continue;
-		}
-
-		if (_multipartBuffer.size() >= _boundary.size() + 6)
-		{
-			size_t boundaryPos = _multipartBuffer.find("\r\n" + _boundary);
-			if (boundaryPos != std::string::npos)
-			{
-				if (!_currentFilename.empty())
-				{
-					if (!_uploadHandler.write(_multipartBuffer.c_str(), boundaryPos))
-						return setState(false, INTERNAL_SERVER_ERROR);
-				}
-				_isCompleted = true;
-				return true;
-			}
-		}
-
-		if (_multipartBuffer.size() > _boundary.size() + 6)
-		{
-			size_t safeWriteSize = _multipartBuffer.size() - (_boundary.size() + 6);
-			if (!_currentFilename.empty())
-			{
-				if (!_uploadHandler.write(_multipartBuffer.c_str(), safeWriteSize))
+					std::cerr << "[Multipart] Failed to create upload file\n";
 					return setState(false, INTERNAL_SERVER_ERROR);
+				}
 			}
-			_multipartBuffer.erase(0, safeWriteSize);
+		}
+		_inPart = true;
+	}
+
+	std::string boundaryLine = "--" + _boundary;
+	size_t boundaryPos;
+	while ((boundaryPos = _multipartBuffer.find(boundaryLine)) != std::string::npos)
+	{
+		std::cout << "[Multipart] Found boundary\n";
+
+		size_t partDataStart = _multipartBuffer.find(CRLFCRLF);
+		if (partDataStart == std::string::npos)
+			break;
+
+		partDataStart += 4;
+		size_t partDataEnd = boundaryPos - 2;
+		if (_isCurrentPartFile)
+		{
+			size_t partLen = partDataEnd - partDataStart;
+			if (!_uploadHandler.write(_multipartBuffer.data() + partDataStart, partLen))
+			{
+				std::cerr << "[Multipart] Failed to write to upload file\n";
+				return setState(false, INTERNAL_SERVER_ERROR);
+			}
+			std::cout << "[Multipart] Wrote " << partLen << " bytes to upload file\n";
+		}
+
+		// Advance past this boundary
+		_multipartBuffer.erase(0, boundaryPos + boundaryLine.size());
+		_isCurrentPartFile = false;
+		_inPart = false;
+
+		if (_multipartBuffer.find("--") == 0)
+		{
+			std::cout << "[Multipart] Final boundary found\n";
+			_isCompleted = true;
+			return true;
 		}
 	}
 
 	return true;
 }
-
 
 
 void	RequestBody::clear()
@@ -546,7 +634,7 @@ bool	RequestBody::receiveData(const char* data, size_t len)
 // 	size_t file_end = _rawData.find("\"", file_start);
 // 	std::string filename = _rawData.substr(file_start, file_end - file_start);
 
-// 	size_t content_start = _rawData.find(END_HEADER, file_end) + 4;
+// 	size_t content_start = _rawData.find(CRLFCRLF, file_end) + 4;
 // 	if (content_start == std::string::npos + 4) return false;
 	
 // 	size_t content_end = _rawData.find(boundary, content_start) - 2;

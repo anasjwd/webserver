@@ -5,7 +5,7 @@
 # include "../incs/FileHandler.hpp"
 
 const std::string FileHandler::TEMP_DIR = "/tmp";
-const std::string FileHandler::UPLOAD_DIR = "/home/achraf/Desktop/1337/webserver/upload";
+const std::string FileHandler::UPLOAD_DIR = "/home/achraf/Desktop/newest/upload";
 
 FileHandler::FileHandler() 
 	:	_fd(-1), _size(0), _offset(0), _isOpen(false), _isTemp(false)

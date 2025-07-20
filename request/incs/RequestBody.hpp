@@ -23,6 +23,7 @@ class	RequestBody
 		std::string			_currentFilename;
 		std::string			_multipartBuffer;
 		bool				_isCurrentPartFile;
+		bool _parsingHeaders;
 
 		size_t				_chunkParsePos;
 		size_t				_currentChunkSize;

@@ -9,7 +9,7 @@
 # define	DEFAULT_MAX_BODY_SIZE	1048576;
 
 # define	CRLF					"\r\n"
-# define	END_HEADER				"\r\n\r\n"
+# define	CRLFCRLF				"\r\n\r\n"
 # define	HTTP_VERSION			"HTTP/1.1"
 
 enum    FileType
