@@ -1,5 +1,5 @@
 CXX = c++ -std=c++98
-CXXFLAGS = -Wall -Wextra -Werror -g3 -fsanitize=address
+CXXFLAGS = -Wall -Wextra -Werror #-g3 -fsanitize=address
 TARGET = webserv
 
 SRCS     = $(wildcard conf/*.cpp request/srcs/*.cpp response/srcs/*.cpp) Connection.cpp server_core.cpp

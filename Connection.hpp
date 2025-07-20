@@ -47,17 +47,18 @@ class	Connection
 
 		// ahanaf
 		Root*				getRoot();
+		Index*				getIndex();
 		const Location*		getLocation();
 		// const Location*		getLocation() const;
 		AutoIndex*			getAutoIndex();
 		ErrorPage*			getErrorPage();
-		Index*				getIndex();
 		
 		// 
 		Connection*			findConnectionByFd(int, std::vector<Connection*>&);
 		void				closeConnection(Connection*, std::vector<Connection*>&, int);
+		void				freeConnections(std::vector<Connection*>&);
 
-		Return* getReturnDirective();
-		ErrorPage* getErrorPageForCode(int code);
+		Return*				getReturnDirective();
+		ErrorPage*			getErrorPageForCode(int);
 
 };

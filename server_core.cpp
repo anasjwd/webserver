@@ -9,6 +9,7 @@
 # include <netdb.h>
 # include <utility>
 # include <cstring>
+# include <signal.h>
 # include <iostream>
 # include <unistd.h>
 # include <algorithm>
@@ -26,6 +27,7 @@
 # include "conf/cfg_parser.hpp"
 # include "conf/LimitExcept.hpp"
 # include "request/incs/Defines.hpp"
+#include "request/incs/FileHandler.hpp"
 # include "request/incs/Request.hpp"
 # include "response/include/Response.hpp"
 # include "response/include/ResponseHandler.hpp"
@@ -216,11 +218,6 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 			epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, &ev);
 			std::cout << "Closing connection fd " << conn->fd << std::endl;
 			conn->closeConnection(conn, connections, epollFd);
-			// Send timeout response.
-			// ev.events = EPOLLOUT;
-			// ev.data.fd = conn->fd;
-			// epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
-			// close(conn->fd);
 		}
 		++it;
 	}
@@ -270,30 +267,31 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	std::vector<Connection*>	connections;
 	char						buff[EIGHT_KB];
 	int							numberOfEvents;
-	ResponseHandler				responseHandler;
 	struct epoll_event			ev, events[MAX_EVENTS];
 	time_t						lastTimeoutCheck = time(NULL);
-	
+
 	ResponseHandler::initialize();
+
 	while (true)
 	{
 		if (got_singint == true)
 		{
+			// free all connections here.
+			conn->freeConnections(connections);
 			return ;
 		}
- 		if (time(NULL) - lastTimeoutCheck >= 1)
+		if (time(NULL) - lastTimeoutCheck >= 1)
 		{
 			checkForTimeouts(connections, ev, epollFd);
 			lastTimeoutCheck = time(NULL);
 		}
-		
 		// // Cleanup stale connections every 30 seconds
 		// if (time(NULL) - lastCleanupCheck >= 30)
 		// {
 		// 	cleanupStaleConnections(connections, epollFd);
 		// 	lastCleanupCheck = time(NULL);
 		// }
-		
+
 		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000);
 
 		for (int i = 0; i < numberOfEvents; i++)
@@ -337,11 +335,12 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 						if (!conn->checkMaxBodySize())
 						{
 							std::cout << "PAYLOAD_TOO_LARGE\n";
-							conn->req->setState(true, PAYLOAD_TOO_LARGE);
+							conn->req->setState(false, PAYLOAD_TOO_LARGE);
 						}
 
 						if (conn->req->isRequestDone())
 						{
+							std::cout << "Request done with state: " << conn->req->getStatusCode() << "\n";
 							ev.events = EPOLLOUT;
 							ev.data.fd = conn->fd;
 							epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
@@ -466,6 +465,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 
 void sigintHandler(int sig)
 {
+	(void)sig;
 	got_singint = true;
 }
 

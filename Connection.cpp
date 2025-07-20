@@ -118,7 +118,7 @@ IDirective*	Connection::getDirective(DIRTYPE type)
 		return NULL;
 
 	for (std::vector<IDirective*>::iterator dit = conServer->directives.begin(); 
-		 dit != conServer->directives.end(); ++dit) 
+		dit != conServer->directives.end(); ++dit) 
 	{
 		if ((*dit) && (*dit)->getType() == type)
 			return *dit;
@@ -249,28 +249,28 @@ Root*	Connection::getRoot()
 
 AutoIndex* Connection::getAutoIndex()
 {
-    const Location* location = getLocation();
-    if (location) {
-        char* locUri = location->getUri();
-        if (locUri) std::cout << locUri << std::endl;
-        for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); 
-        dit != location->directives.end(); ++dit) 
-        {
-            if ((*dit)->getType() == AUTOINDEX) {
-                AutoIndex* locAutoIndex = static_cast<AutoIndex*>(*dit);
-                if (locAutoIndex) {
-                    return locAutoIndex;
-                }
-            }
-        }
-    }
-    AutoIndex* autoindex = static_cast<AutoIndex*>(getDirective(AUTOINDEX));
-    if (autoindex) {
-        return autoindex;
-    }
-    static AutoIndex defaultOff;
-    defaultOff.setState(false);
-    return &defaultOff;
+	const Location* location = getLocation();
+	if (location) {
+		char* locUri = location->getUri();
+		if (locUri) std::cout << locUri << std::endl;
+		for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); 
+		dit != location->directives.end(); ++dit) 
+		{
+			if ((*dit)->getType() == AUTOINDEX) {
+				AutoIndex* locAutoIndex = static_cast<AutoIndex*>(*dit);
+				if (locAutoIndex) {
+					return locAutoIndex;
+				}
+			}
+		}
+	}
+	AutoIndex* autoindex = static_cast<AutoIndex*>(getDirective(AUTOINDEX));
+	if (autoindex) {
+		return autoindex;
+	}
+	static AutoIndex defaultOff;
+	defaultOff.setState(false);
+	return &defaultOff;
 }
 
 Return* Connection::getReturnDirective(){
@@ -294,20 +294,20 @@ Return* Connection::getReturnDirective(){
 }
 
 Index* Connection::getIndex() {
-    const Location* location = getLocation();
-    if (location) {
-        for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); 
-        dit != location->directives.end(); ++dit) 
-        {
-            if ((*dit)->getType() == INDEX) {
-                return static_cast<Index*>(*dit);
-            }
-        }
-    }
-    Index* index = static_cast<Index*>(getDirective(INDEX));
-    if (index)
-        return index;
-    return NULL;
+	const Location* location = getLocation();
+	if (location) {
+		for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); 
+		dit != location->directives.end(); ++dit) 
+		{
+			if ((*dit)->getType() == INDEX) {
+				return static_cast<Index*>(*dit);
+			}
+		}
+	}
+	Index* index = static_cast<Index*>(getDirective(INDEX));
+	if (index)
+		return index;
+	return NULL;
 }
 
 ErrorPage* Connection::getErrorPage() {
@@ -354,30 +354,31 @@ ErrorPage* Connection::getErrorPageForCode(int code) {
 
 void Connection::closeConnection(Connection* conn, std::vector<Connection*>& connections, int epollFd)
 {
-    if (!conn || conn->closed)
-        return;
+	if (!conn || conn->closed)
+		return;
 
-    conn->closed = true;
+	conn->closed = true;
 
-    if (epollFd != -1 && conn->fd != -1)
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, NULL);
+	if (epollFd != -1 && conn->fd != -1)
+		epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, NULL);
 
-    if (conn->fileFd != -1) {
-        close(conn->fileFd);
-        conn->fileFd = -1;
-    }
-
-    if (conn->fd != -1) {
-        close(conn->fd);
-        conn->fd = -1;
-    }
+	if (conn->fileFd != -1)
+	{
+		close(conn->fileFd);
+		conn->fileFd = -1;
+	}
+	if (conn->fd != -1)
+	{
+		close(conn->fd);
+		conn->fd = -1;
+	}
 
 	delete conn->req;
 	conn->req = NULL;
-	
+
 	connections.erase(
-	    std::remove(connections.begin(), connections.end(), conn),
-	    connections.end()
+		std::remove(connections.begin(), connections.end(), conn),
+		connections.end()
 	);
 	if (std::find(connections.begin(), connections.end(), conn) != connections.end())
 	{
@@ -396,4 +397,29 @@ void Connection::closeConnection(Connection* conn, std::vector<Connection*>& con
 	delete conn;
 	conn = NULL;
 	std::cout << "Connection closed and deleted" << std::endl;
+}
+
+void	Connection::freeConnections(std::vector<Connection*>& connections)
+{
+    for (std::vector<Connection*>::iterator it = connections.begin(); it != connections.end(); ++it)
+    {
+        Connection* conn = *it;
+        if (conn->req)
+        {
+            delete conn->req;
+            conn->req = NULL;
+        }
+        if (conn->fileFd != -1)
+        {
+            close(conn->fileFd);
+            conn->fileFd = -1;
+        }
+        if (conn->fd != -1)
+        {
+            close(conn->fd);
+            conn->fd = -1;
+        }
+        delete conn;
+    }
+    connections.clear();
 }

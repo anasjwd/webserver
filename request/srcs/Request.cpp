@@ -56,14 +56,13 @@ bool	Request::_processBodyHeaders()
 		return _processContentLength();
 	else
 	{
-		// TODO: Should be developped to fix all cases.
 		std::string method = _rl.getMethod();
 		if (method == "POST")
 			return setState(false, LENGTH_REQUIRED);
 		else if (method == "GET" || method == "DELETE")
 			return setState(true, OK);
 	}
-		
+
 	return true;
 }
 
@@ -78,10 +77,6 @@ bool	Request::_processContentLength()
 
 	if (*end != '\0' || contentLengthStr.empty())
 		return setState(false, BAD_REQUEST);
-
-	// TODO: IS THIS SHOULD BE HERE!
-	// if (contentLength > MAX_BODY_SIZE)
-	// 	return setState(false, PAYLOAD_TOO_LARGE);
 
 	if (contentLength == 0 && (_rl.getMethod() == "GET" || _rl.getMethod() == "DELETE"))
 		return setState(true, OK);
@@ -248,7 +243,7 @@ bool	Request::lineSection()
 
 bool	Request::headerSection()
 {
-	size_t end_header = _buffer.find(END_HEADER);
+	size_t end_header = _buffer.find(CRLFCRLF);
 
 	if (end_header == std::string::npos)
 		return false;
@@ -326,8 +321,6 @@ bool	Request::appendToBuffer(const char* data, size_t len)
 					progress = true;
 				break;
 
-			case COMPLETE:
-				return true;
 			default:
 				break;
 		}
