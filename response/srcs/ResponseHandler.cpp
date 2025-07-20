@@ -313,17 +313,17 @@ Response ResponseHandler::handleRequest(Connection* conn)
         }
         return ErrorResponse::createNotFoundResponse(conn);
     }
-    else if (method == "POST")
-    {
-        std::string tempPath = conn->req->getRequestBody().uploadpath; // e.g., "/tmp/upload.tmp"
-        std::string destDir = "www/uploads"; // Destination directory
+    // else if (method == "POST")
+    // {
+    //     std::string tempPath = conn->req->getRequestBody().uploadpath; // e.g., "/tmp/upload.tmp"
+    //     std::string destDir = "www/upload"; // Destination directory
 
-        // Copy the uploaded file
-        if (copydir(tempPath, destDir)) {
-            return FileResponse::serve("www/201.html", "text/html", 201); // Success
-        return ErrorResponse::createInternalErrorResponse(); // Failed to copy
-    }
-}
+    //     // Copy the uploaded file
+    //     if (copydir(tempPath, destDir)) {
+    //         return FileResponse::serve("www/201.html", "text/html", 201); // Success
+    //     return ErrorResponse::createInternalErrorResponse(); // Failed to copy
+//     // }
+// }
     return ErrorResponse::createNotFoundResponse(conn);
 }
 void ResponseHandler::initialize() {}

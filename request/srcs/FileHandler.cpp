@@ -1,11 +1,12 @@
 # include <cstdio>
 # include <cstdlib>
 # include <cstring>
+#include <iostream>
 # include <stdexcept>
 # include "../incs/FileHandler.hpp"
 
 const std::string FileHandler::TEMP_DIR = "/tmp";
-const std::string FileHandler::UPLOAD_DIR = "/home/achraf/Desktop/newest/upload";
+const std::string FileHandler::UPLOAD_DIR = "/home/alassiqu/tester/upload";
 
 FileHandler::FileHandler() 
 	:	_fd(-1), _size(0), _offset(0), _isOpen(false), _isTemp(false)
@@ -73,6 +74,7 @@ bool	FileHandler::_createTempResponse()
 
 bool	FileHandler::_createUploadFile(const std::string& filename)
 {
+	std::cout << "Creating upload file named: " << filename << "\n"; 
 	if (filename.empty())
 		throw std::runtime_error("Filename required for upload file");
 
@@ -89,6 +91,7 @@ bool	FileHandler::_createUploadFile(const std::string& filename)
 	_isOpen = true;
 	_isTemp = false;
 	_path = full_path;
+	std::cout << "Succesfully created!\n"; 
 	return true;
 }
 
