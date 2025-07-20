@@ -118,7 +118,6 @@ bool RequestBody::_processMultipartChunk(const char* data, size_t len)
 					std::cerr << "[Multipart] Failed to create upload file\n";
 					return setState(false, INTERNAL_SERVER_ERROR);
 				}
-				setState(true, 201);
 				std::cout << "fd upload: " << _uploadHandler.fd() << ", path: " << _uploadHandler.path() << "\n";
 			}
 		}
