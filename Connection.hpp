@@ -41,14 +41,14 @@ class	Connection
 		IDirective*			getDirective(DIRTYPE type);
 
 		// Alassiqu:
-		LimitExcept*		getLimitExcept();
+		LimitExcept*		getLimitExcept() const;
 		bool				checkMaxBodySize();
 		ClientMaxBodySize*	getClientMaxBodySize();
 
 		// ahanaf
 		Root*				getRoot();
 		Index*				getIndex();
-		const Location*		getLocation();
+		const Location*		getLocation() const;
 		// const Location*		getLocation() const;
 		AutoIndex*			getAutoIndex();
 		ErrorPage*			getErrorPage();
@@ -60,5 +60,10 @@ class	Connection
 
 		Return*				getReturnDirective();
 		ErrorPage*			getErrorPageForCode(int);
+
+		std::vector<std::string> _getAllowedMethods() const;
+		bool _isAllowedMethod(const std::string& method, const std::vector<std::string>& allowedMethods);
+
+
 
 };

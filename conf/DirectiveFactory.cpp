@@ -381,6 +381,11 @@ IDirective* parseReturnDirective(
 	return_dir->setUrl(strdup(tokens[pos++]->data));
 	if (tokens[pos]->type != DIR_END)
 	{
+		std::cout <<"tokens[pos] " << tokens[pos] << std::endl;
+		std::cout <<"pos " << pos << std::endl;
+		std::cout <<"tokens[pos]->type " << tokens[pos]->type << std::endl;
+		std::cout << return_dir->getUrl() << std::endl;
+		std::cout <<"DIR_END " << DIR_END << std::endl;
 		delete return_dir;
 		throw DirectiveException("incomplete return directive - missing \";\"");
 	}

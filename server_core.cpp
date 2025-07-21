@@ -330,7 +330,15 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 						conn->req->appendToBuffer(buff, bytes);
 						std::cout << "-----------------------------------\nState in req " << conn->fd << " : " << conn->req->getStatusCode() << "\n";
 						if (!conn->conServer)
+						{
 							conn->findServer(http);
+							std::string method = conn->req->getRequestLine().getMethod();
+							std::vector<std::string> allowed = conn->_getAllowedMethods();
+							if (!conn->_isAllowedMethod(method, allowed)) {
+								std::cout  << BGREEN << "not allowed method so without creating file" << RESET <<  std::endl;
+								conn->req->setState(false, METHOD_NOT_ALLOWED);
+							}
+						}
 						if (!conn->checkMaxBodySize())
 						{
 							std::cout << "PAYLOAD_TOO_LARGE\n";
@@ -348,19 +356,12 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				} 
 				else if (events[i].events & EPOLLOUT)
 				{
-					// std::cout << "Response: " << &conn << "\n";
 					if (conn->req)
 					{
-						// std::cout << "i am in response" << std::endl;
 						try {
 							if (conn->fileSendState == 0) {
 								conn->res = ResponseHandler::handleRequest(conn);
 								std::string responseStr = conn->res.build();
-							// 	if (conn->req->getStatusCode() == OK) {
-							// 		std::string connectionHeader = conn->req->getRequestHeaders().getHeaderValue("connection");
-							// 		if (!connectionHeader.empty() && connectionHeader != "close")
-							// 		conn->shouldKeepAlive = true;
-							// }
 							ssize_t sent = send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
 							std::cout<<responseStr<<std::endl;
 							std::cout<<"filesendstate: "<<conn->fileSendState<<"contnet-lenght: "<<conn->res.getFileSize()<<std::endl;

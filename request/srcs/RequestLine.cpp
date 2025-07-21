@@ -1,5 +1,4 @@
 # include <cctype>
-#include <iostream>
 # include <sstream>
 # include <cstdlib>
 # include "../incs/RequestLine.hpp"
@@ -18,7 +17,6 @@ bool	RequestLine::_validateMethod()
 		if (_method == allowedMethods[i])
 			return true;
 
-	std::cerr << "Invalid method: " << _method << std::endl;
 	return setState(false, METHOD_NOT_ALLOWED);
 }
 
