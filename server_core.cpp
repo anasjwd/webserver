@@ -203,47 +203,30 @@ void closeSockets(std::vector<int>& sockets)
 		close(sockets[idx]);
 }
 
-void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event ev, int epollFd)
+void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event ev, int epollFd, time_t& checkTime)
 {
+	if (connections.size() == 0)
+		return ;
 	std::vector<Connection*>::iterator it = connections.begin();
-	
+
 	while (it != connections.end())
 	{
 		Connection* conn = *it;
-		if (conn->req && conn->req->checkForTimeout())
+		if (conn && conn->isTimedOut())
 		{
 			std::cout << "Connection timeout for fd " << conn->fd << std::endl;
-			conn->req->setState(false, REQUEST_TIMEOUT);
+			if (conn->req)
+				conn->req->setState(false, REQUEST_TIMEOUT);
 			epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, &ev);
 			std::cout << "Closing connection fd " << conn->fd << std::endl;
 			conn->closeConnection(conn, connections, epollFd);
 		}
+		if (connections.size() == 0)
+			break;
 		++it;
 	}
+	checkTime = time(NULL);
 }
-
-// void	cleanupStaleConnections(std::vector<Connection*>& connections, int epollFd)
-// {
-// 	std::vector<Connection*>::iterator it = connections.begin();
-	
-// 	while (it != connections.end())
-// 	{
-// 		Connection* conn = *it;
-// 		time_t currentTime = time(NULL);
-		
-// 		// Close connections that have been idle for too long
-// 		if (currentTime - conn->lastTimeoutCheck > 300) // 5 minutes
-// 		{
-// 			std::cout << "Closing stale connection fd " << conn->fd << std::endl;
-// 			conn->closeConnection(conn, connections, epollFd);
-// 			it = connections.begin(); // Reset iterator after removal
-// 		}
-// 		else
-// 		{
-// 			++it;
-// 		}
-// 	}
-// }
 
 void	handleConnectionError(Connection* conn, std::vector<Connection*>& connections, int epollFd, const std::string& error)
 {
@@ -274,16 +257,10 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	while (true)
 	{
 		if (got_singint == true)
-		{
-			// free all connections here.
-			conn->freeConnections(connections);
-			return ;
-		}
+			return conn->freeConnections(connections);
 		if (time(NULL) - lastTimeoutCheck >= 1)
-		{
-			checkForTimeouts(connections, ev, epollFd);
-			lastTimeoutCheck = time(NULL);
-		}
+			checkForTimeouts(connections, ev, epollFd, lastTimeoutCheck);
+
 		// // Cleanup stale connections every 30 seconds
 		// if (time(NULL) - lastCleanupCheck >= 30)
 		// {
@@ -303,10 +280,10 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					std::cout << "Error: failed to accept a client" << std::endl;
 					continue;
 				}
-				
+
 				Connection* conn = new Connection(clientFd);
 				connections.push_back(conn);
-				
+
 				ev.events = EPOLLIN;
 				ev.data.fd = clientFd;
 				epoll_ctl(epollFd, EPOLL_CTL_ADD, clientFd, &ev);
@@ -327,18 +304,18 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 						if (!conn->req)
 							conn->req = new Request(conn->fd);
 
-						conn->req->appendToBuffer(buff, bytes);
+						conn->req->appendToBuffer(conn, http, buff, bytes);
 						std::cout << "-----------------------------------\nState in req " << conn->fd << " : " << conn->req->getStatusCode() << "\n";
-						if (!conn->conServer)
-						{
-							conn->findServer(http);
-							std::string method = conn->req->getRequestLine().getMethod();
-							std::vector<std::string> allowed = conn->_getAllowedMethods();
-							if (!conn->_isAllowedMethod(method, allowed)) {
-								std::cout  << BGREEN << "not allowed method so without creating file" << RESET <<  std::endl;
-								conn->req->setState(false, METHOD_NOT_ALLOWED);
-							}
-						}
+						// if (!conn->conServer)
+						// {
+						// 	conn->findServer(http);
+						// 	std::string method = conn->req->getRequestLine().getMethod();
+						// 	std::vector<std::string> allowed = conn->_getAllowedMethods();
+						// 	if (!conn->_isAllowedMethod(method, allowed)) {
+						// 		std::cout  << BGREEN << "not allowed method so without creating file" << RESET <<  std::endl;
+						// 		conn->req->setState(false, METHOD_NOT_ALLOWED);
+						// 	}
+						// }
 						if (!conn->checkMaxBodySize())
 						{
 							std::cout << "PAYLOAD_TOO_LARGE\n";
@@ -370,7 +347,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 									conn = NULL;
 									continue;
 								}
-								conn->req->setLastActivityTime(time(NULL));
+								conn->lastActivityTime = time(NULL);
 								std::cout << "headers sent succefuly\n";
 								if (!conn->res.getFilePath().empty()) {
 									conn->fileFd = open(conn->res.getFilePath().c_str(), O_RDONLY);
@@ -421,7 +398,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 										conn->fileFd = -1;
 										break;
 									}
-									conn->req->setLastActivityTime(time(NULL));
+									conn->lastActivityTime = time(NULL);
 									conn->fileSendOffset += bytesSent;
 									if (conn->fileSendOffset >= (ssize_t)conn->res.getFileSize()) {
 										close(conn->fileFd);
