@@ -171,6 +171,10 @@ Response ResponseHandler::handleRequest(Connection* conn)
 {
     if (!conn || !conn->req) return ErrorResponse::createInternalErrorResponse();
     const Request& request = *conn->req;
+    if (conn->req->getStatusCode() != OK)
+    {
+        return ErrorResponse::createErrorResponseWithMapping(conn,conn->req->getStatusCode() );
+    }
     std::string method = request.getRequestLine().getMethod();
     std::vector<std::string> allowed = conn->_getAllowedMethods();
     for (std::vector<std::string>::const_iterator it = allowed.begin(); it != allowed.end(); it++)

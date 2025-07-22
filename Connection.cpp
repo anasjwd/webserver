@@ -1,40 +1,35 @@
-#include <algorithm>
-#include <cstddef>
-#include <cstdlib>
 # include <ctime>
+# include <cstddef>
+# include <cstdlib>
 # include <unistd.h>
+# include <algorithm>
 # include <sys/epoll.h>
-#include "conf/AutoIndex.hpp"
 # include "conf/Http.hpp"
 # include "conf/Root.hpp"
 # include "Connection.hpp"
 # include "conf/Listen.hpp"
 # include "conf/Server.hpp"
 # include "conf/Location.hpp"
+# include "conf/AutoIndex.hpp"
 # include "conf/IDirective.hpp"
 # include "conf/ServerName.hpp"
 # include "conf/LimitExcept.hpp"
 # include "request/incs/Defines.hpp"
 # include "conf/ClientMaxBodySize.hpp"
-#include "response/include/ResponseHandler.hpp"
+# include "response/include/ResponseHandler.hpp"
 
 Connection::Connection()
-	:	fd(-1), req(NULL), connect(false),
-		conServer(NULL), shouldKeepAlive(false), lastTimeoutCheck(time(NULL)), closed(false),
-		fileFd(-1), fileSendState(0), fileSendOffset(0)
+	:	fd(-1), req(NULL), connect(false), conServer(NULL), shouldKeepAlive(false),
+		lastActivityTime(time(NULL)), lastTimeoutCheck(time(NULL)),
+		closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0)
 {
 }
 
 Connection::Connection(int clientFd)
-	:	fd(clientFd), req(NULL), connect(false),
-		conServer(NULL), shouldKeepAlive(false), lastTimeoutCheck(time(NULL)), closed(false),
-		fileFd(-1), fileSendState(0), fileSendOffset(0)
+	:	fd(clientFd), req(NULL), connect(false), conServer(NULL), shouldKeepAlive(false),
+		lastActivityTime(time(NULL)), lastTimeoutCheck(time(NULL)),
+		closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0)
 {
-}
-
-void	Connection::updateTime()
-{
-	lastTimeoutCheck = time(NULL);
 }
 
 Connection* Connection::findConnectionByFd(int fd, std::vector<Connection*>& connections)
@@ -146,19 +141,29 @@ LimitExcept*	Connection::getLimitExcept() const
 
 bool	Connection::checkMaxBodySize()
 {
+	unsigned long long maxAllowedSize;
 	ClientMaxBodySize* max = getClientMaxBodySize();
+
 	if (max == NULL)
-		return true;
+		maxAllowedSize = 1048576;
+	else
+		maxAllowedSize = max->getSize();
 
 	std::string str = req->getRequestHeaders().getHeaderValue("content-length");
 	if (str.empty())
-		return true; // No content-length header, assume OK
+		return true;
 
-	unsigned int actualSize = strtoull(str.c_str(), NULL, 10);
+	unsigned long long actualSize = strtoull(str.c_str(), NULL, 10);
 
-	if (max->getSize() < actualSize)
+	if (maxAllowedSize < actualSize)
+	{
+		std::cout << "MaxBodySize ";
+		if (maxAllowedSize == 1048576)
+			std::cout << "default (1M) detected!\n";
+		else
+			std::cout << "from config file detected!\n";
 		return false;
-
+	}
 	return true;
 }
 
@@ -399,7 +404,7 @@ void Connection::closeConnection(Connection* conn, std::vector<Connection*>& con
 	}
 
 	delete conn;
-	conn = NULL;
+	// conn = NULL;
 	std::cout << "Connection closed and deleted" << std::endl;
 }
 
@@ -451,4 +456,9 @@ std::vector<std::string> Connection::_getAllowedMethods() const {
 bool Connection::_isAllowedMethod(const std::string& method, const std::vector<std::string>& allowedMethods) {
     if (method.empty()) return false;
     return std::find(allowedMethods.begin(), allowedMethods.end(), method) != allowedMethods.end();
+}
+
+bool	Connection::isTimedOut() const
+{
+	return time(NULL) - lastActivityTime > TIMEOUT_SECONDS;
 }
