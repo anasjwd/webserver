@@ -23,6 +23,23 @@
 #include <fstream>
 #include <sstream>
 
+static std::string _normalizeUri(const std::string& uri) {
+    std::string result;
+    bool prevSlash = false;
+    for (size_t i = 0; i < uri.size(); ++i) {
+        if (uri[i] == '/') {
+            if (!prevSlash) result += '/';
+            prevSlash = true;
+        } else {
+            result += uri[i];
+            prevSlash = false;
+        }
+    }
+    if (result.size() > 1 && result[result.size() - 1] == '/')
+        result.erase(result.size() - 1);
+    return result.empty() ? "/" : result;
+}
+
 std::string ResponseHandler::_getRootPath(Connection* conn) {
     if (!conn) return "www";
     Root* root = conn->getRoot();
@@ -81,55 +98,27 @@ std::map<int, std::string> ResponseHandler::_getErrorPages(Connection* conn) {
     }
     return errorPages;
 }
-std::vector<std::string> ResponseHandler::_getAllowedMethods(Connection* conn) {
-    std::vector<std::string> methods;
-    if (!conn) {
-        methods.push_back("GET");
-        return methods;
-    }
-    LimitExcept* limitExcept = conn->getLimitExcept();
-    if (limitExcept) {
-        char** allowedMethods = limitExcept->getMethods();
-        if (allowedMethods) {
-            for (int i = 0; allowedMethods[i] != NULL; ++i) {
-                methods.push_back(std::string(allowedMethods[i]));
-            }
-        }
-    }
-    else {std::cout << BRED << "means that limitexcept == NULL" << RESET << std::endl;}
-    if (methods.empty()) {
-        methods.push_back("GET");
-    }
-    return methods;
-}
-bool ResponseHandler::_isAllowedMethod(const std::string& method, const std::vector<std::string>& allowedMethods) {
-    if (method.empty()) return false;
-    return std::find(allowedMethods.begin(), allowedMethods.end(), method) != allowedMethods.end();
-}
-// std::string ResponseHandler::_buildFilePath(const std::string& uri, const std::string& root) {
-//     if (root.empty()) return uri;
-//     std::string path = root;
-//     if (path[path.length() - 1] != '/') path += "/";
-//     std::string cleanUri = uri;
-//     if (!cleanUri.empty() && cleanUri[0] == '/') cleanUri = cleanUri.substr(1);
-//     path += cleanUri;
-//     return path;
-// }
+
 
 std::string ResponseHandler::_buildFilePath(const std::string& uri, const std::string& root, const Location* location) {
     std::string path = root;
-    if (!path.empty() && path[path.length() - 1] != '/') path += "/";
-
-    // If location is exact match (like = /images), don't append URI
-    if (location && location->isExactMatch()) {
-        return path; // Just the root, e.g., "www/"
-    }
+    while (!path.empty() && path[path.length() - 1] == '/') path.erase(path.length() - 1);
 
     std::string cleanUri = uri;
-    if (!cleanUri.empty() && cleanUri[0] == '/') cleanUri = cleanUri.substr(1);
-    path += cleanUri;
+    if (location && location->getUri()) {
+        std::string locUri = std::string(location->getUri());
+        if (!locUri.empty() && locUri[0] == '/') locUri = locUri.substr(1);
+        std::string prefix = "/" + locUri;
+        if (cleanUri.find(prefix) == 0) {
+            cleanUri = cleanUri.substr(prefix.length());
+            if (!cleanUri.empty() && cleanUri[0] == '/') cleanUri = cleanUri.substr(1);
+        }
+    }
+    while (!cleanUri.empty() && cleanUri[0] == '/') cleanUri = cleanUri.substr(1);
+    if (!cleanUri.empty()) path += "/" + cleanUri;
     return path;
 }
+
 std::string ResponseHandler::_getMimeType(const std::string& path) {
     size_t dotPos = path.find_last_of('.');
     if (dotPos != std::string::npos) {
@@ -183,11 +172,11 @@ Response ResponseHandler::handleRequest(Connection* conn)
     if (!conn || !conn->req) return ErrorResponse::createInternalErrorResponse();
     const Request& request = *conn->req;
     std::string method = request.getRequestLine().getMethod();
-    std::vector<std::string> allowed = _getAllowedMethods(conn);
+    std::vector<std::string> allowed = conn->_getAllowedMethods();
     for (std::vector<std::string>::const_iterator it = allowed.begin(); it != allowed.end(); it++)
         std::cout <<BGREEN << (*it) << RESET << std::endl;
 
-    if (!_isAllowedMethod(method, allowed))
+    if (!conn->_isAllowedMethod(method, allowed))
         return ErrorResponse::createMethodNotAllowedResponse(conn ,allowed);
     const Location* location = conn->getLocation();
     Return* ret = conn->getReturnDirective();
@@ -206,10 +195,10 @@ Response ResponseHandler::handleRequest(Connection* conn)
         root = std::string(locRoot->getPath());
     else
         root = _getRootPath(conn);
-    std::cout << CYAN << root <<  RESET << std::endl;
-    std::string uri = request.getRequestLine().getUri();
+    std::cout << CYAN << "root " << root <<  RESET << std::endl;
+    std::string uri = _normalizeUri(request.getRequestLine().getUri());
     std::string filePath = _buildFilePath(uri, root, location);
-    std::cout << CYAN << filePath <<  RESET << std::endl;
+    std::cout << CYAN << "filepath " <<  filePath <<  RESET << std::endl;
     if (method == "GET") {
         struct stat fileStat;
         bool isDir = false;
@@ -217,8 +206,11 @@ Response ResponseHandler::handleRequest(Connection* conn)
         std::vector<std::string> indexFiles = _getIndexFiles(conn);
         if (isDir) {
             for (size_t i = 0; i < indexFiles.size(); ++i) {
-                std::string indexPath = filePath + "/" + indexFiles[i];
-                std::cout << CYAN << indexPath <<  RESET << std::endl;
+                std::string indexPath = filePath;
+                if (!indexPath.empty() && indexPath[indexPath.size() - 1] != '/')
+                    indexPath += "/";
+                indexPath += indexFiles[i];
+                std::cout << CYAN << "indexPaht " <<  indexPath <<  RESET << std::endl;
                 if (stat(indexPath.c_str(), &fileStat) == 0 && S_ISREG(fileStat.st_mode)) {
                     return FileResponse::serve(indexPath, _getMimeType(indexPath), 200);
                 }
@@ -241,6 +233,7 @@ Response ResponseHandler::handleRequest(Connection* conn)
             }
             return ErrorResponse::createForbiddenResponse();
         }
+        std::cout << RED << filePath << RESET << std::endl;
         if (stat(filePath.c_str(), &fileStat) == 0 && S_ISREG(fileStat.st_mode)) {
             return FileResponse::serve(filePath, _getMimeType(filePath), 200);
         }
@@ -258,6 +251,21 @@ Response ResponseHandler::handleRequest(Connection* conn)
     {
         return FileResponse::serve("www/201.html", _getMimeType("www/201.html"), 201);
     }
+    else if (method == "DELETE")
+    {
+        struct stat fileStat;
+        if (stat(filePath.c_str(), &fileStat) != 0) {
+            return ErrorResponse::createNotFoundResponse(conn);
+        }
+        if (S_ISDIR(fileStat.st_mode)) {
+            return ErrorResponse::createForbiddenResponse();
+        }
+        if (unlink(filePath.c_str()) != 0) {
+            return ErrorResponse::createInternalErrorResponse();
+        }
+        Response resp(204);
+        resp.addHeader("Content-Length", "0");
+        return resp;
+    }
     return ErrorResponse::createInternalErrorResponse();
 }
-// void ResponseHandler::initialize() {}

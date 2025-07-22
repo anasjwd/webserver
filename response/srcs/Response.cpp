@@ -16,7 +16,7 @@ Response::Response(int statusCode) : _statusCode(statusCode), _statusMessage(_ge
 Response::~Response() {}
 
 void Response::_addDefaultHeaders() {
-    _headers["Server"] = "WebServ/1.0";
+    _headers["Server"] = "WebServ/1.1";
     _headers["Date"] = "";
 }
 
@@ -143,6 +143,7 @@ void Response::setFileSize(size_t size) {
 
 Response Response::createRedirectResponse(int statusCode, const std::string& location) {
     Response response(statusCode);
+    std::cout << GREEN << location << RESET << std::endl;
     response.addHeader("Location", location);
     response.setContentType("text/html");
     

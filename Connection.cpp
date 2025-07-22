@@ -16,6 +16,7 @@
 # include "conf/LimitExcept.hpp"
 # include "request/incs/Defines.hpp"
 # include "conf/ClientMaxBodySize.hpp"
+#include "response/include/ResponseHandler.hpp"
 
 Connection::Connection()
 	:	fd(-1), req(NULL), connect(false),
@@ -126,7 +127,7 @@ IDirective*	Connection::getDirective(DIRTYPE type)
 	return NULL;
 }
 
-LimitExcept*	Connection::getLimitExcept()
+LimitExcept*	Connection::getLimitExcept() const
 {
 	const Location*	location = getLocation();
 	if (location == NULL)
@@ -182,7 +183,7 @@ ClientMaxBodySize*	Connection::getClientMaxBodySize()
 }
 
 
-const Location* Connection::getLocation()
+const Location* Connection::getLocation() const
 {
 	if (!conServer)
 		return NULL;
@@ -212,7 +213,10 @@ const Location* Connection::getLocation()
 				return loc;
 			}
 		} else {
-			if (!locUriStr.empty() && reqUri.find(locUriStr) == 0 && locUriStr.length() > bestMatchLen) {
+			if (!locUriStr.empty() &&
+			    (reqUri == locUriStr ||
+			     (reqUri.find(locUriStr + "/") == 0)) &&
+			    locUriStr.length() > bestMatchLen) {
 				bestMatchLen = locUriStr.length();
 				bestLoc = loc;
 			}
@@ -422,4 +426,29 @@ void	Connection::freeConnections(std::vector<Connection*>& connections)
         delete conn;
     }
     connections.clear();
+}
+
+
+std::vector<std::string> Connection::_getAllowedMethods() const {
+    std::vector<std::string> methods;
+    LimitExcept* limitExcept = getLimitExcept();
+    if (limitExcept) {
+        char** allowedMethods = limitExcept->getMethods();
+        if (allowedMethods) {
+            for (int i = 0; allowedMethods[i] != NULL; ++i) {
+                methods.push_back(std::string(allowedMethods[i]));
+            }
+        }
+    }
+    if (methods.empty()) {
+        methods.push_back("GET");
+        methods.push_back("POST");
+        methods.push_back("DELETE");
+    }
+    return methods;
+}
+
+bool Connection::_isAllowedMethod(const std::string& method, const std::vector<std::string>& allowedMethods) {
+    if (method.empty()) return false;
+    return std::find(allowedMethods.begin(), allowedMethods.end(), method) != allowedMethods.end();
 }
