@@ -2,18 +2,20 @@
 # include <climits>
 # include <cstddef>
 # include <cstdlib>
-#include <iostream>
+# include <iostream>
 # include "../incs/Request.hpp"
+# include "../../conf/Http.hpp"
+# include "../../Connection.hpp"
 
 Request::Request()
 	:	_fd(-1), _rl(""), _rh(""), _rb(), _state(BEGIN), _statusCode(START),
-		_buffer(), _requestDone(false), _lastActivityTime(time(NULL))
+		_buffer(), _requestDone(false)
 {
 }
 
 Request::Request(int fd)
 	:	_fd(fd), _rl(""), _rh(""), _rb(), _state(BEGIN), _statusCode(START),
-		_buffer(), _requestDone(false), _lastActivityTime(time(NULL))
+		_buffer(), _requestDone(false)
 {
 }
 
@@ -166,27 +168,6 @@ const int&	Request::getFd() const
 	return _fd;
 }
 
-bool	Request::checkForTimeout() const
-{
-	time_t currentTime = time(NULL);
-	if (currentTime - _lastActivityTime > TIMEOUT_SECONDS)
-	{
-		std::cout << "Timeout detected for fd " << _fd << std::endl;
-		return true;
-	}
-	return false;
-}
-
-time_t	Request::getLastActivityTime() const
-{
-	return _lastActivityTime;
-}
-
-void	Request::setLastActivityTime(time_t time)
-{
-	_lastActivityTime = time;
-}
-
 const RequestState&	Request::getState() const
 {
 	return _state;
@@ -241,7 +222,7 @@ bool	Request::lineSection()
 	return true;
 }
 
-bool	Request::headerSection()
+bool	Request::headerSection(Connection* conn, Http* http)
 {
 	size_t end_header = _buffer.find(CRLFCRLF);
 
@@ -265,6 +246,21 @@ bool	Request::headerSection()
 	if (_rb.isExpected())
 		_state = BODY;
 
+	if (!conn->conServer)
+	{
+		conn->findServer(http);
+		std::string method = _rl.getMethod();
+		std::cout << "Curr method: " << method << ", to be checked if allowed!\n";
+		std::vector<std::string> allowed = conn->_getAllowedMethods();
+		for (size_t i = 0; i < allowed.size(); i++)
+			std::cout << "Allowed method " << i << " is -> " << allowed[i] << "\n";
+
+		if (!conn->_isAllowedMethod(method, allowed))
+		{
+			std::cout  << BGREEN << "not allowed method so without creating file" << RESET <<  std::endl;
+			return conn->req->setState(false, METHOD_NOT_ALLOWED);
+		}
+	}
 	return true;
 }
 
@@ -286,15 +282,13 @@ bool	Request::bodySection()
 	return false;
 }
 
-bool	Request::appendToBuffer(const char* data, size_t len)
+bool	Request::appendToBuffer(Connection* conn, Http* http, const char* data, size_t len)
 {
 	_buffer.append(data, len);
 
 	bool progress = true;
 	while (progress && !isRequestDone())
 	{
-		if (progress)
-			setLastActivityTime(time(NULL));
 		progress = false;
 		switch (_state)
 		{
@@ -312,7 +306,7 @@ bool	Request::appendToBuffer(const char* data, size_t len)
 				break;
 
 			case HEADERS:
-				if (headerSection())
+				if (headerSection(conn, http))
 					progress = true;
 				break;
 
