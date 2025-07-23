@@ -225,7 +225,6 @@ bool	Request::lineSection()
 bool	Request::headerSection(Connection* conn, Http* http)
 {
 	size_t end_header = _buffer.find(CRLFCRLF);
-
 	if (end_header == std::string::npos)
 		return false;
 
@@ -245,6 +244,12 @@ bool	Request::headerSection(Connection* conn, Http* http)
 
 	if (_rb.isExpected())
 		_state = BODY;
+	else
+	{
+		if (!_buffer.empty())
+			return setState(false, BAD_REQUEST);
+		_state = COMPLETE;
+	}
 
 	if (!conn->conServer)
 	{
@@ -266,9 +271,6 @@ bool	Request::headerSection(Connection* conn, Http* http)
 
 bool	Request::bodySection()
 {
-	if (!_rb.isExpected() && !_buffer.empty())
-		return setState(false, BAD_REQUEST);
-
 	if (!_buffer.empty())
 	{
 		if (!_rb.receiveData(_buffer.c_str(), _buffer.size()))

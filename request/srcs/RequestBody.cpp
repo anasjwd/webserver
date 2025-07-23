@@ -11,12 +11,15 @@ RequestBody::RequestBody()
 		_bytesReceived(0), _chunkParsePos(0), _currentChunkSize(0),
 		_bytesReceivedInChunk(0)
 {
-	_fileHandler.create(TEMP_REQ);
+	_fileHandler.create(TEMP_REQ, false);
 }
 
 RequestBody::~RequestBody()
 {
-	_fileHandler.remove();
+	if (_uploadHandler.fd() != -1)
+		std::cout << "Uploaded file path: " << _uploadHandler.path() << "\n";
+	if (_fileHandler.fd() != -1)
+		std::cout << "Body file path: " << _fileHandler.path() << "\n";
 }
 
 bool	RequestBody::_parseChunkSize(const std::string& buf)
@@ -113,7 +116,7 @@ bool RequestBody::_processMultipartChunk(const char* data, size_t len)
 				_isCurrentPartFile = true;
 				std::cout << "[Multipart] Found file part: " << _currentFilename << "\n";
 
-				if (!_uploadHandler.create(UPLOAD_FILE, _currentFilename))
+				if (!_uploadHandler.create(UPLOAD_FILE, true, _currentFilename))
 				{
 					std::cerr << "[Multipart] Failed to create upload file\n";
 					return setState(false, INTERNAL_SERVER_ERROR);
@@ -163,7 +166,6 @@ bool RequestBody::_processMultipartChunk(const char* data, size_t len)
 	return true;
 }
 
-
 void	RequestBody::clear()
 {
 	_statusCode = OK;
@@ -175,7 +177,6 @@ void	RequestBody::clear()
 
 	_boundary.clear();
 	_contentType.clear();
-	_fileHandler.remove();
 
 	_contentLength = 0;
 	_bytesReceived = 0;
