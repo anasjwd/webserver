@@ -251,7 +251,7 @@ void	handleConnectionError(Connection* conn, std::vector<Connection*>& connectio
 	
 	// Send error response if possible
 	if (conn->req) {
-		conn->res = ErrorResponse::createInternalErrorResponse();
+		conn->res = ErrorResponse::createInternalErrorResponse(conn);
 		std::string responseStr = conn->res.build();
 		send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
 	}

@@ -8,6 +8,6 @@ public:
     static Response createErrorResponseWithMapping(Connection* conn, int statusCode, const std::string& message = "");
     static Response createMethodNotAllowedResponse(Connection* conn, const std::vector<std::string>& allowedMethods);
     static Response createNotFoundResponse(Connection* conn);
-    static Response createForbiddenResponse();
-    static Response createInternalErrorResponse();
+    static Response createForbiddenResponse(Connection* conn);
+    static Response createInternalErrorResponse(Connection* conn);
 }; 

@@ -77,9 +77,9 @@ Response ErrorResponse::createMethodNotAllowedResponse(Connection* conn, const s
 Response ErrorResponse::createNotFoundResponse(Connection* conn) {
     return createErrorResponseWithMapping(conn, 404, "Not Found");
 }
-Response ErrorResponse::createForbiddenResponse() {
-    return createErrorResponse(403, "Forbidden");
+Response ErrorResponse::createForbiddenResponse(Connection* conn) {
+    return createErrorResponseWithMapping(conn , 403, "Forbidden");
 }
-Response ErrorResponse::createInternalErrorResponse() {
-    return createErrorResponse(500, "Internal Server Error");
+Response ErrorResponse::createInternalErrorResponse(Connection* conn) {
+    return createErrorResponseWithMapping(conn ,500, "Internal Server Error");
 } 

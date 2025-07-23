@@ -13,6 +13,7 @@
 #include "../../conf/Location.hpp"
 #include "../../conf/Server.hpp"
 #include "../../conf/IDirective.hpp"
+#include <cstddef>
 #include <cstring>
 #include <vector>
 #include <string>
@@ -169,7 +170,6 @@ std::string ResponseHandler::_generateDirectoryListing(const std::string& path, 
 
 Response ResponseHandler::handleRequest(Connection* conn) 
 {
-    if (!conn || !conn->req) return ErrorResponse::createInternalErrorResponse();
     const Request& request = *conn->req;
     std::string method = request.getRequestLine().getMethod();
     std::vector<std::string> allowed = conn->_getAllowedMethods();
@@ -231,7 +231,7 @@ Response ResponseHandler::handleRequest(Connection* conn)
                     return FileResponse::serve(tmpFile, "text/html", 200);
                 }
             }
-            return ErrorResponse::createForbiddenResponse();
+            return ErrorResponse::createForbiddenResponse(conn);
         }
         std::cout << RED << filePath << RESET << std::endl;
         if (stat(filePath.c_str(), &fileStat) == 0 && S_ISREG(fileStat.st_mode)) {
@@ -258,14 +258,14 @@ Response ResponseHandler::handleRequest(Connection* conn)
             return ErrorResponse::createNotFoundResponse(conn);
         }
         if (S_ISDIR(fileStat.st_mode)) {
-            return ErrorResponse::createForbiddenResponse();
+            return ErrorResponse::createForbiddenResponse(conn);
         }
         if (unlink(filePath.c_str()) != 0) {
-            return ErrorResponse::createInternalErrorResponse();
+            return ErrorResponse::createInternalErrorResponse(conn);
         }
         Response resp(204);
         resp.addHeader("Content-Length", "0");
         return resp;
     }
-    return ErrorResponse::createInternalErrorResponse();
+    return ErrorResponse::createInternalErrorResponse(conn);
 }
