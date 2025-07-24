@@ -33,7 +33,6 @@ class	RequestBody
 		bool				_processMultipartChunk(const char*, size_t);
 
 	public:
-		std::string uploadpath;
 		RequestBody();
 		~RequestBody();
 

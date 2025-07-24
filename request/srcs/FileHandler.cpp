@@ -6,8 +6,6 @@
 # include <stdexcept>
 # include "../incs/FileHandler.hpp"
 
-const std::string FileHandler::TEMP_DIR = "/tmp";
-
 FileHandler::FileHandler() 
 	:	_fd(-1), _size(0), _offset(0), _isOpen(false), _isTemp(false)
 {
@@ -16,16 +14,12 @@ FileHandler::FileHandler()
 FileHandler::~FileHandler()
 {
 	close();
-
-	if (_isTemp && !_path.empty())
-		::unlink(_path.c_str());
 }
 
-bool	FileHandler::_createTempBody()
+bool	FileHandler::_createTempBody(bool isPost)
 {
-	char path[WS_PATH_MAX];
-	snprintf(path, sizeof(path), "%s/webserv_reqBody_XXXXXX", TEMP_DIR.c_str());
-	
+	char path[] = "/tmp/webserv_reqBody_XXXXXX";
+
 	_fd = mkstemp(path);
 	if (_fd == -1)
 		return false;
@@ -38,11 +32,10 @@ bool	FileHandler::_createTempBody()
 	return true;
 }
 
-bool	FileHandler::_createTempRequest()
+bool	FileHandler::_createTempRequest(bool isPost)
 {
-	char path[WS_PATH_MAX];
-	snprintf(path, sizeof(path), "%s/webserv_request_XXXXXX", TEMP_DIR.c_str());
-	
+	char path[] = "/tmp/webserv_request_XXXXXX";
+
 	_fd = mkstemp(path);
 	if (_fd == -1)
 		return false;
@@ -55,11 +48,10 @@ bool	FileHandler::_createTempRequest()
 	return true;
 }
 
-bool	FileHandler::_createTempResponse()
+bool	FileHandler::_createTempResponse(bool isPost)
 {
-	char path[WS_PATH_MAX];
-	snprintf(path, sizeof(path), "%s/webserv_response_XXXXXX", TEMP_DIR.c_str());
-	
+	char path[] = "/tmp/webserv_response_XXXXXX";
+
 	_fd = mkstemp(path);
 	if (_fd == -1)
 		return false;
@@ -166,7 +158,7 @@ ssize_t	FileHandler::write(const char* data, size_t size)
 	return written;
 }
 
-bool	FileHandler::create(FileType type, const std::string& filename)
+bool	FileHandler::create(FileType type, bool _isPost, const std::string& filename)
 {
 	if (_isOpen)
 		close();
@@ -176,9 +168,9 @@ bool	FileHandler::create(FileType type, const std::string& filename)
 		switch (type)
 		{
 			case TEMP_BODY:
-				return _createTempBody();
+				return _createTempBody(_isPost);
 			case TEMP_REQ:
-				return _createTempRequest();
+				return _createTempRequest(_isPost);
 			case UPLOAD_FILE:
 				return _createUploadFile(filename);
 			default:
@@ -252,6 +244,11 @@ size_t	FileHandler::offset() const
 	return _offset;
 }
 
+std::string	FileHandler::getUploadPath(const std::string& filename)
+{
+	return _uploadDir + "/" + filename;
+}
+
 bool	FileHandler::exists(const std::string& path)
 {
 	struct stat st;
@@ -270,9 +267,4 @@ bool	FileHandler::isDirectory(const std::string& path)
 bool	FileHandler::createDirectory(const std::string& path)
 {
 	return (mkdir(path.c_str(), 0755) == 0);
-}
-
-std::string	FileHandler::getUploadPath(const std::string& filename)
-{
-	return _uploadDir + "/" + filename;
 }
