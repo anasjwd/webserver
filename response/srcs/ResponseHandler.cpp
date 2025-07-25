@@ -183,6 +183,19 @@ Response ResponseHandler::handleRequest(Connection* conn)
     if (!conn->_isAllowedMethod(method, allowed))
         return ErrorResponse::createMethodNotAllowedResponse(conn ,allowed);
     const Location* location = conn->getLocation();
+    // if LOCATION is CGI set 
+    // if (location) {
+    //     std::cout << YELLOW <<  location->getUri()  <<  RESET << std::endl;
+    //     Root* locRoot = NULL;
+    //     for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); dit != location->directives.end(); ++dit) {
+    //         if ((*dit)->getType() == ROOT) {
+    //             locRoot = static_cast<Root*>(*dit);
+    //             break;
+    //         }
+    //     }
+    //     std::cout << YELLOW <<  locRoot->getPath()  <<  RESET << std::endl;
+    // }
+
     Return* ret = conn->getReturnDirective();
     if (ret) return ReturnHandler::handle(conn);
     std::string root;
@@ -253,7 +266,18 @@ Response ResponseHandler::handleRequest(Connection* conn)
     }
     else if (method == "POST")
     {
-        return FileResponse::serve("www/201.html", _getMimeType("www/201.html"), 201);
+        struct stat fileStat;
+        char fPath[] = "www/201.html";
+        if (stat(fPath , &fileStat) != 0) {
+            return ErrorResponse::createNotFoundResponse(conn);
+        }
+        Response response(201);
+        response.addHeader("location", "www/201.html");
+        response.setFilePath(fPath);
+        response.setContentType(_getMimeType(fPath));
+        response.setFileSize(static_cast<size_t>(fileStat.st_size));
+        response.addHeader("Connection", "close");
+        return response;
     }
     else if (method == "DELETE")
     {
@@ -267,9 +291,9 @@ Response ResponseHandler::handleRequest(Connection* conn)
         if (unlink(filePath.c_str()) != 0) {
             return ErrorResponse::createInternalErrorResponse(conn);
         }
-        Response resp(204);
-        resp.addHeader("Content-Length", "0");
-        return resp;
+        Response response(204);
+        response.addHeader("Content-Length", "0");
+        return response;
     }
     return ErrorResponse::createInternalErrorResponse(conn);
 }
