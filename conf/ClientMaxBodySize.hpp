@@ -4,7 +4,7 @@
 
 class ClientMaxBodySize : public IDirective {
 	private:
-		unsigned int size;
+		unsigned long long size;
 
 		ClientMaxBodySize(const ClientMaxBodySize& other);
 		ClientMaxBodySize& operator=(const ClientMaxBodySize& other);
@@ -13,9 +13,9 @@ class ClientMaxBodySize : public IDirective {
 		ClientMaxBodySize(void);
 		~ClientMaxBodySize(void);
 		DIRTYPE getType(void) const;
-		void setSize(unsigned int value);
+		void setSize(unsigned long long value);
 
 		// TODO: Added by achraf!
-		unsigned int getSize() {return size;}
+		unsigned long long getSize() {return size;}
 };
 

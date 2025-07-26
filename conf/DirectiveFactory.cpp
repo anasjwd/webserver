@@ -404,9 +404,9 @@ IDirective* parseClientMaxBodySizeDirective(
 
 	ClientMaxBodySize* clientMaxBodySize = new ClientMaxBodySize();
 	std::stringstream ss(tokens[pos++]->data);
-	int tmp;
+	unsigned long long tmp;
 	ss >> tmp;
-	if (ss.fail() || ss.eof() == false || tmp < 0)
+	if (ss.fail() || ss.eof() == false)
 	{
 		delete clientMaxBodySize;
 		throw DirectiveException("invalid argument for client_max_body_size directive - invalid number");
