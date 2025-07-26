@@ -11,7 +11,7 @@ DIRTYPE ClientMaxBodySize::getType(void) const
 	return CLIENT_MAX_BODY_SIZE;
 }
 
-void ClientMaxBodySize::setSize(unsigned int value)
+void ClientMaxBodySize::setSize(unsigned long long value)
 {
 	size = value;
 }

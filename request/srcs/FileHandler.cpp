@@ -16,7 +16,7 @@ FileHandler::~FileHandler()
 	close();
 }
 
-bool	FileHandler::_createTempBody(bool isPost)
+bool	FileHandler::_createTempBody()
 {
 	char path[] = "/tmp/webserv_reqBody_XXXXXX";
 
@@ -32,7 +32,7 @@ bool	FileHandler::_createTempBody(bool isPost)
 	return true;
 }
 
-bool	FileHandler::_createTempRequest(bool isPost)
+bool	FileHandler::_createTempRequest()
 {
 	char path[] = "/tmp/webserv_request_XXXXXX";
 
@@ -48,7 +48,7 @@ bool	FileHandler::_createTempRequest(bool isPost)
 	return true;
 }
 
-bool	FileHandler::_createTempResponse(bool isPost)
+bool	FileHandler::_createTempResponse()
 {
 	char path[] = "/tmp/webserv_response_XXXXXX";
 
@@ -158,7 +158,7 @@ ssize_t	FileHandler::write(const char* data, size_t size)
 	return written;
 }
 
-bool	FileHandler::create(FileType type, bool _isPost, const std::string& filename)
+bool	FileHandler::create(FileType type, const std::string& filename)
 {
 	if (_isOpen)
 		close();
@@ -168,9 +168,9 @@ bool	FileHandler::create(FileType type, bool _isPost, const std::string& filenam
 		switch (type)
 		{
 			case TEMP_BODY:
-				return _createTempBody(_isPost);
+				return _createTempBody();
 			case TEMP_REQ:
-				return _createTempRequest(_isPost);
+				return _createTempRequest();
 			case UPLOAD_FILE:
 				return _createUploadFile(filename);
 			default:

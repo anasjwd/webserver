@@ -17,9 +17,9 @@ class	FileHandler
 		bool			_isOpen;
 		bool			_isTemp;
 		std::string		_uploadDir;
-		bool			_createTempBody(bool);
-		bool			_createTempRequest(bool);
-		bool			_createTempResponse(bool);
+		bool			_createTempBody();
+		bool			_createTempRequest();
+		bool			_createTempResponse();
 		bool			_createUploadFile(const std::string&);
 
 	public:
@@ -32,7 +32,7 @@ class	FileHandler
 		bool				seek(size_t);
 		ssize_t				read(char*, size_t);
 		ssize_t				write(const char*, size_t );
-		bool				create(FileType, bool, const std::string& = "");
+		bool				create(FileType, const std::string& = "");
 		bool				open(const std::string& , int = O_RDWR | O_CREAT, mode_t = 0644);
 
 		int					fd() const;

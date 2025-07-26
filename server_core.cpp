@@ -22,21 +22,24 @@
 # include <sys/sendfile.h>
 # include "Connection.hpp"
 # include "conf/Server.hpp"
-# include "conf/Location.hpp"
 # include "conf/IDirective.hpp"
 # include "conf/cfg_parser.hpp"
-# include "conf/LimitExcept.hpp"
 # include "request/incs/Defines.hpp"
-#include "request/incs/FileHandler.hpp"
 # include "request/incs/Request.hpp"
 # include "response/include/Response.hpp"
-# include "response/include/ResponseHandler.hpp"
 # include "response/include/ErrorResponse.hpp"
+# include "response/include/ResponseHandler.hpp"
 
 # define	NONESSENTIAL	101
 # define	MAX_EVENTS		512
 # define	BACKLOG			511
 # define	EIGHT_KB		8192
+
+/*
+	TODO:
+	It takes too long for uploading files, thinking of incrementing it from 8KB to 500KB or 1MB.
+	To see with jawad later: 1048576.
+*/ 
 
 bool got_singint = false;
 
@@ -77,7 +80,7 @@ int createListeningSocket(const char* host, unsigned int port, int epfd)
 	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0)
 	{
 		std::cerr << "Error: failed to set SO_REUSEADDR on host [ "
-		   << host << ":" << port << " ]\n";	
+		<< host << ":" << port << " ]\n";	
 		close(sockfd);
 		freeaddrinfo(res);
 		return ( -1 );
