@@ -291,6 +291,8 @@ bool	Request::appendToBuffer(Connection* conn, Http* http, const char* data, siz
 	bool progress = true;
 	while (progress && !isRequestDone())
 	{
+		if (progress)
+			conn->lastActivityTime = time(NULL);
 		progress = false;
 		switch (_state)
 		{
