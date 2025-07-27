@@ -16,7 +16,8 @@ enum DIRTYPE {
 	INDEX,
 	AUTOINDEX,
 	DENY,
-	ALLOW
+	ALLOW,
+	CGI_EXTENSION
 };
 
 class IDirective {
