@@ -272,7 +272,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 		// }
 
 		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000);
-
+		// std::cout << ""
 		for (int i = 0; i < numberOfEvents; i++)
 		{
 			if (std::find(sockets.begin(), sockets.end(), events[i].data.fd) != sockets.end())
@@ -286,6 +286,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 
 				Connection* conn = new Connection(clientFd);
 				connections.push_back(conn);
+				std::cout << RED << "Connection created!\n" << RESET;
 
 				ev.events = EPOLLIN;
 				ev.data.fd = clientFd;
@@ -299,6 +300,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 
 				if (events[i].events & EPOLLIN)
 				{
+					std::cout << RED << "EPOLLIN\n" << RESET;
 					bytes = read(conn->fd, buff, EIGHT_KB);
 					if (bytes <= 0)
 						conn->closeConnection(conn, connections, epollFd);
