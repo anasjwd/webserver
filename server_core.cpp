@@ -237,7 +237,7 @@ void	handleConnectionError(Connection* conn, std::vector<Connection*>& connectio
 	
 	// Send error response if possible
 	if (conn->req) {
-		conn->res = ErrorResponse::createInternalErrorResponse();
+		conn->res = ErrorResponse::createInternalErrorResponse(conn);
 		std::string responseStr = conn->res.build();
 		send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
 	}
@@ -305,7 +305,10 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					else
 					{
 						if (!conn->req)
+						{
 							conn->req = new Request(conn->fd);
+							conn->cachedLocation = NULL; // Clear cache for new request
+						}
 
 						conn->req->appendToBuffer(conn, http, buff, bytes);
 						std::cout << "-----------------------------------\nState in req " << conn->fd << " : " << conn->req->getStatusCode() << "\n";

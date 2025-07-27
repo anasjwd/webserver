@@ -32,7 +32,10 @@ class	Connection
 		int				fileSendState; // 0: not started, 1: headers sent, 2: sending body, 3: done
 		ssize_t			fileSendOffset;
 
-		Connection(); // Unused constructor.
+		// Cached location to avoid multiple getLocation calls
+		mutable const Location*	cachedLocation;
+
+		Connection();
 		Connection(int);
 
 		bool				isTimedOut() const;
@@ -50,7 +53,7 @@ class	Connection
 		Root*				getRoot();
 		Index*				getIndex();
 		const Location*		getLocation() const;
-		// const Location*		getLocation() const;
+		const Location*		_findBestLocation(const std::vector<IDirective*>& directives, const std::string& reqUri) const;
 		AutoIndex*			getAutoIndex();
 		ErrorPage*			getErrorPage();
 
@@ -64,6 +67,5 @@ class	Connection
 
 		std::vector<std::string> _getAllowedMethods() const;
 		bool _isAllowedMethod(const std::string& method, const std::vector<std::string>& allowedMethods);
-
 
 };
