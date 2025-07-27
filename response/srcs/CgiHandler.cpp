@@ -128,7 +128,7 @@ Response CgiHandler::executeCgi(Connection* conn, const std::string& scriptPath)
         // Send request body to CGI script if it's a POST request
         if (conn->req && conn->req->getRequestLine().getMethod() == "POST") {
             // Read from the temporary file that contains the request body
-            std::string tempFile = conn->req->getRequestBody().getTempFilename();
+            std::string tempFile = conn->req->getRequestBody().getTempFile().path();
             if (!tempFile.empty()) {
                 std::ifstream bodyFile(tempFile.c_str());
                 if (bodyFile.is_open()) {
