@@ -5,6 +5,7 @@
 #include <vector>
 #include "Response.hpp"
 #include "utils.hpp"
+#include "CgiHandler.hpp"
 
 class Request;
 class Server;

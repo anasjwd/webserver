@@ -281,6 +281,11 @@ const Location* Connection::_findBestLocation(const std::vector<IDirective*>& di
 		}
 	}
 
+	if (cgiMatch) {
+		std::cout << "[DEBUG] Returning CGI match: " << cgiMatch->getUri() << std::endl;
+		return cgiMatch;
+	}
+
 	if (longestPrefixMatch) {
 		std::cout << "[DEBUG] Returning longest prefix match: " << longestPrefixMatch->getUri() << std::endl;
 		const Location* nestedMatch = _findBestLocation(longestPrefixMatch->directives, reqUri);
@@ -288,11 +293,6 @@ const Location* Connection::_findBestLocation(const std::vector<IDirective*>& di
 			return nestedMatch;
 		}
 		return longestPrefixMatch;
-	}
-
-	if (cgiMatch) {
-		std::cout << "[DEBUG] Returning CGI match: " << cgiMatch->getUri() << std::endl;
-		return cgiMatch;
 	}
 
 	std::cout << "[DEBUG] No match found" << std::endl;
