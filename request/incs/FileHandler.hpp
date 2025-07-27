@@ -23,9 +23,9 @@ class	FileHandler
 		bool			_createUploadFile(const std::string&);
 
 	public:
-		static const std::string TEMP_DIR;
 		FileHandler();
 		~FileHandler();
+		static const std::string TEMP_DIR;
 
 		void				close();
 		bool				remove();
@@ -41,7 +41,6 @@ class	FileHandler
 		bool				isOpen() const;
 		bool				isTemp() const;
 		size_t				offset() const;
-		std::string			uploadDir() const;
 		std::string			getUploadPath(const std::string&);
 
 		static bool			exists(const std::string&);
