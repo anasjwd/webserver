@@ -4,6 +4,7 @@
 #include "../include/MimeTypes.hpp"
 #include "../include/ReturnHandler.hpp"
 #include "../include/FileResponse.hpp"
+#include "../include/CgiHandler.hpp"
 #include "../../Connection.hpp"
 #include "../../conf/Index.hpp"
 #include "../../conf/LimitExcept.hpp"
@@ -13,6 +14,7 @@
 #include "../../conf/Location.hpp"
 #include "../../conf/Server.hpp"
 #include "../../conf/IDirective.hpp"
+#include <cstddef>
 #include <cstring>
 #include <vector>
 #include <string>
@@ -107,6 +109,17 @@ std::string ResponseHandler::_buildFilePath(const std::string& uri, const std::s
     std::string cleanUri = uri;
     if (location && location->getUri()) {
         std::string locUri = std::string(location->getUri());
+        
+        // Special handling for CGI locations (starting with '.')
+        if (!locUri.empty() && locUri[0] == '.') {
+            // For CGI locations, just append the URI to the root
+            while (!cleanUri.empty() && cleanUri[0] == '/') cleanUri = cleanUri.substr(1);
+            if (!cleanUri.empty()) path += "/" + cleanUri;
+
+            return path;
+        }
+        
+        // Regular location handling
         if (!locUri.empty() && locUri[0] == '/') locUri = locUri.substr(1);
         std::string prefix = "/" + locUri;
         if (cleanUri.find(prefix) == 0) {
@@ -169,7 +182,6 @@ std::string ResponseHandler::_generateDirectoryListing(const std::string& path, 
 
 Response ResponseHandler::handleRequest(Connection* conn) 
 {
-    if (!conn || !conn->req) return ErrorResponse::createInternalErrorResponse();
     const Request& request = *conn->req;
     if (conn->req->getStatusCode() != OK)
     {
@@ -183,6 +195,19 @@ Response ResponseHandler::handleRequest(Connection* conn)
     if (!conn->_isAllowedMethod(method, allowed))
         return ErrorResponse::createMethodNotAllowedResponse(conn ,allowed);
     const Location* location = conn->getLocation();
+    // if LOCATION is CGI set 
+    // if (location) {
+    //     std::cout << YELLOW <<  location->getUri()  <<  RESET << std::endl;
+    //     Root* locRoot = NULL;
+    //     for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); dit != location->directives.end(); ++dit) {
+    //         if ((*dit)->getType() == ROOT) {
+    //             locRoot = static_cast<Root*>(*dit);
+    //             break;
+    //         }
+    //     }
+    //     std::cout << YELLOW <<  locRoot->getPath()  <<  RESET << std::endl;
+    // }
+
     Return* ret = conn->getReturnDirective();
     if (ret) return ReturnHandler::handle(conn);
     std::string root;
@@ -203,6 +228,14 @@ Response ResponseHandler::handleRequest(Connection* conn)
     std::string uri = _normalizeUri(request.getRequestLine().getUri());
     std::string filePath = _buildFilePath(uri, root, location);
     std::cout << CYAN << "filepath " <<  filePath <<  RESET << std::endl;
+    
+    // Check if this is a CGI request
+    if (location && location->getUri() && location->getUri()[0] == '.') {
+        // This is a CGI location, execute the script
+
+        return CgiHandler::executeCgi(conn, filePath);
+    }
+    
     if (method == "GET") {
         struct stat fileStat;
         bool isDir = false;
@@ -235,7 +268,7 @@ Response ResponseHandler::handleRequest(Connection* conn)
                     return FileResponse::serve(tmpFile, "text/html", 200);
                 }
             }
-            return ErrorResponse::createForbiddenResponse();
+            return ErrorResponse::createForbiddenResponse(conn);
         }
         std::cout << RED << filePath << RESET << std::endl;
         if (stat(filePath.c_str(), &fileStat) == 0 && S_ISREG(fileStat.st_mode)) {
@@ -253,7 +286,20 @@ Response ResponseHandler::handleRequest(Connection* conn)
     }
     else if (method == "POST")
     {
-        return FileResponse::serve("www/201.html", _getMimeType("www/201.html"), 201);
+        struct stat fileStat;
+        char fPath[] = "www/201.html";
+        if (stat(fPath , &fileStat) != 0) {
+            return ErrorResponse::createNotFoundResponse(conn);
+        }
+        Response response(201);
+        std::string lastPath  = request.getRequestBody().getUploadedFiles().back().path();
+        if (!lastPath.empty())
+            response.addHeader("location", lastPath);
+        response.setFilePath(fPath);
+        response.setContentType(_getMimeType(fPath));
+        response.setFileSize(static_cast<size_t>(fileStat.st_size));
+        response.addHeader("Connection", "close");
+        return response;
     }
     else if (method == "DELETE")
     {
@@ -262,14 +308,14 @@ Response ResponseHandler::handleRequest(Connection* conn)
             return ErrorResponse::createNotFoundResponse(conn);
         }
         if (S_ISDIR(fileStat.st_mode)) {
-            return ErrorResponse::createForbiddenResponse();
+            return ErrorResponse::createForbiddenResponse(conn);
         }
         if (unlink(filePath.c_str()) != 0) {
-            return ErrorResponse::createInternalErrorResponse();
+            return ErrorResponse::createInternalErrorResponse(conn);
         }
-        Response resp(204);
-        resp.addHeader("Content-Length", "0");
-        return resp;
+        Response response(204);
+        response.addHeader("Content-Length", "0");
+        return response;
     }
-    return ErrorResponse::createInternalErrorResponse();
+    return ErrorResponse::createInternalErrorResponse(conn);
 }

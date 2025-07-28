@@ -21,14 +21,16 @@
 Connection::Connection()
 	:	fd(-1), req(NULL), connect(false), conServer(NULL), shouldKeepAlive(false),
 		lastActivityTime(time(NULL)), lastTimeoutCheck(time(NULL)),
-		closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0)
+		closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0),
+		cachedLocation(NULL)
 {
 }
 
 Connection::Connection(int clientFd)
 	:	fd(clientFd), req(NULL), connect(false), conServer(NULL), shouldKeepAlive(false),
 		lastActivityTime(time(NULL)), lastTimeoutCheck(time(NULL)),
-		closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0)
+		closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0),
+		cachedLocation(NULL)
 {
 }
 
@@ -87,6 +89,7 @@ bool	Connection::findServer(Http *http)
 							if (names[i] == hostname)
 							{
 								conServer = server;
+								cachedLocation = NULL; // Clear cache when server changes
 								return true;
 							}
 					}
@@ -98,6 +101,7 @@ bool	Connection::findServer(Http *http)
 				if (listen && listen->getPort() == port)
 				{
 					conServer = server;
+					cachedLocation = NULL; // Clear cache when server changes
 					return true;
 				}
 			}
@@ -187,7 +191,116 @@ ClientMaxBodySize*	Connection::getClientMaxBodySize()
 	return NULL;
 }
 
+const Location* Connection::getLocation() const
+{
+	// Return cached location if available
+	if (cachedLocation)
+	{
+		std::cout << "[CACHE HIT] Using cached location for URI: " << (req ? req->getRequestLine().getUri() : uri) << std::endl;
+		return cachedLocation;
+	}
 
+	if (!conServer)
+		return NULL;
+
+	std::string reqUri;
+	if (req && req->getRequestLine().getUri().size())
+		reqUri = req->getRequestLine().getUri();
+	else if (!uri.empty())
+		reqUri = uri;
+	else
+		return NULL;
+
+	std::cout << "[CACHE MISS] Computing location for URI: " << reqUri << std::endl;
+	// Compute location once and cache it
+	cachedLocation = _findBestLocation(conServer->directives, reqUri);
+	return cachedLocation;
+}
+
+const Location* Connection::_findBestLocation(const std::vector<IDirective*>& directives, const std::string& reqUri) const
+{
+	const Location* longestPrefixMatch = NULL;
+	size_t bestMatchLen = 0;
+	const Location* cgiMatch = NULL;
+
+	std::string cgiExtension;
+	size_t dotPos = reqUri.rfind('.');
+	if (dotPos != std::string::npos) {
+		size_t slashAfterDot = reqUri.find('/', dotPos);
+		if (slashAfterDot == std::string::npos || slashAfterDot > dotPos) {
+			cgiExtension = reqUri.substr(dotPos);
+		}
+	}
+
+	std::cout << "[DEBUG] reqUri: '" << reqUri << "' cgiExtension: '" << cgiExtension << "'" << std::endl;
+
+	for (std::vector<IDirective*>::const_iterator it = directives.begin(); it != directives.end(); ++it) {
+		if ((*it)->getType() != LOCATION)
+			continue;
+		const Location* loc = static_cast<const Location*>(*it);
+		if (!loc) continue;
+
+		std::string locUri = loc->getUri();
+		bool exact = loc->isExactMatch();
+
+		std::cout << "[DEBUG] Checking location: '" << locUri << "' exact: " << exact << std::endl;
+
+		if (exact) {
+			if (reqUri == locUri) {
+				std::cout << "[DEBUG] Exact match found: " << locUri << std::endl;
+				return loc;
+			}
+		} else {
+			if (!locUri.empty() && locUri[0] == '.') {
+				if (!cgiExtension.empty() && locUri == cgiExtension) {
+					std::cout << "[DEBUG] CGI match found: " << locUri << std::endl;
+					cgiMatch = loc;
+				}
+			} else {
+				// For prefix matching, check if request URI starts with location URI
+				bool matches = false;
+				if (locUri == "/") {
+					// Special case: if location is "/", any URI starting with "/" should match
+					matches = (reqUri[0] == '/');
+				} else {
+					// Check if request URI starts with location URI
+					// For /about/somt to match /about/, we need to check if it starts with /about/
+					if (reqUri.compare(0, locUri.length(), locUri) == 0) {
+						matches = true;
+					}
+				}
+				
+				if (matches) {
+					if (locUri.length() > bestMatchLen) {
+						bestMatchLen = locUri.length();
+						longestPrefixMatch = loc;
+						std::cout << "[DEBUG] New longest prefix match: " << locUri << " (length: " << locUri.length() << ")" << std::endl;
+					}
+				}
+			}
+		}
+	}
+
+	if (cgiMatch) {
+		std::cout << "[DEBUG] Returning CGI match: " << cgiMatch->getUri() << std::endl;
+		return cgiMatch;
+	}
+
+	if (longestPrefixMatch) {
+		std::cout << "[DEBUG] Returning longest prefix match: " << longestPrefixMatch->getUri() << std::endl;
+		const Location* nestedMatch = _findBestLocation(longestPrefixMatch->directives, reqUri);
+		if (nestedMatch) {
+			return nestedMatch;
+		}
+		return longestPrefixMatch;
+	}
+
+	std::cout << "[DEBUG] No match found" << std::endl;
+	return NULL;
+}
+
+
+/* 
 const Location* Connection::getLocation() const
 {
 	if (!conServer)
@@ -235,7 +348,7 @@ const Location* Connection::getLocation() const
 	std::cout << "[getLocation] No match found." << std::endl;
 	return NULL;
 }
-
+ */
 Root*	Connection::getRoot()
 {
 	Root*	root = static_cast<Root*>(getDirective(ROOT));
