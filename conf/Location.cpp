@@ -3,6 +3,7 @@
 Location::Location()
 {
 	uri = NULL;
+	exactMatch = false;
 }
 
 Location::~Location(void)

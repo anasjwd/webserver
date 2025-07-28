@@ -16,5 +16,7 @@ class Return : public IDirective {
 		DIRTYPE getType(void) const;
 		void setCode(unsigned int value);
 		void setUrl(char* value);
+		unsigned int getCode() const { return code; }
+		char* getUrl() const { return url; }
 };
 

@@ -6,6 +6,9 @@
 # include "RequestLine.hpp"
 # include "RequestHeaders.hpp"
 
+class	Http;
+class	Connection;
+
 class	Request
 {
 	private:
@@ -18,7 +21,6 @@ class	Request
 
 		std::string		_buffer;
 		bool			_requestDone;
-		time_t			_lastActivityTime;
 
 		bool			_processBodyHeaders();
 		bool			_processContentLength();
@@ -36,23 +38,20 @@ class	Request
 		bool					isRequestDone() const;
 
 		void					setFd(int);
-		const int&				getFd() const;
-		bool					checkForTimeout() const;
-		time_t					getLastActivityTime() const;
-		void					setLastActivityTime(time_t time);
+		bool					setState(bool, HttpStatusCode);
 
+		const int&				getFd() const;
 		const RequestState&		getState() const;
 		const HttpStatusCode&	getStatusCode() const;
 		const RequestLine&		getRequestLine() const;
 		const RequestBody&		getRequestBody() const;
 		const RequestHeaders&	getRequestHeaders() const;
-		bool					setState(bool, HttpStatusCode);
 
 		bool					isMultipart(const std::string&);
 		bool					contentLength(const std::string&);
 
 		bool					bodySection();
 		bool					lineSection();
-		bool					headerSection();
-		bool					appendToBuffer(const char*, size_t);
+		bool					headerSection(Connection*, Http*);
+		bool					appendToBuffer(Connection*, Http*, const char*, size_t);
 };

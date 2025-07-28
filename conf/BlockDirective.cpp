@@ -20,3 +20,12 @@ bool BlockDirective::validate(void)
 {
 	return ( true );
 }
+
+IDirective* BlockDirective::getDirective(DIRTYPE type) const
+{
+	for (std::vector<IDirective*>::const_iterator it = directives.begin(); it != directives.end(); ++it) {
+		if ((*it)->getType() == type)
+			return *it;
+	}
+	return NULL;
+}

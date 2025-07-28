@@ -1,6 +1,6 @@
-#include <cstdlib>
 # include <string>
 # include <cctype>
+# include <cstdlib>
 # include <sstream>
 # include "../incs/RequestHeaders.hpp"
 
@@ -84,24 +84,31 @@ bool	RequestHeaders::_isValidHeaderValue(const std::string& value)
 		if ((c < 32 && c != '\t') || c == 127)
 			return false;
 	}
-	
+
 	return true;
 }
 
-bool	RequestHeaders::_storeHeader(std::string& f_name, std::string& val)
+bool	RequestHeaders::_isDuplicated(std::string& filed, std::string& val)
 {
-	if (f_name == "set-cookie" || f_name == "warning")
+	std::map<std::string, std::string>::iterator it = _headers.find(filed);
+
+	if (filed == "set-cookie" || filed == "warning")
 	{
-		_multiHeaders[f_name].push_back(val);
+		_multiHeaders[filed].push_back(val);
 		return true;
 	}
 
-	std::map<std::string, std::string>::iterator it = _headers.find(f_name);
-
 	if (it != _headers.end())
-		it->second += ", " + val;
+	{
+		if (filed == "content-length" && it->second != val)
+			return false;
+		else if (filed == "host" || filed == "content-type")
+			return false;
+		else
+			it->second += ", " + val;
+	}
 	else
-		_headers[f_name] = val;
+		_headers[filed] = val;
 
 	return true;
 }
@@ -173,7 +180,7 @@ bool	RequestHeaders::checkAndStore(std::string& line, size_t colonPos)
 		return setState(false, BAD_REQUEST);
 
 	std::string lowerName = _toLowercase(name);
-	if (!_storeHeader(lowerName, value))
+	if (!_isDuplicated(lowerName, value))
 		return setState(false, BAD_REQUEST);
 
 	if (lowerName == "host")

@@ -2,7 +2,9 @@
 
 # include "conf/Http.hpp"
 # include "conf/Root.hpp"
+# include "conf/Index.hpp"
 # include "conf/Server.hpp"
+# include "conf/Return.hpp"
 # include "conf/Location.hpp"
 # include "conf/AutoIndex.hpp"
 # include "conf/ErrorPage.hpp"
@@ -21,34 +23,47 @@ class	Connection
 		Request			*req;
 		bool			connect;
 		Server			*conServer;
-		bool			shouldKeepAlive;
+		bool			shouldKeepAlive; // Hanaf useless member.
+		time_t			lastActivityTime;
 		time_t			lastTimeoutCheck;
-		const Location	*matchedLocation;
 
+		bool			closed;
+		int				fileFd;
+		int				fileSendState; // 0: not started, 1: headers sent, 2: sending body, 3: done
+		ssize_t			fileSendOffset;
 
-		Connection();
+		Connection(); // Unused constructor.
 		Connection(int);
 
-		void				updateTime();
+		bool				isTimedOut() const;
 
 		// General ones:
 		bool				findServer(Http*);
 		IDirective*			getDirective(DIRTYPE type);
 
 		// Alassiqu:
-		LimitExcept*		getLimitExcept();
+		LimitExcept*		getLimitExcept() const;
 		bool				checkMaxBodySize();
 		ClientMaxBodySize*	getClientMaxBodySize();
 
-		// Ahanaf:
+		// ahanaf
 		Root*				getRoot();
-		const Location*		getLocation();
+		Index*				getIndex();
+		const Location*		getLocation() const;
+		// const Location*		getLocation() const;
 		AutoIndex*			getAutoIndex();
 		ErrorPage*			getErrorPage();
-		
+
 		// 
-		void				freeConnections(std::vector<Connection*>&);
 		Connection*			findConnectionByFd(int, std::vector<Connection*>&);
 		void				closeConnection(Connection*, std::vector<Connection*>&, int);
+		void				freeConnections(std::vector<Connection*>&);
+
+		Return*				getReturnDirective();
+		ErrorPage*			getErrorPageForCode(int);
+
+		std::vector<std::string> _getAllowedMethods() const;
+		bool _isAllowedMethod(const std::string& method, const std::vector<std::string>& allowedMethods);
+
 
 };

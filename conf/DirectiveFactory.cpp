@@ -1,25 +1,6 @@
 #include "cfg_parser.hpp"
 #define NUM_OF_DIRECTIVES 11
 
-char* removeQuotes(char* str)
-{
-	if (str[0] != '\"' && str[0] != '\'')
-		return ( strdup(str) );
-	char* newStr;
-	unsigned int j = 0;
-	char quoteType;
-
-	newStr = new char[strlen(str) - 1];
-	quoteType = str[0];
-	for (unsigned int i = 1; str[i] != quoteType; i++)
-	{
-		newStr[j] = str[i];
-		++j;
-	}
-	newStr[j] = '\0';
-	return ( newStr );
-}
-
 IDirective* createNode(std::vector<t_token*>&,unsigned int&);
 void consumeDirectives(
 		BlockDirective* block,
@@ -84,7 +65,7 @@ IDirective* parseLocationBlock(
 		delete location;
 		throw DirectiveException("invalid listen's content - invalid URI");
 	}
-	location->setUri(removeQuotes(tokens[pos++]->data));
+	location->setUri(strdup(tokens[pos++]->data));
 	if (pos >= tokensSize || tokens[pos]->type != BLOCK_START)
 	{
 		delete location;
@@ -122,13 +103,8 @@ IDirective* parseListenDirective(
 	{
 		listen->setHost(strdup("0.0.0.0"));
 		std::stringstream ss(tokens[pos++]->data);
-		unsigned short port;
+		unsigned int port;
 		ss >> port;
-		if (ss.fail() || ss.eof() == false)
-		{
-			delete listen;
-			throw DirectiveException("invalid content for listen directive - invalid PORT number");
-		}
 		listen->setPort(port);
 	}
 	else if (isHostAndPort(tokens, pos, tokensSize))
@@ -148,13 +124,8 @@ IDirective* parseListenDirective(
 				throw DirectiveException("incomplete listen directive - missing port");
 			}
 			std::stringstream ss(tokens[pos++]->data);
-			unsigned short port;
+			unsigned int port;
 			ss >> port;
-			if (ss.fail() || ss.eof() == false)
-			{
-				delete listen;
-				throw DirectiveException("invalid content for listen directive - invalid PORT number");
-			}
 			listen->setPort(port);
 		}
 		else
@@ -320,36 +291,16 @@ IDirective* parseErrorPage(
 		delete errorPage;
 		throw DirectiveException("invalid content for error_page directive - code must be between 300 and 599");
 	}
-	ss.str(tokens[pos++]->data);
-	ss.clear();
-	ss >> tmp;
-	errorPage->setResponseCode(tmp);
-	if (ss.fail() || ss.eof() == false)
-	{
+	// Accept only <uri> as the next argument
+	if (tokens[pos]->type != STRING) {
 		delete errorPage;
-		throw DirectiveException("invalid content for error_page directive - invalid response code number");
+		throw DirectiveException("invalid content for error_page directive - missing or invalid uri");
 	}
-	if (pos >= tokensSize)
-	{
-		delete errorPage;
-		throw DirectiveException("incomplete error_page directive - missing \";\"");
-	}
-	else if (tokens[pos]->type == DIR_END)
-	{
-		++pos;
-		return ( errorPage );
-	}
-	if (errorPage->getResponseCode() < 300 || errorPage->getResponseCode() > 599)
-	{
-		delete errorPage;
-		throw DirectiveException("invalid content for error_page directive - code must be between 300 and 599");
-	}
-	std::cout << ">> " << tokens[pos]->data << std::endl;
-	errorPage->setUri(removeQuotes(tokens[pos++]->data));
+	errorPage->setUri(strdup(tokens[pos++]->data));
 	if (pos >= tokensSize || tokens[pos]->type != DIR_END)
 	{
 		delete errorPage;
-		throw DirectiveException("incomplete error_page directive - missing \";\"");
+		throw DirectiveException("incomplete error_page directive - missing ';'");
 	}
 	else
 		++pos;
@@ -427,9 +378,14 @@ IDirective* parseReturnDirective(
 		delete return_dir;
 		throw DirectiveException("invalid argument for return directive - invalid url");
 	}
-	return_dir->setUrl(removeQuotes(tokens[pos++]->data));
+	return_dir->setUrl(strdup(tokens[pos++]->data));
 	if (tokens[pos]->type != DIR_END)
 	{
+		std::cout <<"tokens[pos] " << tokens[pos] << std::endl;
+		std::cout <<"pos " << pos << std::endl;
+		std::cout <<"tokens[pos]->type " << tokens[pos]->type << std::endl;
+		std::cout << return_dir->getUrl() << std::endl;
+		std::cout <<"DIR_END " << DIR_END << std::endl;
 		delete return_dir;
 		throw DirectiveException("incomplete return directive - missing \";\"");
 	}
@@ -448,9 +404,9 @@ IDirective* parseClientMaxBodySizeDirective(
 
 	ClientMaxBodySize* clientMaxBodySize = new ClientMaxBodySize();
 	std::stringstream ss(tokens[pos++]->data);
-	int tmp;
+	unsigned long long tmp;
 	ss >> tmp;
-	if (ss.fail() || ss.eof() == false || tmp < 0)
+	if (ss.fail() || ss.eof() == false)
 	{
 		delete clientMaxBodySize;
 		throw DirectiveException("invalid argument for client_max_body_size directive - invalid number");

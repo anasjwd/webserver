@@ -1,11 +1,13 @@
 #include "Return.hpp"
 
 Return::Return(void)
-{}
+{
+	url = NULL;
+}
 
 Return::~Return(void)
 {
-	free(url);
+	if (url) free(url);
 }
 
 DIRTYPE Return::getType(void) const

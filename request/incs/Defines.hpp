@@ -1,17 +1,25 @@
 # pragma once
 
-# define	TIMEOUT_SECONDS	60
+# define	TIMEOUT_SECONDS			10
 
 # define	MAX_HEADER				100
+# define	WS_PATH_MAX				1024
 # define	MAX_URI_LENGTH			4096
 # define	MAX_LINE_LENGTH			8192
 # define	DEFAULT_MAX_BODY_SIZE	1048576;
 
 # define	CRLF					"\r\n"
-# define	END_HEADER				"\r\n\r\n"
+# define	CRLFCRLF				"\r\n\r\n"
 # define	HTTP_VERSION			"HTTP/1.1"
 
-enum RequestState
+enum    FileType
+{
+	TEMP_REQ,
+	TEMP_BODY,
+	UPLOAD_FILE
+};
+
+enum	RequestState
 {
 	BEGIN,
 	LINE,
@@ -21,10 +29,12 @@ enum RequestState
 	ERROR
 };
 
-enum HttpStatusCode
+enum	HttpStatusCode
 {
 	START,
 	OK = 200,
+	CREATED = 201,
+	ACCEPTED = 202,
 	BAD_REQUEST = 400,
 	METHOD_NOT_ALLOWED = 405,
 	REQUEST_TIMEOUT = 408,
