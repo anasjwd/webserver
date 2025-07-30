@@ -292,7 +292,9 @@ Response ResponseHandler::handleRequest(Connection* conn)
             return ErrorResponse::createNotFoundResponse(conn);
         }
         Response response(201);
-        response.addHeader("location", "www/201.html");
+        std::string lastPath  = request.getRequestBody().getUploadedFiles().back().path();
+        if (!lastPath.empty())
+            response.addHeader("location", lastPath);
         response.setFilePath(fPath);
         response.setContentType(_getMimeType(fPath));
         response.setFileSize(static_cast<size_t>(fileStat.st_size));
