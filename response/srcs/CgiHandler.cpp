@@ -128,7 +128,7 @@ Response CgiHandler::executeCgi(Connection* conn, const std::string& scriptPath)
         // Send request body to CGI script if it's a POST request
         if (conn->req && conn->req->getRequestLine().getMethod() == "POST") {
             // Read from the temporary file that contains the request body
-            std::string tempFile = conn->req->getRequestBody().getTempFilename();
+            std::string tempFile = conn->req->getRequestBody().getTempFile().path();
             if (!tempFile.empty()) {
                 std::ifstream bodyFile(tempFile.c_str());
                 if (bodyFile.is_open()) {
@@ -183,10 +183,11 @@ std::map<std::string, std::string> CgiHandler::buildEnvironment(Connection* conn
     env["PATH_TRANSLATED"] = scriptPath;
     env["SCRIPT_NAME"] = uri.substr(0, uri.find('?'));
     env["QUERY_STRING"] = getQueryString(request.getRequestLine().getQueryParams());
+    // env["HTTP_COOKIE"] = "num=15";
     // env["REMOTE_ADDR"] = getClientIp(conn->fd);
     // env["REMOTE_HOST"] = getClientIp(conn->fd);
     
-    // Content-related variables
+// Content-related variables
     if (method == "POST") {
         env["CONTENT_TYPE"] = request.getRequestHeaders().getHeaderValue("content-type");
         env["CONTENT_LENGTH"] = request.getRequestHeaders().getHeaderValue("content-length");
