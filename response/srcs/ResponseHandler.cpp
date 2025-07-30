@@ -110,16 +110,13 @@ std::string ResponseHandler::_buildFilePath(const std::string& uri, const std::s
     if (location && location->getUri()) {
         std::string locUri = std::string(location->getUri());
         
-        // Special handling for CGI locations (starting with '.')
         if (!locUri.empty() && locUri[0] == '.') {
-            // For CGI locations, just append the URI to the root
             while (!cleanUri.empty() && cleanUri[0] == '/') cleanUri = cleanUri.substr(1);
             if (!cleanUri.empty()) path += "/" + cleanUri;
 
             return path;
         }
         
-        // Regular location handling
         if (!locUri.empty() && locUri[0] == '/') locUri = locUri.substr(1);
         std::string prefix = "/" + locUri;
         if (cleanUri.find(prefix) == 0) {
@@ -195,18 +192,6 @@ Response ResponseHandler::handleRequest(Connection* conn)
     if (!conn->_isAllowedMethod(method, allowed))
         return ErrorResponse::createMethodNotAllowedResponse(conn ,allowed);
     const Location* location = conn->getLocation();
-    // if LOCATION is CGI set 
-    // if (location) {
-    //     std::cout << YELLOW <<  location->getUri()  <<  RESET << std::endl;
-    //     Root* locRoot = NULL;
-    //     for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); dit != location->directives.end(); ++dit) {
-    //         if ((*dit)->getType() == ROOT) {
-    //             locRoot = static_cast<Root*>(*dit);
-    //             break;
-    //         }
-    //     }
-    //     std::cout << YELLOW <<  locRoot->getPath()  <<  RESET << std::endl;
-    // }
 
     Return* ret = conn->getReturnDirective();
     if (ret) return ReturnHandler::handle(conn);
@@ -229,11 +214,22 @@ Response ResponseHandler::handleRequest(Connection* conn)
     std::string filePath = _buildFilePath(uri, root, location);
     std::cout << CYAN << "filepath " <<  filePath <<  RESET << std::endl;
     
-    // Check if this is a CGI request
-    if (location && location->getUri() && location->getUri()[0] == '.') {
-        // This is a CGI location, execute the script
-
-        return CgiHandler::executeCgi(conn, filePath);
+    if (location && location->getUri() && location->getUri()[0] == '.') {        
+        if (conn->cgiExecuted == false) {
+            std::cout << YELLOW << "Executing CGI..." << RESET << std::endl;
+            CgiHandler::executeCgi(conn, filePath);
+            return Response(200);
+        }
+        if (conn->cgiExecuted == true && !conn->cgiCompleted) {
+            std::cout << YELLOW << "Waiting for CGI..." << RESET << std::endl;
+            CgiHandler::waitCgi(conn);
+            CgiHandler::readCgiOutput(conn);
+            return Response(200);
+        }
+        if (conn->cgiCompleted == true) {
+            std::cout << YELLOW << "CGI completed, returning response..." << RESET << std::endl;
+            return CgiHandler::returnCgiResponse(conn);
+        }
     }
     
     if (method == "GET") {

@@ -19,17 +19,19 @@
 # include "response/include/ResponseHandler.hpp"
 
 Connection::Connection()
-	:	fd(-1), req(NULL), connect(false), conServer(NULL), shouldKeepAlive(false),
+	:	fd(-1), req(NULL), connect(false), conServer(NULL),
 		lastActivityTime(time(NULL)), lastTimeoutCheck(time(NULL)),
 		closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0),
+		cgiExecuted(false), cgiCompleted(false), cgiPid(-1), cgiReadState(0),
 		cachedLocation(NULL)
 {
 }
 
 Connection::Connection(int clientFd)
-	:	fd(clientFd), req(NULL), connect(false), conServer(NULL), shouldKeepAlive(false),
+	:	fd(clientFd), req(NULL), connect(false), conServer(NULL),
 		lastActivityTime(time(NULL)), lastTimeoutCheck(time(NULL)),
 		closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0),
+		cgiExecuted(false), cgiCompleted(false), cgiPid(-1), cgiReadState(0),
 		cachedLocation(NULL)
 {
 }
@@ -570,6 +572,7 @@ bool Connection::_isAllowedMethod(const std::string& method, const std::vector<s
     if (method.empty()) return false;
     return std::find(allowedMethods.begin(), allowedMethods.end(), method) != allowedMethods.end();
 }
+
 
 bool	Connection::isTimedOut() const
 {

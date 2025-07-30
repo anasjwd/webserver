@@ -70,7 +70,7 @@ Response ErrorResponse::createMethodNotAllowedResponse(Connection* conn, const s
         methods += allowedMethods[i];
     }
     Response errorBodyResponse = createErrorResponseWithMapping(conn, 405);
-    errorBodyResponse.addHeader("Allow", methods); // Copy over Allow header
+    errorBodyResponse.addHeader("Allow", methods);
     return errorBodyResponse;
 }
 
