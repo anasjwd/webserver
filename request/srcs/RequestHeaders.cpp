@@ -88,27 +88,23 @@ bool	RequestHeaders::_isValidHeaderValue(const std::string& value)
 	return true;
 }
 
-bool	RequestHeaders::_isDuplicated(std::string& filed, std::string& val)
+bool	RequestHeaders::_isDuplicated(std::string& field, std::string& val)
 {
-	std::map<std::string, std::string>::iterator it = _headers.find(filed);
-
-	if (filed == "set-cookie" || filed == "warning")
-	{
-		_multiHeaders[filed].push_back(val);
-		return true;
-	}
+	std::map<std::string, std::string>::iterator it = _headers.find(field);
 
 	if (it != _headers.end())
 	{
-		if (filed == "content-length" && it->second != val)
+		if (field == "content-length" && it->second != val)
 			return false;
-		else if (filed == "host" || filed == "content-type")
+		else if (field == "host" || field == "content-type")
 			return false;
+		else if (field == "cookie")
+			it->second += "; " + val;
 		else
 			it->second += ", " + val;
 	}
 	else
-		_headers[filed] = val;
+		_headers[field] = val;
 
 	return true;
 }
@@ -119,7 +115,6 @@ void	RequestHeaders::clear()
 	_headers.clear();
 	_hasHost = false;
 	_statusCode = START;
-	_multiHeaders.clear();
 }
 
 bool	RequestHeaders::parse()
@@ -212,13 +207,4 @@ std::string	RequestHeaders::getHeaderValue(const std::string& name) const
 		return it->second;
 	
 	return "";
-}
-
-const std::vector<std::string>& RequestHeaders::getMultiHeader(const std::string& name) const
-{
-	static const std::vector<std::string> empty;
-	std::map<std::string, std::vector<std::string> >::const_iterator it = _multiHeaders.find(_toLowercase(name));
-	if (it != _multiHeaders.end())
-		return it->second;
-	return empty;
 }
