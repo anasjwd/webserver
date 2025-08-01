@@ -137,7 +137,7 @@ bool ResponseSender::sendFileBody(Connection* conn, Response* response, int epol
         return false;
     }
     
-    ssize_t bytesRead = read(conn->fileFd, fileBuf, sizeof(fileBuf));
+    ssize_t bytesRead = read(conn->fileFd, fileBuf, sizeof(fileBuf) - 1);
     if (bytesRead == 0) {
         close(conn->fileFd);
         conn->fileFd = -1;

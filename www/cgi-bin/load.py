@@ -1,41 +1,18 @@
-import cgi
 import os
 import cgitb
 
 cgitb.enable()
 
-upload_dir = "../../uploads/"
-
-form = cgi.FieldStorage()
-
 print("Content-Type: text/html; charset=utf-8\r\n\r\n")
 print()
 
-if 'file' not in form:
-    value = "Aucun fichier n'a été téléchargé."
+uploaded_file_path = os.environ.get('UPLOADED_FILE_PATH', '')
+
+if uploaded_file_path and os.path.exists(uploaded_file_path):
+    filename = os.path.basename(uploaded_file_path)
+    value = f"'{filename}' a été uploadé avec succès et enregistré à '{uploaded_file_path}'"
 else:
-    file_item = form['file']
-
-    if file_item.filename:
-        filename = os.path.basename(file_item.filename)
-        filepath = os.path.join(upload_dir, filename)
-
-        if os.path.exists(filepath):
-            value = f"Le fichier '{filename}' existe déjà. Veuillez renommer votre fichier et réessayer."
-        else:
-            try:
-                with open(filepath, 'wb') as output_file:
-                    while True:
-                        chunk = file_item.file.read(1024)
-                        if not chunk:
-                            break
-                        output_file.write(chunk)
-
-                value = f"'{filename}' a été uploadé avec succès et enregistré à '{upload_dir}'"
-            except Exception as e:
-                value = f"Erreur lors de l'enregistrement du fichier : {e}"
-    else:
-        value = "Aucun fichier n'a été téléchargé."
+    value = "Aucun fichier n'a été téléchargé ou le fichier n'existe pas."
 
 html_content = f"""
 <!DOCTYPE html>

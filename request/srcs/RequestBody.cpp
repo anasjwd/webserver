@@ -129,6 +129,7 @@ bool RequestBody::_processMultipartChunk(const char* data, size_t len)
 
 	std::string boundaryLine = "--" + _boundary;
 	size_t boundaryPos;
+	std::cout << "[Multipart] Looking for boundary: '" << boundaryLine << "' in buffer of size " << _multipartBuffer.size() << std::endl;
 	while ((boundaryPos = _multipartBuffer.find(boundaryLine)) != std::string::npos)
 	{
 		std::cout << "[Multipart] Found boundary\n";
@@ -247,6 +248,11 @@ void	RequestBody::setContentType(const std::string& contentType)
 const FileHandler	RequestBody::getTempFile() const
 {
 	return _fileHandler;
+}
+
+const FileHandler&	RequestBody::getUploadHandler() const
+{
+	return _uploadHandler;
 }
 
 HttpStatusCode	RequestBody::getStatusCode() const

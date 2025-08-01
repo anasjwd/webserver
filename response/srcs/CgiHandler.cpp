@@ -59,10 +59,21 @@ Response CgiHandler::executeCgi(Connection* conn, const std::string& scriptPath)
         return ErrorResponse::createInternalErrorResponse(conn);
     }
     
+    bool isPost = conn->req->getRequestLine().getMethod() == "POST";
+    if (isPost && pipe(conn->cgiPipeToChild) == -1) {
+        close(conn->cgiPipeFromChild[0]);
+        close(conn->cgiPipeFromChild[1]);
+        return ErrorResponse::createInternalErrorResponse(conn);
+    }
+    
     conn->cgiPid = fork();
     if (conn->cgiPid == -1) {
         close(conn->cgiPipeFromChild[0]);
         close(conn->cgiPipeFromChild[1]);
+        if (isPost) {
+            close(conn->cgiPipeToChild[0]);
+            close(conn->cgiPipeToChild[1]);
+        }
         return ErrorResponse::createInternalErrorResponse(conn);
     }
     
@@ -71,6 +82,12 @@ Response CgiHandler::executeCgi(Connection* conn, const std::string& scriptPath)
         
         dup2(conn->cgiPipeFromChild[1], STDOUT_FILENO);
         close(conn->cgiPipeFromChild[1]);
+        
+        if (isPost) {
+            close(conn->cgiPipeToChild[1]);
+            dup2(conn->cgiPipeToChild[0], STDIN_FILENO);
+            close(conn->cgiPipeToChild[0]);
+        }
         
         std::map<std::string, std::string> env = buildEnvironment(conn, scriptPath);
         
@@ -100,6 +117,11 @@ Response CgiHandler::executeCgi(Connection* conn, const std::string& scriptPath)
         exit(1);
     } else {
         close(conn->cgiPipeFromChild[1]);
+        
+        if (isPost) {
+            close(conn->cgiPipeToChild[0]);
+            close(conn->cgiPipeToChild[1]);
+        }
         
         conn->cgiExecuted = true;
         conn->cgiCompleted = false;
@@ -136,12 +158,12 @@ void CgiHandler::readCgiOutput(Connection* conn) {
     }
     
     char buffer[8192];
-    ssize_t bytesRead = read(conn->cgiPipeFromChild[0], buffer, sizeof(buffer));
-    std::cout << YELLOW << "#######################################" << RESET << std::endl;
-    std::cout << buffer << std::endl;
-    std::cout << YELLOW << "#######################################" << RESET << std::endl;
+    ssize_t bytesRead = read(conn->cgiPipeFromChild[0], buffer, sizeof(buffer) - 1);
     if (bytesRead > 0) {
         buffer[bytesRead] = '\0';
+        std::cout << YELLOW << "#######################################" << RESET << std::endl;
+        std::cout << buffer << std::endl;
+        std::cout << YELLOW << "#######################################" << RESET << std::endl;
         conn->cgiOutput += std::string(buffer, bytesRead);
         
         if (conn->cgiReadState == 0) {
@@ -250,11 +272,18 @@ std::map<std::string, std::string> CgiHandler::buildEnvironment(Connection* conn
     env["SCRIPT_NAME"] = uri.substr(0, uri.find('?'));
     env["QUERY_STRING"] = getQueryString(request.getRequestLine().getQueryParams());
     env["HTTP_COOKIE"] = request.getRequestHeaders().getHeaderValue("cookie");
+    
+    // initilize time out here
 
 
     if (method == "POST") {
         env["CONTENT_TYPE"] = request.getRequestHeaders().getHeaderValue("content-type");
         env["CONTENT_LENGTH"] = request.getRequestHeaders().getHeaderValue("content-length");
+        
+        // Add uploaded file path if it's a multipart upload
+        if (request.getRequestBody().isMultipart() && request.getRequestBody().getUploadHandler().isOpen()) {
+            env["UPLOADED_FILE_PATH"] = request.getRequestBody().getUploadHandler().path();
+        }
     }
     
     const std::map<std::string, std::string>& headers = request.getRequestHeaders().getHeadersMap();

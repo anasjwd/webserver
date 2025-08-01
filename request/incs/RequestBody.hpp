@@ -56,6 +56,7 @@ class	RequestBody
 		void						setContentType(const std::string&);
 
 		const FileHandler   		getTempFile() const;
+		const FileHandler&			getUploadHandler() const;
 		HttpStatusCode				getStatusCode() const;
 		std::vector<FileHandler>	getUploadedFiles() const;
 		size_t						getContentLength() const;
