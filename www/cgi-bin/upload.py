@@ -1,69 +1,71 @@
 #!/usr/bin/env python3
-import os
-import sys
-import cgi
-import cgitb
 
-# Enable error reporting
-cgitb.enable()
-
-print("Content-Type: text/html")
+print("Content-Type: text/html\r\n")
 print()
-print("<!DOCTYPE html>")
-print("<html>")
-print("<head>")
-print("<title>Upload Test</title>")
-print("<style>")
-print("body { font-family: Arial, sans-serif; margin: 20px; }")
-print(".info { background-color: #e8f4f8; padding: 10px; border-radius: 5px; margin: 10px 0; }")
-print("input[type=file] { margin: 10px 0; }")
-print("input[type=submit] { padding: 5px 10px; background-color: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer; }")
-print("</style>")
-print("</head>")
-print("<body>")
-print("<h1>Upload Test CGI</h1>")
 
-# Check if this is a POST request
-if os.environ.get('REQUEST_METHOD') == 'POST':
-    print("<div class='info'>")
-    print("<h2>POST Request Received</h2>")
-    
-    # Get content length
-    content_length = int(os.environ.get('CONTENT_LENGTH', 0))
-    print(f"<p><strong>Content Length:</strong> {content_length} bytes</p>")
-    
-    # Get content type
-    content_type = os.environ.get('CONTENT_TYPE', '')
-    print(f"<p><strong>Content Type:</strong> {content_type}</p>")
-    
-    # Read POST data
-    if content_length > 0:
-        post_data = sys.stdin.read(content_length)
-        print(f"<p><strong>POST Data:</strong></p>")
-        print(f"<pre>{post_data[:500]}{'...' if len(post_data) > 500 else ''}</pre>")
-    
-    print("</div>")
-else:
-    print("<div class='info'>")
-    print("<h2>GET Request</h2>")
-    print("<p>This page accepts POST requests for testing file uploads.</p>")
-    print("</div>")
+html = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OuiTransfer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
-print("<form method='POST' enctype='multipart/form-data'>")
-print("<label for='file'>Select a file:</label><br>")
-print("<input type='file' id='file' name='file'><br>")
-print("<input type='submit' value='Upload File'>")
-print("</form>")
+        .container{
+            --max-width: 1000px;
+            --padding: 1rem;
 
-print("<br>")
-print("<h3>Environment Variables:</h3>")
-print("<ul>")
-for key, value in sorted(os.environ.items()):
-    if key.startswith('HTTP_') or key in ['REQUEST_METHOD', 'CONTENT_TYPE', 'CONTENT_LENGTH', 'QUERY_STRING']:
-        print(f"<li><strong>{key}:</strong> {value}</li>")
-print("</ul>")
+            width: min(var(--max-width), 100% - (var(--padding) * 1.2));
+            margin-inline: auto;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f0f0;
+        }
+        div {
+            font-size: 2rem;
+            font-weight: semibold;
+            color: #333;
+            text-align: center;
+        }
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+        }
+        .button{
+            margin-top: 2rem;
+            border: none;
+            padding: 1rem 3rem;
+            background-color: #333;
+            border-radius: 15px;
+            font-weight: semibold;
+            color: #f0f0f0;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Upload a File</h1>
+        <form action="./load.py" method="post" enctype="multipart/form-data">
+            <label for="file">Select a file:</label>
+            <input type="file" name="file" id="file">
+            <br><br>
+            <input type="submit" value="Upload">
+        </form>
+    </div>
+</body>
+</html>
+"""
 
-print("<br>")
-print("<a href='/'>Back to Home</a>")
-print("</body>")
-print("</html>") 
+print(html)

@@ -105,6 +105,7 @@ std::string Response::build() {
         }
     }
 
+    // _headers["Set-Cookie"] = "name=ahanaf";
 
     std::vector<std::pair<std::string, std::string> > sortedHeaders(_headers.begin(), _headers.end());
     std::sort(sortedHeaders.begin(), sortedHeaders.end());

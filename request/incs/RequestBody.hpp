@@ -20,7 +20,7 @@ class	RequestBody
 		size_t						_bytesReceived;
 
 		bool						_inPart;
-		size_t						_partContentStart;
+		// size_t						_partContentStart;
 		FileHandler					_uploadHandler;
 		std::vector<FileHandler>	_uploadHandlers;
 		std::string					_currentFilename;

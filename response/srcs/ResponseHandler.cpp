@@ -179,6 +179,7 @@ std::string ResponseHandler::_generateDirectoryListing(const std::string& path, 
 
 Response ResponseHandler::handleRequest(Connection* conn) 
 {
+    std::cout << RED  << "in handle request "<< RESET << std::endl;
     const Request& request = *conn->req;
     if (conn->req->getStatusCode() != OK)
     {
@@ -217,19 +218,19 @@ Response ResponseHandler::handleRequest(Connection* conn)
     if (location && location->getUri() && location->getUri()[0] == '.') {        
         if (conn->cgiExecuted == false) {
             std::cout << YELLOW << "Executing CGI..." << RESET << std::endl;
-            CgiHandler::executeCgi(conn, filePath);
-            return Response(200);
+            return CgiHandler::executeCgi(conn, filePath);
+            // return Response(200);
         }
-        if (conn->cgiExecuted == true && !conn->cgiCompleted) {
-            std::cout << YELLOW << "Waiting for CGI..." << RESET << std::endl;
-            CgiHandler::waitCgi(conn);
-            CgiHandler::readCgiOutput(conn);
-            return Response(200);
-        }
-        if (conn->cgiCompleted == true) {
-            std::cout << YELLOW << "CGI completed, returning response..." << RESET << std::endl;
-            return CgiHandler::returnCgiResponse(conn);
-        }
+        // if (conn->cgiExecuted == true && !conn->cgiCompleted) {
+        //     std::cout << YELLOW << "Waiting for CGI..." << RESET << std::endl;
+        //     CgiHandler::waitCgi(conn);
+        //     CgiHandler::readCgiOutput(conn);
+        //     // return Response(200);
+        // }
+        // if (conn->cgiCompleted == true) {
+        //     std::cout << YELLOW << "CGI completed, returning response..." << RESET << std::endl;
+        //     return CgiHandler::returnCgiResponse(conn);
+        // }
     }
     
     if (method == "GET") {
@@ -288,9 +289,11 @@ Response ResponseHandler::handleRequest(Connection* conn)
             return ErrorResponse::createNotFoundResponse(conn);
         }
         Response response(201);
-        std::string lastPath  = request.getRequestBody().getUploadedFiles().back().path();
-        if (!lastPath.empty())
-            response.addHeader("location", lastPath);
+        std::string lastPath = "upload/chifile.txt" ;// TODO;
+        // if (request.getRequestBody().isCompleted())
+            // lastPath  = request.getRequestBody().getUploadedFiles().back().path();
+        // if (!lastPath.empty())
+        response.addHeader("location", lastPath);
         response.setFilePath(fPath);
         response.setContentType(_getMimeType(fPath));
         response.setFileSize(static_cast<size_t>(fileStat.st_size));
