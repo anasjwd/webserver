@@ -289,7 +289,11 @@ Response ResponseHandler::handleRequest(Connection* conn)
             return ErrorResponse::createNotFoundResponse(conn);
         }
         Response response(201);
-        std::string lastPath = "upload/chifile.txt" ;// TODO;
+        std::string lastPath;
+        if (request.getRequestBody().isMultipart() && request.getRequestBody().getUploadHandler().isOpen()) {
+            lastPath = request.getRequestBody().getUploadHandler().path();
+        }
+        // std::string lastPath = "upload/chifile.txt" ;// TODO;
         // if (request.getRequestBody().isCompleted())
             // lastPath  = request.getRequestBody().getUploadedFiles().back().path();
         // if (!lastPath.empty())

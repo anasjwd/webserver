@@ -283,6 +283,9 @@ std::map<std::string, std::string> CgiHandler::buildEnvironment(Connection* conn
         // Add uploaded file path if it's a multipart upload
         if (request.getRequestBody().isMultipart() && request.getRequestBody().getUploadHandler().isOpen()) {
             env["UPLOADED_FILE_PATH"] = request.getRequestBody().getUploadHandler().path();
+            std::cout << GREEN <<"%%%%%%%%%%%%%%%%%%%%%%%%%%"<< RESET << std::endl;
+            std::cout << GREEN << env["UPLOADED_FILE_PATH"] << RESET << std::endl;
+            std::cout << GREEN <<"%%%%%%%%%%%%%%%%%%%%%%%%%%"<< RESET << std::endl;
         }
     }
     
