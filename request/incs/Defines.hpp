@@ -1,6 +1,7 @@
 # pragma once
 
-# define	TIMEOUT_SECONDS			10
+# define	TIMEOUT_SECONDS			60
+# define	CGI_TIMEOUT				10
 
 # define	MAX_HEADER				100
 # define	WS_PATH_MAX				1024

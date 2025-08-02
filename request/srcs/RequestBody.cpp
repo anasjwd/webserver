@@ -129,6 +129,7 @@ bool RequestBody::_processMultipartChunk(const char* data, size_t len)
 
 	std::string boundaryLine = "--" + _boundary;
 	size_t boundaryPos;
+	std::cout << "[Multipart] Looking for boundary: '" << boundaryLine << "' in buffer of size " << _multipartBuffer.size() << std::endl;
 	while ((boundaryPos = _multipartBuffer.find(boundaryLine)) != std::string::npos)
 	{
 		std::cout << "[Multipart] Found boundary\n";
@@ -244,19 +245,19 @@ void	RequestBody::setContentType(const std::string& contentType)
 	_contentType = contentType;
 }
 
-const FileHandler	RequestBody::getTempFile() const
+FileHandler	RequestBody::getTempFile() const
 {
 	return _fileHandler;
+}
+
+const FileHandler&	RequestBody::getUploadHandler() const
+{
+	return _uploadHandler;
 }
 
 HttpStatusCode	RequestBody::getStatusCode() const
 {
 	return _statusCode;
-}
-
-std::vector<FileHandler>	RequestBody::getUploadedFiles() const
-{
-	return _uploadHandlers;
 }
 
 size_t	RequestBody::getContentLength() const
@@ -289,8 +290,9 @@ bool	RequestBody::receiveData(const char* data, size_t len)
 	if (_isChunked) // chunked | contnt-length
 		return _processChunkData(data, len);
 
-	if (_bytesReceived + len > _contentLength)
-		return setState(false, PAYLOAD_TOO_LARGE);
+	// TODO:
+	// if (_bytesReceived + len > _contentLength)
+	// 	return setState(false, PAYLOAD_TOO_LARGE);
 
 	if (!_fileHandler.write(data, len))
 		return setState(false, INTERNAL_SERVER_ERROR);

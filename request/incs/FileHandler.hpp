@@ -21,7 +21,7 @@ class	FileHandler
 		bool			_createTempRequest();
 		bool			_createTempResponse();
 		bool			_createUploadFile(const std::string&);
-
+		
 	public:
 		FileHandler();
 		~FileHandler();

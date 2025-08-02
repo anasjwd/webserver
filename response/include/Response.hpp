@@ -8,7 +8,7 @@
 
 
 
-// Foreground colors
+
 #define RESET       "\033[0m"
 #define BLACK       "\033[30m"
 #define RED         "\033[31m"
@@ -19,7 +19,7 @@
 #define CYAN        "\033[36m"
 #define WHITE       "\033[37m"
 
-// Bright foreground colors
+
 #define BBLACK      "\033[90m"
 #define BRED        "\033[91m"
 #define BGREEN      "\033[92m"
@@ -29,7 +29,7 @@
 #define BCYAN       "\033[96m"
 #define BWHITE      "\033[97m"
 
-// Background colors (optional)
+
 #define BG_BLACK    "\033[40m"
 #define BG_RED      "\033[41m"
 #define BG_GREEN    "\033[42m"
@@ -45,8 +45,8 @@ class Response
         int _statusCode;
         std::string _statusMessage;
         std::map<std::string, std::string> _headers;
-        std::string _filePath;  // For direct file serving
-        size_t _fileSize;       // File size for Content-Length
+        std::string _filePath;
+        size_t _fileSize;
         bool _isBuilt;
         std::string _cachedResponse;
         void _addDefaultHeaders();
