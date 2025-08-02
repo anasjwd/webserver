@@ -73,7 +73,7 @@ echo "\r\n";
         <h2>Visit Counter</h2>
         <p><?php echo $message; ?></p>
         <form action="" method="post">
-            <button type="submit" name="reset" class="button">Reset Visit Count</button>
+            <button type="submit" name="reset" class="button">Visit Count</button>
         </form>
     </div>
 </body>

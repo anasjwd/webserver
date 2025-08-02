@@ -20,9 +20,7 @@ class	RequestBody
 		size_t						_bytesReceived;
 
 		bool						_inPart;
-		// size_t						_partContentStart;
 		FileHandler					_uploadHandler;
-		std::vector<FileHandler>	_uploadHandlers;
 		std::string					_currentFilename;
 		std::string					_multipartBuffer;
 		bool						_isCurrentPartFile;
@@ -55,14 +53,14 @@ class	RequestBody
 		bool						setState(bool, HttpStatusCode);
 		void						setContentType(const std::string&);
 
-		const FileHandler   		getTempFile() const;
-		const FileHandler&			getUploadHandler() const;
+		FileHandler   				getTempFile() const;
 		HttpStatusCode				getStatusCode() const;
-		std::vector<FileHandler>	getUploadedFiles() const;
+		const FileHandler&			getUploadHandler() const;
 		size_t						getContentLength() const;
 		size_t						getBytesReceived() const;
 
 		bool						receiveData(const char*, size_t);
 		bool						extractBoundary(const std::string&);
+
 
 };

@@ -17,18 +17,12 @@ bool ResponseSender::handleEpollOut(Connection* conn, int epollFd, std::vector<C
 
     try {
         if (conn->fileSendState == 0) {
-            std::cout << "[ResponseSender] fileSendState = 0, cgiExecuted=" << conn->cgiExecuted 
-                      << ", cgiCompleted=" << conn->cgiCompleted << std::endl;
-            
             if (conn->cgiExecuted && !conn->cgiCompleted) {
-                std::cout << "[ResponseSender] CGI is running, waiting for completion..." << std::endl;
                 CgiHandler::waitCgi(conn);
                 CgiHandler::readCgiOutput(conn);
                 if (!conn->cgiCompleted) {
-                    std::cout << "[ResponseSender] CGI still running, waiting..." << std::endl;
                     return true;
                 }
-                std::cout << "[ResponseSender] CGI completed" << std::endl;
             } else {
                 std::cout << "[ResponseSender] CGI state - executed: " << conn->cgiExecuted 
                           << ", completed: " << conn->cgiCompleted << std::endl;
@@ -46,9 +40,6 @@ bool ResponseSender::handleEpollOut(Connection* conn, int epollFd, std::vector<C
                 std::cout << "[ResponseSender] Using regular response" << std::endl;
                 conn->res = ResponseHandler::handleRequest(conn);
                 currentResponse = &conn->res;
-                std::cout << "[ResponseSender] After ResponseHandler, cgiExecuted=" << conn->cgiExecuted 
-                          << ", cgiCompleted=" << conn->cgiCompleted << std::endl;
-                
                 if (conn->cgiExecuted && !conn->cgiCompleted) {
                     std::cout << "[ResponseSender] CGI started, waiting for completion..." << std::endl;
                     return true;

@@ -32,6 +32,7 @@ class	Connection
 		int				fileSendState; // 0: not started, 1: headers sent, 2: sending body, 3: done
 		ssize_t			fileSendOffset;
 
+		bool			isCgi;
 		bool			cgiExecuted;
 		bool			cgiCompleted;
 		std::string		cgiOutput;
@@ -50,6 +51,7 @@ class	Connection
 		Connection(int);
 
 		bool				isTimedOut() const;
+		bool				isCgiTimedOut() const;
 
 		bool				findServer(Http*);
 		IDirective*			getDirective(DIRTYPE type);

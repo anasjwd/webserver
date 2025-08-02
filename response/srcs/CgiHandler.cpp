@@ -1,5 +1,6 @@
 #include "../include/CgiHandler.hpp"
 #include "../include/ErrorResponse.hpp"
+#include <cstddef>
 #include <string>
 #include <unistd.h>
 #include <sys/wait.h>
@@ -139,6 +140,18 @@ void CgiHandler::waitCgi(Connection* conn) {
         return;
     }
 
+    time_t currentTime = time(NULL);
+    if (currentTime - conn->cgiStartTime > CGI_TIMEOUT) {
+        if (conn->cgiPid > 0) {
+            kill(conn->cgiPid, SIGTERM);
+            sleep(1);
+            kill(conn->cgiPid, SIGKILL);
+        }
+        conn->cgiCompleted = true;
+        close(conn->cgiPipeFromChild[0]);
+        return;
+    }
+
     int status;
     int result = waitpid(conn->cgiPid, &status, WNOHANG);
         
@@ -148,7 +161,6 @@ void CgiHandler::waitCgi(Connection* conn) {
     } else if (result == -1) {
         conn->cgiCompleted = true;
         close(conn->cgiPipeFromChild[0]);
-    } else if (result == 0) {
     }
 }
 
@@ -186,6 +198,11 @@ void CgiHandler::readCgiOutput(Connection* conn) {
         conn->cgiCompleted = true;
         close(conn->cgiPipeFromChild[0]);
     } else if (bytesRead == -1) {
+        if (conn->cgiPid > 0) {
+            kill(conn->cgiPid, SIGTERM);
+            sleep(1);
+            kill(conn->cgiPid, SIGKILL);
+        }
         conn->cgiCompleted = true;
         close(conn->cgiPipeFromChild[0]);
     }
@@ -279,14 +296,10 @@ std::map<std::string, std::string> CgiHandler::buildEnvironment(Connection* conn
     if (method == "POST") {
         env["CONTENT_TYPE"] = request.getRequestHeaders().getHeaderValue("content-type");
         env["CONTENT_LENGTH"] = request.getRequestHeaders().getHeaderValue("content-length");
-        
-        // Add uploaded file path if it's a multipart upload
-        if (request.getRequestBody().isMultipart() && request.getRequestBody().getUploadHandler().isOpen()) {
+        if (request.getRequestBody().isMultipart() && request.getRequestBody().getUploadHandler().isOpen()) 
             env["UPLOADED_FILE_PATH"] = request.getRequestBody().getUploadHandler().path();
-            std::cout << GREEN <<"%%%%%%%%%%%%%%%%%%%%%%%%%%"<< RESET << std::endl;
-            std::cout << GREEN << env["UPLOADED_FILE_PATH"] << RESET << std::endl;
-            std::cout << GREEN <<"%%%%%%%%%%%%%%%%%%%%%%%%%%"<< RESET << std::endl;
-        }
+        else
+            env["UPLOADED_FILE_PATH"] = request.getRequestBody().getTempFile().path();     
     }
     
     const std::map<std::string, std::string>& headers = request.getRequestHeaders().getHeadersMap();

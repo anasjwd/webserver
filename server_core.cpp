@@ -26,6 +26,7 @@
 # include "conf/cfg_parser.hpp"
 # include "request/incs/Defines.hpp"
 # include "request/incs/Request.hpp"
+#include "response/include/FileResponse.hpp"
 # include "response/include/Response.hpp"
 # include "response/include/ErrorResponse.hpp"
 # include "response/include/ResponseHandler.hpp"
@@ -216,13 +217,31 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 	while (it != connections.end())
 	{
 		Connection* conn = *it;
-		if (conn && conn->isTimedOut())
+		if (conn && conn->isTimedOut() && !conn->isCgi)
 		{
 			std::cout << "Connection timeout for fd " << conn->fd << std::endl;
 			if (conn->req)
 				conn->req->setState(false, REQUEST_TIMEOUT);
 			epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, &ev);
 			std::cout << "Closing connection fd " << conn->fd << std::endl;
+			conn->closeConnection(conn, connections, epollFd);
+		}
+		else if (conn && conn->isCgi && conn->isCgiTimedOut())
+		{
+			std::cout << "Connection cgi timeout for fd " << conn->fd << std::endl;
+			Response res =  FileResponse::serve("www/error_504.html" , "text/html", 504);
+			  std::string responseStr = res.build();
+			std::cout << "response headers\n";
+			std::cout << CYAN <<  responseStr << RESET << std::endl;
+			send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
+			conn->fileFd = open(res.getFilePath().c_str(), O_RDONLY);
+			char fileBuf[EIGHT_KB]; 
+   			ssize_t bytesRead = read(conn->fileFd, fileBuf, sizeof(fileBuf) - 1);
+			std::cout << RED  << fileBuf << RESET << std::endl;
+			send(conn->fd, fileBuf, bytesRead, 0);
+
+			epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, &ev);
+			std::cout << "Closing cgi connection fd " << conn->fd << std::endl;
 			conn->closeConnection(conn, connections, epollFd);
 		}
 		if (connections.size() == 0)
