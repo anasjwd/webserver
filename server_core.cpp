@@ -333,10 +333,6 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 						conn->req->appendToBuffer(conn, http, buff, bytes);
 						if (!conn->checkMaxBodySize())
 							conn->req->setState(false, PAYLOAD_TOO_LARGE);
-<<<<<<< HEAD
-
-=======
->>>>>>> refs/remotes/origin/main
 						if (conn->req->isRequestDone())
 						{
 							ev.events = EPOLLOUT;
