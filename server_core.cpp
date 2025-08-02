@@ -271,7 +271,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 		// 	lastCleanupCheck = time(NULL);
 		// }
 
-		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000);
+		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000); //TODO-ACHRAF: check if the 1000 is valid
 
 		for (int i = 0; i < numberOfEvents; i++)
 		{
@@ -307,30 +307,15 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 						if (!conn->req)
 						{
 							conn->req = new Request(conn->fd);
-							conn->cachedLocation = NULL; // Clear cache for new request
+							conn->cachedLocation = NULL;
 						}
 
 						conn->req->appendToBuffer(conn, http, buff, bytes);
-						std::cout << "-----------------------------------\nState in req " << conn->fd << " : " << conn->req->getStatusCode() << "\n";
-						// if (!conn->conServer)
-						// {
-						// 	conn->findServer(http);
-						// 	std::string method = conn->req->getRequestLine().getMethod();
-						// 	std::vector<std::string> allowed = conn->_getAllowedMethods();
-						// 	if (!conn->_isAllowedMethod(method, allowed)) {
-						// 		std::cout  << BGREEN << "not allowed method so without creating file" << RESET <<  std::endl;
-						// 		conn->req->setState(false, METHOD_NOT_ALLOWED);
-						// 	}
-						// }
 						if (!conn->checkMaxBodySize())
-						{
-							std::cout << "PAYLOAD_TOO_LARGE\n";
 							conn->req->setState(false, PAYLOAD_TOO_LARGE);
-						}
 
 						if (conn->req->isRequestDone())
 						{
-							std::cout << "Request done with state: " << conn->req->getStatusCode() << "\n";
 							ev.events = EPOLLOUT;
 							ev.data.fd = conn->fd;
 							epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
