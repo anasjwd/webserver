@@ -6,6 +6,7 @@
 #include <string>
 
 Response ReturnHandler::handle(Connection* conn) {
+    std::cout << RED <<  "return handler" << RESET << std::endl;
     Return* ret = conn ? conn->getReturnDirective() : NULL;
     if (!ret) return Response();
     const Location* loc = conn->getLocation();
@@ -25,8 +26,14 @@ Response ReturnHandler::handle(Connection* conn) {
         unsigned int code = ret->getCode();
         char* url = ret->getUrl();
         std::string urlStr = url ? std::string(url) : "";
+        if (!urlStr.empty() && urlStr[0] == '"' && urlStr[urlStr.size() - 1] == '"')
+            urlStr = urlStr.substr(1, urlStr.size() - 2);
         if (code >= 300 && code < 400 && url && url[0]) {
-            if (!urlStr.empty() && urlStr[0] != '/') urlStr = "/" + urlStr;
+           bool isAbsoluteUrl = urlStr.find("http://") == 0 || urlStr.find("https://") == 0;
+           std::cout <<  CYAN << isAbsoluteUrl << " " << urlStr << RESET  <<  std::endl;
+            if (!urlStr.empty() && !isAbsoluteUrl && urlStr[0] != '/')
+                urlStr = "/" + urlStr;
+
             return Response::createRedirectResponse(code, urlStr);
         } else if (code >= 400 && code < 600) {
             if (url && url[0] == '/') {

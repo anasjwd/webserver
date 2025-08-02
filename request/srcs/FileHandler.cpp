@@ -7,13 +7,16 @@
 # include "../incs/FileHandler.hpp"
 
 FileHandler::FileHandler() 
-	:	_fd(-1), _size(0), _offset(0), _isOpen(false), _isTemp(false)
+	:	_fd(-1), _size(0), _offset(0),
+		_isOpen(false), _isTemp(false)
 {
 }
 
 FileHandler::~FileHandler()
 {
 	close();
+	// if (_isPost == false)
+	// 	remove();
 }
 
 bool	FileHandler::_createTempBody()
@@ -109,7 +112,7 @@ bool	FileHandler::remove()
 
 	if (!_path.empty())
 	{
-		if (::unlink(_path.c_str()))
+		if (std::remove(_path.c_str()))
 			return false;
 
 		_path.clear();

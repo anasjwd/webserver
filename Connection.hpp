@@ -23,7 +23,7 @@ class	Connection
 		Request			*req;
 		bool			connect;
 		Server			*conServer;
-		bool			shouldKeepAlive; // Hanaf useless member.
+
 		time_t			lastActivityTime;
 		time_t			lastTimeoutCheck;
 
@@ -32,15 +32,27 @@ class	Connection
 		int				fileSendState; // 0: not started, 1: headers sent, 2: sending body, 3: done
 		ssize_t			fileSendOffset;
 
-		// Cached location to avoid multiple getLocation calls
+		bool			isCgi;
+		bool			cgiExecuted;
+		bool			cgiCompleted;
+		std::string		cgiOutput;
+		Response		cgiResponse;
+		int				cgiPid;
+		int				cgiPipeToChild[2];
+		int				cgiPipeFromChild[2];
+		int				cgiReadState;
+		std::string		cgiHeaders;
+		std::string		cgiBody;
+		time_t			cgiStartTime;
+
 		mutable const Location*	cachedLocation;
 
 		Connection();
 		Connection(int);
 
 		bool				isTimedOut() const;
+		bool				isCgiTimedOut() const;
 
-		// General ones:
 		bool				findServer(Http*);
 		IDirective*			getDirective(DIRTYPE type);
 

@@ -26,9 +26,11 @@
 # include "conf/cfg_parser.hpp"
 # include "request/incs/Defines.hpp"
 # include "request/incs/Request.hpp"
+#include "response/include/FileResponse.hpp"
 # include "response/include/Response.hpp"
 # include "response/include/ErrorResponse.hpp"
 # include "response/include/ResponseHandler.hpp"
+# include "response/include/ResponseSender.hpp"
 
 # define	NONESSENTIAL	101
 # define	MAX_EVENTS		512
@@ -215,13 +217,31 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 	while (it != connections.end())
 	{
 		Connection* conn = *it;
-		if (conn && conn->isTimedOut())
+		if (conn && conn->isTimedOut() && !conn->isCgi)
 		{
 			std::cout << "Connection timeout for fd " << conn->fd << std::endl;
 			if (conn->req)
 				conn->req->setState(false, REQUEST_TIMEOUT);
 			epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, &ev);
 			std::cout << "Closing connection fd " << conn->fd << std::endl;
+			conn->closeConnection(conn, connections, epollFd);
+		}
+		else if (conn && conn->isCgi && conn->isCgiTimedOut())
+		{
+			std::cout << "Connection cgi timeout for fd " << conn->fd << std::endl;
+			Response res =  FileResponse::serve("www/error_504.html" , "text/html", 504);
+			  std::string responseStr = res.build();
+			std::cout << "response headers\n";
+			std::cout << CYAN <<  responseStr << RESET << std::endl;
+			send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
+			conn->fileFd = open(res.getFilePath().c_str(), O_RDONLY);
+			char fileBuf[EIGHT_KB]; 
+   			ssize_t bytesRead = read(conn->fileFd, fileBuf, sizeof(fileBuf) - 1);
+			std::cout << RED  << fileBuf << RESET << std::endl;
+			send(conn->fd, fileBuf, bytesRead, 0);
+
+			epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, &ev);
+			std::cout << "Closing cgi connection fd " << conn->fd << std::endl;
 			conn->closeConnection(conn, connections, epollFd);
 		}
 		if (connections.size() == 0)
@@ -272,7 +292,6 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 		// }
 
 		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000); //TODO-ACHRAF: check if the 1000 is valid
-
 		for (int i = 0; i < numberOfEvents; i++)
 		{
 			if (std::find(sockets.begin(), sockets.end(), events[i].data.fd) != sockets.end())
@@ -286,6 +305,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 
 				Connection* conn = new Connection(clientFd);
 				connections.push_back(conn);
+				std::cout << RED << "Connection created!\n" << RESET;
 
 				ev.events = EPOLLIN;
 				ev.data.fd = clientFd;
@@ -299,6 +319,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 
 				if (events[i].events & EPOLLIN)
 				{
+					std::cout << RED << "EPOLLIN\n" << RESET;
 					bytes = read(conn->fd, buff, EIGHT_KB);
 					if (bytes <= 0)
 						conn->closeConnection(conn, connections, epollFd);
@@ -309,11 +330,13 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 							conn->req = new Request(conn->fd);
 							conn->cachedLocation = NULL;
 						}
-
 						conn->req->appendToBuffer(conn, http, buff, bytes);
 						if (!conn->checkMaxBodySize())
 							conn->req->setState(false, PAYLOAD_TOO_LARGE);
+<<<<<<< HEAD
 
+=======
+>>>>>>> refs/remotes/origin/main
 						if (conn->req->isRequestDone())
 						{
 							ev.events = EPOLLOUT;
@@ -324,102 +347,9 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				} 
 				else if (events[i].events & EPOLLOUT)
 				{
-					if (conn->req)
-					{
-						try {
-							if (conn->fileSendState == 0) {
-								conn->res = ResponseHandler::handleRequest(conn);
-								std::string responseStr = conn->res.build();
-							ssize_t sent = send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
-							std::cout<<responseStr<<std::endl;
-							std::cout<<"filesendstate: "<<conn->fileSendState<<"contnet-lenght: "<<conn->res.getFileSize()<<std::endl;
-								if (sent == -1) {
-									handleConnectionError(conn, connections, epollFd, "Header send error");
-									conn = NULL;
-									continue;
-								}
-								conn->lastActivityTime = time(NULL);
-								std::cout << "headers sent succefuly\n";
-								if (!conn->res.getFilePath().empty()) {
-									conn->fileFd = open(conn->res.getFilePath().c_str(), O_RDONLY);
-									if (conn->fileFd == -1) {
-										handleConnectionError(conn, connections, epollFd, "File open error");
-										conn = NULL;
-										continue;
-									}
-									conn->fileSendOffset = 0;
-									conn->fileSendState = 1;
-									break;
-									// continue;
-								} else {
-									conn->fileSendState = 3;
-								}
-							}
-							if (conn->fileSendState == 1) {
-							std::cout<<"filesendstate: "<<conn->fileSendState<<std::endl;
-								char fileBuf[EIGHT_KB];
-								if (lseek(conn->fileFd, conn->fileSendOffset, SEEK_SET) == -1) {
-									close(conn->fileFd);
-									conn->fileFd = -1;
-									handleConnectionError(conn, connections, epollFd, "File seek error");
-									conn = NULL;
-									continue;
-								}
-								ssize_t bytesRead = read(conn->fileFd, fileBuf, sizeof(fileBuf));
-								if (bytesRead == 0) {
-									close(conn->fileFd);
-									conn->fileFd = -1;
-									conn->fileSendState = 3;
-								}
-								else if (bytesRead < 0) {
-									close(conn->fileFd);
-									conn->fileFd = -1;
-									handleConnectionError(conn, connections, epollFd, "File send error");
-									conn = NULL;
-									continue;
-								}
-								else {
-									
-									ssize_t bytesSent = send(conn->fd, fileBuf, bytesRead, 0);
-									std::cout << "reads  succefuly  "<<bytesSent<<"\n";
-									if (bytesSent == -1) {
-							std::cout<<"filesendstate: "<<conn->fileSendState<<"contnet-lenght: "<<conn->fileSendOffset<<std::endl;
-										conn->fileSendState = 3;
-										close(conn->fileFd);
-										conn->fileFd = -1;
-										break;
-									}
-									conn->lastActivityTime = time(NULL);
-									conn->fileSendOffset += bytesSent;
-									if (conn->fileSendOffset >= (ssize_t)conn->res.getFileSize()) {
-										close(conn->fileFd);
-										conn->fileFd = -1;
-										conn->fileSendState = 3;
-									}
-									break;
-								}
-							}
-							if (conn->fileSendState == 3) {
-							std::cout<<"filesendstate: "<<conn->fileSendState<<std::endl;
-							std::cout<<"filesendstate: "<<conn->fileSendState<<"contnet-lenght: "<<conn->fileSendOffset<<std::endl;
-							
-								if (conn->shouldKeepAlive) {
-									conn->req->clear();
-									conn->fileSendState = 0;
-									ev.events = EPOLLIN;
-									ev.data.fd = conn->fd;
-									epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
-								} else {
-									conn->closeConnection(conn, connections, epollFd);
-									conn = NULL;
-								}
-							}
-						} catch (const std::exception& e) {
-							std::cout << RED << "Exception in request handling: " << e.what() << RESET << std::endl;
-							handleConnectionError(conn, connections, epollFd, "Request handling exception");
-							conn = NULL;
-							continue;
-						}
+					std::cout << "EPOLLOUT event triggered for fd " << conn->fd << std::endl;
+					if (!ResponseSender::handleEpollOut(conn, epollFd, connections)) {
+						conn = NULL;
 					}
 				}
 				else if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP)

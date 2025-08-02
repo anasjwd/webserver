@@ -9,13 +9,13 @@
 
 Request::Request()
 	:	_fd(-1), _rl(""), _rh(""), _rb(), _state(BEGIN), _statusCode(START),
-		_buffer(), _requestDone(false)
+		_requestDone(false)
 {
 }
 
 Request::Request(int fd)
 	:	_fd(fd), _rl(""), _rh(""), _rb(), _state(BEGIN), _statusCode(START),
-		_buffer(), _requestDone(false)
+		_requestDone(false)
 {
 }
 

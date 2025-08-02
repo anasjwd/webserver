@@ -19,6 +19,8 @@ print("</head>")
 print("<body>")
 print("<h1>Simple Calculator</h1>")
 
+while(True):
+    print("hello")
 # Get query string
 query_string = os.environ.get('QUERY_STRING', '')
 

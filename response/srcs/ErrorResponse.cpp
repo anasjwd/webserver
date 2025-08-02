@@ -53,6 +53,9 @@ Response ErrorResponse::createErrorResponseWithMapping(Connection* conn, int sta
             struct stat fileStat;
             if (stat(errorPath.c_str(), &fileStat) == 0 && S_ISREG(fileStat.st_mode)) {
                 Response response(statusCode);
+                std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n";
+                std::cout << BLUE << errorPath  << RESET <<  std::endl;
+                std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n";
                 response.setFilePath(errorPath);
                 response.setContentType("text/html");
                 response.setFileSize(static_cast<size_t>(fileStat.st_size));
@@ -70,7 +73,7 @@ Response ErrorResponse::createMethodNotAllowedResponse(Connection* conn, const s
         methods += allowedMethods[i];
     }
     Response errorBodyResponse = createErrorResponseWithMapping(conn, 405);
-    errorBodyResponse.addHeader("Allow", methods); // Copy over Allow header
+    errorBodyResponse.addHeader("Allow", methods);
     return errorBodyResponse;
 }
 
