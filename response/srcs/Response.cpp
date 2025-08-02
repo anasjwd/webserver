@@ -104,9 +104,10 @@ std::string Response::build() {
             _headers["Content-Type"] = "text/plain";
         }
     }
-
     // _headers["Set-Cookie"] = "name=ahanaf";
 
+//     _headers["Set-Cookie"] = "num=20";
+    // _headers["Connection"] = "close"; // 
     std::vector<std::pair<std::string, std::string> > sortedHeaders(_headers.begin(), _headers.end());
     std::sort(sortedHeaders.begin(), sortedHeaders.end());
     for (size_t i = 0; i < sortedHeaders.size(); ++i) {
