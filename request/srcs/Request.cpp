@@ -277,6 +277,7 @@ bool	Request::headerSection(Connection* conn, Http* http)
 
 bool	Request::bodySection()
 {
+	std::cout << "Processing body section...\n";
 	if (!_buffer.empty())
 	{
 		if (!_rb.receiveData(_buffer.c_str(), _buffer.size()))
@@ -321,7 +322,7 @@ bool	Request::appendToBuffer(Connection* conn, Http* http, const char* data, siz
 				break;
 
 			case BODY:
-				if (bodySection())
+				if (conn && bodySection())
 					progress = true;
 				break;
 

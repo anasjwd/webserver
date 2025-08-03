@@ -36,7 +36,7 @@
 # define	NONESSENTIAL	101
 # define	MAX_EVENTS		512
 # define	BACKLOG			511
-# define	EIGHT_KB		8192
+# define	EIGHT_KB		1048576
 
 /*
 	TODO:
@@ -326,6 +326,11 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 						conn->closeConnection(conn, connections, epollFd);
 					else
 					{
+						if (!conn)
+						{
+							std::cout << "Client is killed!\n";
+							exit(1);
+						}
 						if (!conn->req)
 						{
 							conn->req = new Request(conn->fd);
@@ -381,7 +386,6 @@ int main(int ac, char** av)
 	}
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGINT, sigintHandler);
-	signal(SIGPIPE, SIG_IGN);
 	http = parseConfig(av[1]);
 	if (http == NULL)
 		return ( 1 );

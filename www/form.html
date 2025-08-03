@@ -34,7 +34,7 @@
 
 				<div class="form-container">
 					<h2>Standard Form Submission</h2>
-					<form id="standardForm" action="./form.html" method="POST">
+					<form id="standardForm" action="./form.html" method="post">
 						<div class="form-group">
 							<label for="username">Username</label>
 							<input type="text" id="username" name="username" required>
@@ -63,7 +63,7 @@
 
 				<div class="form-container">
 					<h2>File Upload</h2>
-					<form id="uploadForm" action="./form.html" method="POST" enctype="multipart/form-data">
+					<form id="uploadForm"  method="post" enctype="multipart/form-data">
 						<div class="form-group">
 							<label for="fileDescription">File Description</label>
 							<input type="text" id="fileDescription" name="description">
@@ -71,8 +71,8 @@
 
 						<div class="form-group file-upload">
 							<label for="fileInput">Choose a file to upload</label>
-							<input type="file" id="fileInput" name="file" name="files[]" multiple required>
-							<img id="filePreview" class="file-upload-preview" alt="File preview">
+							<input type="file" name="file" required>
+							<!-- <input type="file" id="fileInput" name="file" required> -->
 						</div>
 
 						<button type="submit" class="submit-btn">Upload File</button>
@@ -90,7 +90,7 @@
 		</footer>
 
 		<script src="./assets/js/script.js"></script>
-		<script>
+		<!-- <script>
 			// File upload preview
 			document.getElementById('fileInput').addEventListener('change', function(e) {
 				const file = e.target.files[0];
@@ -191,6 +191,6 @@
 					responseDiv.style.display = 'block';
 				}
 			});
-		</script>
+		</script> -->
 	</body>
 </html>

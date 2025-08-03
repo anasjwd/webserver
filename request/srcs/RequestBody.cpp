@@ -307,10 +307,6 @@ bool	RequestBody::receiveData(const char* data, size_t len)
 	if (_isChunked) // chunked | contnt-length
 		return _processChunkData(data, len);
 
-	// TODO:
-	// if (_bytesReceived + len > _contentLength)
-	// 	return setState(false, PAYLOAD_TOO_LARGE);
-
 	if (!_fileHandler.write(data, len))
 		return setState(false, INTERNAL_SERVER_ERROR);
 
