@@ -27,20 +27,40 @@
 #include <fstream>
 #include <sstream>
 
+// static std::string _normalizeUri(const std::string& uri) {
+//     std::string result;
+//     bool prevSlash = false;
+//     for (size_t i = 0; i < uri.size(); ++i) {
+//         if (uri[i] == '/') {
+//             if (!prevSlash) result += '/';
+//             prevSlash = true;
+//         } else {
+//             result += uri[i];
+//             prevSlash = false;
+//         }
+//     }
+//     if (result.size() > 1 && result[result.size() - 1] == '/')
+//         result.erase(result.size() - 1);
+//     return result.empty() ? "/" : result;
+// }
+
 static std::string _normalizeUri(const std::string& uri) {
     std::string result;
     bool prevSlash = false;
+    
     for (size_t i = 0; i < uri.size(); ++i) {
         if (uri[i] == '/') {
-            if (!prevSlash) result += '/';
+            if (!prevSlash) {
+                result += '/';
+            }
             prevSlash = true;
         } else {
             result += uri[i];
             prevSlash = false;
         }
     }
-    if (result.size() > 1 && result[result.size() - 1] == '/')
-        result.erase(result.size() - 1);
+    
+    // Don't remove trailing slash - let the file system check handle it
     return result.empty() ? "/" : result;
 }
 
@@ -259,7 +279,9 @@ std::string ResponseHandler::_getMimeType(const std::string& path) {
         if (ext == ".asf") return "video/x-ms-asf";
         if (ext == ".wmv") return "video/x-ms-wmv";
         if (ext == ".avi") return "video/x-msvideo";
-
+        if (ext == ".py") return "text/x-python";
+        if (ext == ".sh") return "text/x-shellscript";
+        if (ext == ".php") return "text/x-php";
     }
     return "application/octet-stream";
 }
@@ -333,18 +355,7 @@ Response ResponseHandler::handleRequest(Connection* conn)
             conn->isCgi = true;
             conn->cgiStartTime = time(NULL);
             return CgiHandler::executeCgi(conn, filePath);
-            // return Response(200);
         }
-        // if (conn->cgiExecuted == true && !conn->cgiCompleted) {
-        //     std::cout << YELLOW << "Waiting for CGI..." << RESET << std::endl;
-        //     CgiHandler::waitCgi(conn);
-        //     CgiHandler::readCgiOutput(conn);
-        //     // return Response(200);
-        // }
-        // if (conn->cgiCompleted == true) {
-        //     std::cout << YELLOW << "CGI completed, returning response..." << RESET << std::endl;
-        //     return CgiHandler::returnCgiResponse(conn);
-        // }
     }
     
     if (method == "GET") {
@@ -373,10 +384,9 @@ Response ResponseHandler::handleRequest(Connection* conn)
                 oss << listing.length();
                 response.addHeader("Content-Length", oss.str());
                 response.addHeader("Connection", "close");
-                
                 std::string responseStr = response.build();
                 responseStr += listing;
-                send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
+                send(conn->fd, responseStr.c_str(), responseStr.size(), 0);//TODO
                 conn->fileSendState = 3;
                 return response;
             }
