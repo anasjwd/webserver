@@ -1,3 +1,4 @@
+#include <csignal>
 # include <map>
 # include <ctime>
 # include <string>
@@ -380,6 +381,7 @@ int main(int ac, char** av)
 	}
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGINT, sigintHandler);
+	signal(SIGPIPE, SIG_IGN);
 	http = parseConfig(av[1]);
 	if (http == NULL)
 		return ( 1 );

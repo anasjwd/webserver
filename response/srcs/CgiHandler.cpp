@@ -23,7 +23,7 @@ static std::map<std::string, std::string> cgiInterpreters;
 static void initCgiInterpreters() {
     if (cgiInterpreters.empty()) {
         cgiInterpreters[".py"] = "/usr/bin/python3";
-        cgiInterpreters[".php"] = "/usr/bin/php";
+        cgiInterpreters[".php"] = "/usr/bin/php-cgi";
         cgiInterpreters[".sh"] = "/bin/bash";
     }
 }
@@ -33,15 +33,15 @@ Response CgiHandler::executeCgi(Connection* conn, const std::string& scriptPath)
     
     struct stat fileStat;
     if (stat(scriptPath.c_str(), &fileStat) != 0) {
-        std::cout << RED << "file not opend" << RESET << std::endl;
+        std::cout << RED << "file not opened" << RESET << std::endl;
         return ErrorResponse::createNotFoundResponse(conn);
     }
     if (!S_ISREG(fileStat.st_mode)) {
-        std::cout << RED << "file not a regualr file" << RESET << std::endl;
+        std::cout << RED << "file not a regular file" << RESET << std::endl;
         return ErrorResponse::createForbiddenResponse(conn);
     }
-    if (access(scriptPath.c_str(), X_OK) != 0) {
-        std::cout << RED << "file not executable" << RESET << std::endl;
+    if (access(scriptPath.c_str(), R_OK) != 0) {
+        std::cout << RED << "file not readable" << RESET << std::endl;
         return ErrorResponse::createForbiddenResponse(conn);
     }
     
@@ -105,14 +105,24 @@ Response CgiHandler::executeCgi(Connection* conn, const std::string& scriptPath)
         }
         envArray.push_back(NULL);
         
-        std::string scriptDir = scriptPath.substr(0, scriptPath.find_last_of('/'));
-        std::string scriptName = scriptPath.substr(scriptPath.find_last_of('/') + 1);
-
-        if (!scriptDir.empty()) {
-            chdir(scriptDir.c_str());
+        char* args[3];
+        if (extension == ".php") {
+            args[0] = const_cast<char*>(interpreter.c_str());
+            args[1] = const_cast<char*>(scriptPath.c_str());
+            args[2] = NULL;
+        } else {
+            std::string scriptDir = scriptPath.substr(0, scriptPath.find_last_of('/'));
+            std::string scriptName = scriptPath.substr(scriptPath.find_last_of('/') + 1);
+            
+            if (!scriptDir.empty()) {
+                chdir(scriptDir.c_str());
+            }
+            
+            args[0] = const_cast<char*>(interpreter.c_str());
+            args[1] = const_cast<char*>(scriptName.c_str());
+            args[2] = NULL;
         }
         
-        char* args[] = {const_cast<char*>(interpreter.c_str()), const_cast<char*>(scriptName.c_str()), NULL};
         execve(interpreter.c_str(), args, envArray.data());
         
         exit(1);
@@ -144,7 +154,7 @@ void CgiHandler::waitCgi(Connection* conn) {
     if (currentTime - conn->cgiStartTime > CGI_TIMEOUT) {
         if (conn->cgiPid > 0) {
             kill(conn->cgiPid, SIGTERM);
-            sleep(1);
+            usleep(100000);
             kill(conn->cgiPid, SIGKILL);
         }
         conn->cgiCompleted = true;
@@ -200,7 +210,7 @@ void CgiHandler::readCgiOutput(Connection* conn) {
     } else if (bytesRead == -1) {
         if (conn->cgiPid > 0) {
             kill(conn->cgiPid, SIGTERM);
-            sleep(1);
+            usleep(100000);
             kill(conn->cgiPid, SIGKILL);
         }
         conn->cgiCompleted = true;
@@ -212,7 +222,6 @@ Response CgiHandler::returnCgiResponse(Connection* conn) {
     if (!conn->cgiCompleted) {
         return Response(200);
     }
-    
     
     if (conn->cgiHeaders.empty()) {
         conn->cgiResponse.setStatus(200);
@@ -246,8 +255,16 @@ Response CgiHandler::returnCgiResponse(Connection* conn) {
                 value = value.substr(0, value.length() - 1);
             }
             
-            if (name == "Content-Type") {
+            if (name == "Status") {
+                std::string statusStr = value.substr(0, 3);
+                int statusCode = atoi(statusStr.c_str());
+                if (statusCode > 0) {
+                    conn->cgiResponse.setStatus(statusCode);
+                    hasStatus = true;
+                }
+            } else if (name == "Content-Type") {
                 conn->cgiResponse.setContentType(value);
+                hasContentType = true;
             } else {
                 conn->cgiResponse.addHeader(name, value);
             }
@@ -279,6 +296,7 @@ std::map<std::string, std::string> CgiHandler::buildEnvironment(Connection* conn
     std::string method = request.getRequestLine().getMethod();
     std::string uri = request.getRequestLine().getUri();
     
+    env["REDIRECT_STATUS"] = "200";
     env["SERVER_SOFTWARE"] = "WebServ/1.1";
     env["SERVER_NAME"] = getServerName(conn);
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
@@ -286,7 +304,10 @@ std::map<std::string, std::string> CgiHandler::buildEnvironment(Connection* conn
     env["SERVER_PORT"] = getServerPort(conn);
     env["REQUEST_METHOD"] = method;
     env["PATH_TRANSLATED"] = scriptPath;
+    env["SCRIPT_FILENAME"] = scriptPath;
     env["SCRIPT_NAME"] = uri.substr(0, uri.find('?'));
+    env["REQUEST_URI"] = uri;
+    env["DOCUMENT_ROOT"] = scriptPath.substr(0, scriptPath.find_last_of('/'));
     env["QUERY_STRING"] = getQueryString(request.getRequestLine().getQueryParams());
     env["HTTP_COOKIE"] = request.getRequestHeaders().getHeaderValue("cookie");
     
@@ -357,4 +378,4 @@ std::string CgiHandler::getServerName(Connection* conn) {
         }
     }
     return "localhost";
-} 
+}
