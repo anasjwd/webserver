@@ -17,6 +17,7 @@
 #include <cstddef>
 #include <cstring>
 #include <ctime>
+#include <sys/socket.h>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -366,17 +367,18 @@ Response ResponseHandler::handleRequest(Connection* conn)
         if (isDir) {
             if (_getAutoIndex(conn)) {
                 std::string listing = _generateDirectoryListing(filePath, uri);
-                std::string dir = root.empty() ? "www" : root;
-                std::stringstream ss;
-                ss << dir << "/autoindex_" << getpid() << ".html";
-                std::string tmpFile = ss.str();
-                std::ofstream out(tmpFile.c_str());
-                out << listing;
-                out.close();
-                struct stat tmpStat;
-                if (stat(tmpFile.c_str(), &tmpStat) == 0 && S_ISREG(tmpStat.st_mode)) {
-                    return FileResponse::serve(tmpFile, "text/html", 200);
-                }
+                Response response(200);
+                response.addHeader("Content-Type", "text/html");
+                std::ostringstream oss;
+                oss << listing.length();
+                response.addHeader("Content-Length", oss.str());
+                response.addHeader("Connection", "close");
+                
+                std::string responseStr = response.build();
+                responseStr += listing;
+                send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
+                conn->fileSendState = 3;
+                return response;
             }
             return ErrorResponse::createForbiddenResponse(conn);
         }
