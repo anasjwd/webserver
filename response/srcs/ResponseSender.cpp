@@ -105,8 +105,8 @@ void ResponseSender::handleConnectionError(Connection* conn, std::vector<Connect
 
 bool ResponseSender::sendHeaders(Connection* conn, Response* response, int epollFd, std::vector<Connection*>& connections) {
     std::string responseStr = response->build();
-    std::cout << "response headers\n";
-    std::cout << CYAN <<  responseStr << RESET << std::endl;
+    // std::cout << "response headers\n";
+    // std::cout << CYAN <<  responseStr << RESET << std::endl;
     ssize_t sent = send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
     
     if (sent == -1) {

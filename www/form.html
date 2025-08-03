@@ -3,98 +3,9 @@
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="icon" href="data:;base64,=">
 		<link rel="stylesheet" href="./assets/css/style.css">
-		<!-- <link rel="icon" href="data:;base64,="> -->
 		<title>Form Testing | 42 Webserv</title>
-		<style>
-			.form-container {
-				max-width: 800px;
-				margin: 2rem auto;
-				padding: 2rem;
-				background: var(--card-bg);
-				border-radius: 8px;
-				box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-			}
-
-			.form-group {
-				margin-bottom: 1.5rem;
-			}
-
-			label {
-				display: block;
-				margin-bottom: 0.5rem;
-				font-weight: 600;
-				color: var(--text-color);
-			}
-
-			input[type="text"],
-			input[type="email"],
-			input[type="password"],
-			textarea,
-			select {
-				width: 100%;
-				padding: 0.75rem;
-				border: 1px solid var(--border-color);
-				border-radius: 4px;
-				background: var(--input-bg);
-				color: var(--text-color);
-				font-size: 1rem;
-			}
-
-			textarea {
-				min-height: 120px;
-				resize: vertical;
-			}
-
-			.file-upload {
-				display: flex;
-				flex-direction: column;
-				gap: 1rem;
-			}
-
-			.file-upload-preview {
-				max-width: 200px;
-				max-height: 200px;
-				display: none;
-				border-radius: 4px;
-				border: 1px dashed var(--border-color);
-			}
-
-			.submit-btn {
-				background: var(--primary-color);
-				color: white;
-				border: none;
-				padding: 0.75rem 1.5rem;
-				border-radius: 4px;
-				cursor: pointer;
-				font-size: 1rem;
-				font-weight: 600;
-				transition: background 0.3s;
-			}
-
-			.submit-btn:hover {
-				background: var(--primary-hover);
-			}
-
-			.response-container {
-				margin-top: 2rem;
-				padding: 1rem;
-				border-radius: 4px;
-				display: none;
-			}
-
-			.success {
-				background: #d4edda;
-				color: #155724;
-				border: 1px solid #c3e6cb;
-			}
-
-			.error {
-				background: #f8d7da;
-				color: #721c24;
-				border: 1px solid #f5c6cb;
-			}
-		</style>
 	</head>
 	<body>
 		<nav>
@@ -121,9 +32,9 @@
 					</p>
 				</header>
 
-				<!-- <div class="form-container">
+				<div class="form-container">
 					<h2>Standard Form Submission</h2>
-					<form id="standardForm" action="./form.html" method="POST">
+					<form id="standardForm" action="./form.html" method="post">
 						<div class="form-group">
 							<label for="username">Username</label>
 							<input type="text" id="username" name="username" required>
@@ -148,11 +59,11 @@
 					</form>
 
 					<div id="standardResponse" class="response-container"></div>
-				</div> -->
+				</div>
 
 				<div class="form-container">
 					<h2>File Upload</h2>
-					<form id="uploadForm" action="./form.html" method="POST" enctype="multipart/form-data">
+					<form id="uploadForm"  method="post" enctype="multipart/form-data">
 						<div class="form-group">
 							<label for="fileDescription">File Description</label>
 							<input type="text" id="fileDescription" name="description">
@@ -160,8 +71,8 @@
 
 						<div class="form-group file-upload">
 							<label for="fileInput">Choose a file to upload</label>
-							<input type="file" id="fileInput" name="file" required>
-							<img id="filePreview" class="file-upload-preview" alt="File preview">
+							<input type="file" name="file" required>
+							<!-- <input type="file" id="fileInput" name="file" required> -->
 						</div>
 
 						<button type="submit" class="submit-btn">Upload File</button>
@@ -169,29 +80,6 @@
 
 					<div id="uploadResponse" class="response-container"></div>
 				</div>
-
-				<!-- <div class="form-container">
-					<h2>JSON Test</h2>
-					<form id="jsonForm">
-						<div class="form-group">
-							<label for="apiEndpoint">API Endpoint</label>
-							<input type="text" id="apiEndpoint" value="/api/data" readonly>
-						</div>
-
-						<div class="form-group">
-							<label for="jsonData">JSON Data</label>
-							<textarea id="jsonData" name="jsonData">{
-		"name": "Test User",
-		"age": 25,
-		"interests": ["programming", "web development"]
-	}</textarea>
-						</div>
-
-						<button type="button" id="sendJson" class="submit-btn">Send JSON</button>
-					</form>
-
-					<div id="jsonResponse" class="response-container"></div>
-				</div> -->
 
 			</div>
 		</div>
@@ -202,7 +90,7 @@
 		</footer>
 
 		<script src="./assets/js/script.js"></script>
-		<script>
+		<!-- <script>
 			// File upload preview
 			document.getElementById('fileInput').addEventListener('change', function(e) {
 				const file = e.target.files[0];
@@ -222,7 +110,6 @@
 				}
 			});
 
-			// Form submission handlers
 			document.getElementById('standardForm').addEventListener('submit', function(e) {
 				e.preventDefault();
 				const formData = new FormData(this);
@@ -304,6 +191,6 @@
 					responseDiv.style.display = 'block';
 				}
 			});
-		</script>
+		</script> -->
 	</body>
 </html>

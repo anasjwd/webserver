@@ -17,9 +17,8 @@ class	FileHandler
 		bool			_isOpen;
 		bool			_isTemp;
 		std::string		_uploadDir;
-		bool			_createTempBody();
-		bool			_createTempRequest();
-		bool			_createTempResponse();
+
+		bool			_createBodyFile(bool);
 		bool			_createUploadFile(const std::string&);
 		
 	public:

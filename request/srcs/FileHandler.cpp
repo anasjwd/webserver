@@ -5,6 +5,7 @@
 # include <unistd.h>
 # include <stdexcept>
 # include "../incs/FileHandler.hpp"
+# include "../../response/include/Response.hpp"
 
 FileHandler::FileHandler() 
 	:	_fd(-1), _size(0), _offset(0),
@@ -15,13 +16,16 @@ FileHandler::FileHandler()
 FileHandler::~FileHandler()
 {
 	close();
-	// if (_isPost == false)
-	// 	remove();
+	if (_isTemp)
+	{
+		std::cout << BBLUE << "Removing temporary file: " << _path << "\n" << RESET;
+		remove();
+	}
 }
 
-bool	FileHandler::_createTempBody()
+bool	FileHandler::_createBodyFile(bool isTemp)
 {
-	char path[] = "/tmp/webserv_reqBody_XXXXXX";
+	char path[] = "/tmp/webserv_request_body_XXXXXX";
 
 	_fd = mkstemp(path);
 	if (_fd == -1)
@@ -30,40 +34,8 @@ bool	FileHandler::_createTempBody()
 	_size = 0;
 	_offset = 0;
 	_path = path;
-	_isTemp = true;
 	_isOpen = true;
-	return true;
-}
-
-bool	FileHandler::_createTempRequest()
-{
-	char path[] = "/tmp/webserv_request_XXXXXX";
-
-	_fd = mkstemp(path);
-	if (_fd == -1)
-		return false;
-
-	_size = 0;
-	_offset = 0;
-	_path = path;
-	_isTemp = true;
-	_isOpen = true;
-	return true;
-}
-
-bool	FileHandler::_createTempResponse()
-{
-	char path[] = "/tmp/webserv_response_XXXXXX";
-
-	_fd = mkstemp(path);
-	if (_fd == -1)
-		return false;
-
-	_size = 0;
-	_offset = 0;
-	_path = path;
-	_isTemp = true;
-	_isOpen = true;
+	_isTemp = isTemp;
 	return true;
 }
 
@@ -171,9 +143,9 @@ bool	FileHandler::create(FileType type, const std::string& filename)
 		switch (type)
 		{
 			case TEMP_BODY:
-				return _createTempBody();
-			case TEMP_REQ:
-				return _createTempRequest();
+				return _createBodyFile(true);
+			case POST_BODY:
+				return _createBodyFile(false);
 			case UPLOAD_FILE:
 				return _createUploadFile(filename);
 			default:
