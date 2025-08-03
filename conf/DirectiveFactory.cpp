@@ -38,6 +38,11 @@ IDirective* parseServerBlock(
 	}
 	else
 		++pos;
+	if (server->validate() == false)
+	{
+		delete server;
+		throw DirectiveException("invalid directive inside of server block");
+	}
 	return ( server );
 }
 
@@ -87,6 +92,11 @@ IDirective* parseLocationBlock(
 	}
 	else
 		++pos;
+	if (location->validate() == false)
+	{
+		delete location;
+		throw DirectiveException("invalid directive inside of location block");
+	}
 	return ( location );
 }
 
@@ -199,7 +209,7 @@ IDirective* parseServerName(
 	return ( serverName );
 }
 
-IDirective* parseLimitExceptBlock(
+IDirective* parseLimitExceptDirective(
 		std::vector<t_token*>& tokens,
 		unsigned int& pos,
 		unsigned int tokensSize)
@@ -467,7 +477,7 @@ IDirective* createNode(
 		parseClientMaxBodySizeDirective,
 		parseLocationBlock,
 		parseRootDirective,
-		parseLimitExceptBlock,
+		parseLimitExceptDirective,
 		parseReturnDirective,
 		parseIndexDirective,
 		parseAutoIndex

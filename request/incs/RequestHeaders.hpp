@@ -2,7 +2,6 @@
 
 # include <map>
 # include <string>
-# include <vector>
 # include "Defines.hpp"
 
 class	RequestHeaders
@@ -14,8 +13,7 @@ class	RequestHeaders
 		unsigned int	_hostPort;
 		HttpStatusCode	_statusCode;
 
-		std::map<std::string, std::string>					_headers;
-		std::map<std::string, std::vector<std::string> >	_multiHeaders;
+		std::map<std::string, std::string>	_headers;
 
 		std::string		_trimWhitespace(const std::string&);
 		bool			_parseHostHeader(const std::string&);
@@ -39,7 +37,6 @@ class	RequestHeaders
 		bool				hasHeader(const std::string&) const;
 
 		const std::map<std::string, std::string>&	getHeadersMap() const;
-		const std::vector<std::string>&				getMultiHeader(const std::string&) const;
 		std::string									getHeaderValue(const std::string&) const;
 
 };

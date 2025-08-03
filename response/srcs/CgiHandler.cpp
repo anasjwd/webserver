@@ -290,9 +290,6 @@ std::map<std::string, std::string> CgiHandler::buildEnvironment(Connection* conn
     env["QUERY_STRING"] = getQueryString(request.getRequestLine().getQueryParams());
     env["HTTP_COOKIE"] = request.getRequestHeaders().getHeaderValue("cookie");
     
-    // initilize time out here
-
-
     if (method == "POST") {
         env["CONTENT_TYPE"] = request.getRequestHeaders().getHeaderValue("content-type");
         env["CONTENT_LENGTH"] = request.getRequestHeaders().getHeaderValue("content-length");
