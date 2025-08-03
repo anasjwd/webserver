@@ -213,7 +213,7 @@ const Location* Connection::getLocation() const
 	else
 		return NULL;
 
-	std::cout << "[CACHE MISS] Computing location for URI: " << reqUri << std::endl;
+	// std::cout << "[CACHE MISS] Computing location for URI: " << reqUri << std::endl;
 	// Compute location once and cache it
 	cachedLocation = _findBestLocation(conServer->directives, reqUri);
 	return cachedLocation;
@@ -234,7 +234,7 @@ const Location* Connection::_findBestLocation(const std::vector<IDirective*>& di
 		}
 	}
 
-	std::cout << "[DEBUG] reqUri: '" << reqUri << "' cgiExtension: '" << cgiExtension << "'" << std::endl;
+	// std::cout << "[DEBUG] reqUri: '" << reqUri << "' cgiExtension: '" << cgiExtension << "'" << std::endl;
 
 	for (std::vector<IDirective*>::const_iterator it = directives.begin(); it != directives.end(); ++it) {
 		if ((*it)->getType() != LOCATION)
@@ -245,17 +245,17 @@ const Location* Connection::_findBestLocation(const std::vector<IDirective*>& di
 		std::string locUri = loc->getUri();
 		bool exact = loc->isExactMatch();
 
-		std::cout << "[DEBUG] Checking location: '" << locUri << "' exact: " << exact << std::endl;
+		// std::cout << "[DEBUG] Checking location: '" << locUri << "' exact: " << exact << std::endl;
 
 		if (exact) {
 			if (reqUri == locUri) {
-				std::cout << "[DEBUG] Exact match found: " << locUri << std::endl;
+				// std::cout << "[DEBUG] Exact match found: " << locUri << std::endl;
 				return loc;
 			}
 		} else {
 			if (!locUri.empty() && locUri[0] == '.') {
 				if (!cgiExtension.empty() && locUri == cgiExtension) {
-					std::cout << "[DEBUG] CGI match found: " << locUri << std::endl;
+					// std::cout << "[DEBUG] CGI match found: " << locUri << std::endl;
 					cgiMatch = loc;
 				}
 			} else {
@@ -276,7 +276,7 @@ const Location* Connection::_findBestLocation(const std::vector<IDirective*>& di
 					if (locUri.length() > bestMatchLen) {
 						bestMatchLen = locUri.length();
 						longestPrefixMatch = loc;
-						std::cout << "[DEBUG] New longest prefix match: " << locUri << " (length: " << locUri.length() << ")" << std::endl;
+						// std::cout << "[DEBUG] New longest prefix match: " << locUri << " (length: " << locUri.length() << ")" << std::endl;
 					}
 				}
 			}
@@ -284,12 +284,12 @@ const Location* Connection::_findBestLocation(const std::vector<IDirective*>& di
 	}
 
 	if (cgiMatch) {
-		std::cout << "[DEBUG] Returning CGI match: " << cgiMatch->getUri() << std::endl;
+		// std::cout << "[DEBUG] Returning CGI match: " << cgiMatch->getUri() << std::endl;
 		return cgiMatch;
 	}
 
 	if (longestPrefixMatch) {
-		std::cout << "[DEBUG] Returning longest prefix match: " << longestPrefixMatch->getUri() << std::endl;
+		// std::cout << "[DEBUG] Returning longest prefix match: " << longestPrefixMatch->getUri() << std::endl;
 		const Location* nestedMatch = _findBestLocation(longestPrefixMatch->directives, reqUri);
 		if (nestedMatch) {
 			return nestedMatch;
@@ -297,7 +297,7 @@ const Location* Connection::_findBestLocation(const std::vector<IDirective*>& di
 		return longestPrefixMatch;
 	}
 
-	std::cout << "[DEBUG] No match found" << std::endl;
+	// std::cout << "[DEBUG] No match found" << std::endl;
 	return NULL;
 }
 

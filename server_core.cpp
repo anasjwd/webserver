@@ -232,8 +232,8 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 			std::cout << "Connection cgi timeout for fd " << conn->fd << std::endl;
 			Response res =  FileResponse::serve("www/error_504.html" , "text/html", 504);
 			  std::string responseStr = res.build();
-			std::cout << "response headers\n";
-			std::cout << CYAN <<  responseStr << RESET << std::endl;
+			// std::cout << "response headers\n";
+			// std::cout << CYAN <<  responseStr << RESET << std::endl;
 			send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
 			conn->fileFd = open(res.getFilePath().c_str(), O_RDONLY);
 			char fileBuf[EIGHT_KB]; 

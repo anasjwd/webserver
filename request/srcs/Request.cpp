@@ -111,7 +111,13 @@ bool	Request::_validateMethodBodyCompatibility()
 		return setState(true, OK);
 
 	if (hasBody)
+	{
 		_rb.setExpected();
+		if (method == "GET" || method == "DELETE")
+			_rb.create(TEMP_BODY);
+		else
+			_rb.create(POST_BODY);
+	}
 
 	return true;
 }
@@ -255,10 +261,10 @@ bool	Request::headerSection(Connection* conn, Http* http)
 	{
 		conn->findServer(http);
 		std::string method = _rl.getMethod();
-		std::cout << "Curr method: " << method << ", to be checked if allowed!\n";
+		// std::cout << "Curr method: " << method << ", to be checked if allowed!\n";
 		std::vector<std::string> allowed = conn->_getAllowedMethods();
 		for (size_t i = 0; i < allowed.size(); i++)
-			std::cout << "Allowed method " << i << " is -> " << allowed[i] << "\n";
+			// std::cout << "Allowed method " << i << " is -> " << allowed[i] << "\n";
 
 		if (!conn->_isAllowedMethod(method, allowed))
 		{

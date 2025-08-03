@@ -11,7 +11,6 @@ RequestBody::RequestBody()
 		_bytesReceived(0), _chunkParsePos(0), _currentChunkSize(0),
 		_bytesReceivedInChunk(0)
 {
-	_fileHandler.create(TEMP_REQ);
 }
 
 RequestBody::~RequestBody()
@@ -186,6 +185,24 @@ void	RequestBody::clear()
 	_chunkParsePos = 0;
 	_currentChunkSize = 0;
 	_bytesReceivedInChunk = 0;
+}
+
+bool	RequestBody::create(FileType type)
+{
+	if (_fileHandler.fd() != -1)
+	{
+		std::cerr << "Temporary file already exists, cannot create a new one\n";
+		return setState(false, INTERNAL_SERVER_ERROR);
+	}
+
+	if (!_fileHandler.create(type))
+	{
+		std::cerr << "Failed to create temporary file for request body\n";
+		return setState(false, INTERNAL_SERVER_ERROR);
+	}
+
+	std::cout << "Temporary file created at: " << _fileHandler.path() << "\n";
+	return true;
 }
 
 bool	RequestBody::isChunked() const

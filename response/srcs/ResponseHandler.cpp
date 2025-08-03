@@ -313,19 +313,19 @@ std::string ResponseHandler::_generateDirectoryListing(const std::string& path, 
 
 Response ResponseHandler::handleRequest(Connection* conn) 
 {
-    std::cout << RED  << "in handle request "<< RESET << std::endl;
+    // std::cout << RED  << "in handle request "<< RESET << std::endl;
     const Request& request = *conn->req;
     if (conn->req->getStatusCode() != OK)
     {
         return ErrorResponse::createErrorResponseWithMapping(conn,conn->req->getStatusCode() );
     }
     std::string method = request.getRequestLine().getMethod();
-    std::vector<std::string> allowed = conn->_getAllowedMethods();
-    for (std::vector<std::string>::const_iterator it = allowed.begin(); it != allowed.end(); it++)
-        std::cout <<BGREEN << (*it) << RESET << std::endl;
+    // std::vector<std::string> allowed = conn->_getAllowedMethods();
+    // for (std::vector<std::string>::const_iterator it = allowed.begin(); it != allowed.end(); it++)
+    //     std::cout <<BGREEN << (*it) << RESET << std::endl;
 
-    if (!conn->_isAllowedMethod(method, allowed))
-        return ErrorResponse::createMethodNotAllowedResponse(conn ,allowed);
+    // if (!conn->_isAllowedMethod(method, allowed))
+    //     return ErrorResponse::createMethodNotAllowedResponse(conn ,allowed);
     const Location* location = conn->getLocation();
 
     Return* ret = conn->getReturnDirective();
@@ -344,10 +344,10 @@ Response ResponseHandler::handleRequest(Connection* conn)
         root = std::string(locRoot->getPath());
     else
         root = _getRootPath(conn);
-    std::cout << CYAN << "root " << root <<  RESET << std::endl;
+    // std::cout << CYAN << "root " << root <<  RESET << std::endl;
     std::string uri = _normalizeUri(request.getRequestLine().getUri());
     std::string filePath = _buildFilePath(uri, root, location);
-    std::cout << CYAN << "filepath " <<  filePath <<  RESET << std::endl;
+    // std::cout << CYAN << "filepath " <<  filePath <<  RESET << std::endl;
     
     if (location && location->getUri() && location->getUri()[0] == '.') {        
         if (conn->cgiExecuted == false) {
