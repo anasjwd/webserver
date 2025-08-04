@@ -36,7 +36,7 @@
 # define	NONESSENTIAL	101
 # define	MAX_EVENTS		512
 # define	BACKLOG			511
-# define	EIGHT_KB		8192
+# define	EIGHT_KB		1048576
 
 /*
 	TODO:
@@ -232,8 +232,8 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 			std::cout << "Connection cgi timeout for fd " << conn->fd << std::endl;
 			Response res =  FileResponse::serve("www/error_504.html" , "text/html", 504);
 			  std::string responseStr = res.build();
-			std::cout << "response headers\n";
-			std::cout << CYAN <<  responseStr << RESET << std::endl;
+			// std::cout << "response headers\n";
+			// std::cout << CYAN <<  responseStr << RESET << std::endl;
 			send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
 			conn->fileFd = open(res.getFilePath().c_str(), O_RDONLY);
 			char fileBuf[EIGHT_KB]; 
@@ -276,21 +276,12 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	struct epoll_event			ev, events[MAX_EVENTS];
 	time_t						lastTimeoutCheck = time(NULL);
 
-	// ResponseHandler::initialize();
-
 	while (true)
 	{
 		if (got_singint == true)
 			return conn->freeConnections(connections);
 		if (time(NULL) - lastTimeoutCheck >= 1)
 			checkForTimeouts(connections, ev, epollFd, lastTimeoutCheck);
-
-		// // Cleanup stale connections every 30 seconds
-		// if (time(NULL) - lastCleanupCheck >= 30)
-		// {
-		// 	cleanupStaleConnections(connections, epollFd);
-		// 	lastCleanupCheck = time(NULL);
-		// }
 
 		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000); //TODO-ACHRAF: check if the 1000 is valid
 		for (int i = 0; i < numberOfEvents; i++)
@@ -337,10 +328,17 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					}
 					else
 					{
+						if (!conn)
+						{
+							std::cout << "Client is killed!\n";
+							exit(1);
+						}
 						if (!conn->req)
 						{
 							conn->req = new Request(conn->fd);
 							conn->cachedLocation = NULL;
+							// AHANAF Reset CGI state for new requests 
+							conn->resetCgiState();
 						}
 						conn->req->appendToBuffer(conn, http, buff, bytes);
 						if (!conn->checkMaxBodySize())
@@ -352,7 +350,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 							epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
 						}
 					}
-				} 
+				}
 				else if (events[i].events & EPOLLOUT)
 				{
 					std::cout << "EPOLLOUT event triggered for fd " << conn->fd << std::endl;

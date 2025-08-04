@@ -19,10 +19,17 @@ bool ResponseSender::handleEpollOut(Connection* conn, int epollFd, std::vector<C
         if (conn->fileSendState == 0) {
             if (conn->cgiExecuted && !conn->cgiCompleted) {
                 CgiHandler::waitCgi(conn);
-                CgiHandler::readCgiOutput(conn);
+                
                 if (!conn->cgiCompleted) {
+                    CgiHandler::readCgiOutput(conn);
+                }
+                
+                if (!conn->cgiCompleted) {
+                    std::cout << "[ResponseSender] CGI still running for fd " << conn->fd 
+                              << ", allowing other connections to proceed" << std::endl;
                     return true;
                 }
+                std::cout << "[ResponseSender] CGI completed for fd " << conn->fd << std::endl;
             } else {
                 std::cout << "[ResponseSender] CGI state - executed: " << conn->cgiExecuted 
                           << ", completed: " << conn->cgiCompleted << std::endl;
@@ -37,17 +44,19 @@ bool ResponseSender::handleEpollOut(Connection* conn, int epollFd, std::vector<C
                 std::cout << "[ResponseSender] CGI is still running, waiting..." << std::endl;
                 return true;
             } else {
-                std::cout << "[ResponseSender] Using regular response" << std::endl;
+                std::cout << "[ResponseSender] Processing regular/new request" << std::endl;
                 conn->res = ResponseHandler::handleRequest(conn);
                 currentResponse = &conn->res;
+                
                 if (conn->cgiExecuted && !conn->cgiCompleted) {
-                    std::cout << "[ResponseSender] CGI started, waiting for completion..." << std::endl;
+                    std::cout << "[ResponseSender] CGI started, will check completion on next EPOLLOUT" << std::endl;
                     return true;
                 }
             }
 
             std::cout << "[ResponseSender] Response status: " << currentResponse->getStatusCode() 
-                      << ", filePath: " << currentResponse->getFilePath() << std::endl;
+                      << ", filePath: " << currentResponse->getFilePath() 
+                      << ", fileSize: " << currentResponse->getFileSize() << std::endl;
 
             if (!sendHeaders(conn, currentResponse, epollFd, connections)) {
                 return false;
@@ -105,8 +114,8 @@ void ResponseSender::handleConnectionError(Connection* conn, std::vector<Connect
 
 bool ResponseSender::sendHeaders(Connection* conn, Response* response, int epollFd, std::vector<Connection*>& connections) {
     std::string responseStr = response->build();
-    std::cout << "response headers\n";
-    std::cout << CYAN <<  responseStr << RESET << std::endl;
+    // std::cout << "response headers\n";
+    // std::cout << CYAN <<  responseStr << RESET << std::endl;
     ssize_t sent = send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
     
     if (sent == -1) {
@@ -158,4 +167,4 @@ bool ResponseSender::sendFileBody(Connection* conn, Response* response, int epol
         }
         return true;
     }
-} 
+}

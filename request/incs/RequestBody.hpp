@@ -1,6 +1,5 @@
 # pragma once
 
-# include <vector>
 # include <string>
 # include "Defines.hpp"
 # include "FileHandler.hpp"
@@ -39,6 +38,7 @@ class	RequestBody
 		~RequestBody();
 
 		void						clear();
+		bool						create(FileType);
 
 		bool						isChunked() const;
 		bool						isExpected() const;
