@@ -28,9 +28,9 @@ if ($method === 'POST') {
 $message = ($counter === 1) ? "Welcome! This is your first visit." : "You have visited this page $counter times.";
 
 // Send headers
-echo "Content-Type: text/html\r\n";
-echo "Set-Cookie: counter=$counter\r\n";
-echo "\r\n";
+// echo "Content-Type: text/html\r\n";
+// echo "Set-Cookie: counter=$counter\r\n";
+// echo "\r\n";
 ?>
 
 <head>

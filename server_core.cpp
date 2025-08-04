@@ -276,21 +276,12 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 	struct epoll_event			ev, events[MAX_EVENTS];
 	time_t						lastTimeoutCheck = time(NULL);
 
-	// ResponseHandler::initialize();
-
 	while (true)
 	{
 		if (got_singint == true)
 			return conn->freeConnections(connections);
 		if (time(NULL) - lastTimeoutCheck >= 1)
 			checkForTimeouts(connections, ev, epollFd, lastTimeoutCheck);
-
-		// // Cleanup stale connections every 30 seconds
-		// if (time(NULL) - lastCleanupCheck >= 30)
-		// {
-		// 	cleanupStaleConnections(connections, epollFd);
-		// 	lastCleanupCheck = time(NULL);
-		// }
 
 		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000); //TODO-ACHRAF: check if the 1000 is valid
 		for (int i = 0; i < numberOfEvents; i++)
@@ -335,6 +326,8 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 						{
 							conn->req = new Request(conn->fd);
 							conn->cachedLocation = NULL;
+							// AHANAF Reset CGI state for new requests 
+							conn->resetCgiState();
 						}
 						conn->req->appendToBuffer(conn, http, buff, bytes);
 						if (!conn->checkMaxBodySize())
@@ -346,7 +339,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 							epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
 						}
 					}
-				} 
+				}
 				else if (events[i].events & EPOLLOUT)
 				{
 					std::cout << "EPOLLOUT event triggered for fd " << conn->fd << std::endl;
@@ -386,6 +379,7 @@ int main(int ac, char** av)
 	}
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGINT, sigintHandler);
+	signal(SIGPIPE, SIG_IGN);
 	http = parseConfig(av[1]);
 	if (http == NULL)
 		return ( 1 );

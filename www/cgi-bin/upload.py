@@ -13,25 +13,32 @@ html = """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
-        .container{
-            --max-width: 1000px;
-            --padding: 1rem;
-
-            width: min(var(--max-width), 100% - (var(--padding) * 1.2));
-            margin-inline: auto;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
         }
         body {
+            background-color: #1a1a1a;;
+            color: #e0e0e0;
+            line-height: 1.6;
             display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f0f0;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        h1 {
+            text-align: center;
+            color: #778da9;
         }
         div {
             font-size: 2rem;
             font-weight: semibold;
-            color: #333;
+            color: #e0e0e0;
             text-align: center;
         }
         canvas {
@@ -49,7 +56,7 @@ html = """
             background-color: #333;
             border-radius: 15px;
             font-weight: semibold;
-            color: #f0f0f0;
+            color: #778da9;
             cursor: pointer;
         }
     </style>

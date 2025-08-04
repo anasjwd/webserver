@@ -80,4 +80,7 @@ class	Connection
 		std::vector<std::string> _getAllowedMethods() const;
 		bool _isAllowedMethod(const std::string& method, const std::vector<std::string>& allowedMethods);
 
+
+		void resetCgiState();
+
 };

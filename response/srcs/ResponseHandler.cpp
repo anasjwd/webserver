@@ -1,13 +1,10 @@
 #include "../include/ResponseHandler.hpp"
 #include "../include/ErrorResponse.hpp"
-#include "../include/DirectoryListing.hpp"
-#include "../include/MimeTypes.hpp"
 #include "../include/ReturnHandler.hpp"
 #include "../include/FileResponse.hpp"
 #include "../include/CgiHandler.hpp"
 #include "../../Connection.hpp"
 #include "../../conf/Index.hpp"
-#include "../../conf/LimitExcept.hpp"
 #include "../../conf/ErrorPage.hpp"
 #include "../../conf/AutoIndex.hpp"
 #include "../../conf/Root.hpp"
@@ -20,29 +17,11 @@
 #include <sys/socket.h>
 #include <vector>
 #include <string>
-#include <algorithm>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <dirent.h>
-#include <fstream>
 #include <sstream>
 
-// static std::string _normalizeUri(const std::string& uri) {
-//     std::string result;
-//     bool prevSlash = false;
-//     for (size_t i = 0; i < uri.size(); ++i) {
-//         if (uri[i] == '/') {
-//             if (!prevSlash) result += '/';
-//             prevSlash = true;
-//         } else {
-//             result += uri[i];
-//             prevSlash = false;
-//         }
-//     }
-//     if (result.size() > 1 && result[result.size() - 1] == '/')
-//         result.erase(result.size() - 1);
-//     return result.empty() ? "/" : result;
-// }
 
 static std::string _normalizeUri(const std::string& uri) {
     std::string result;
@@ -59,8 +38,6 @@ static std::string _normalizeUri(const std::string& uri) {
             prevSlash = false;
         }
     }
-    
-    // Don't remove trailing slash - let the file system check handle it
     return result.empty() ? "/" : result;
 }
 
@@ -320,14 +297,7 @@ Response ResponseHandler::handleRequest(Connection* conn)
         return ErrorResponse::createErrorResponseWithMapping(conn,conn->req->getStatusCode() );
     }
     std::string method = request.getRequestLine().getMethod();
-    // std::vector<std::string> allowed = conn->_getAllowedMethods();
-    // for (std::vector<std::string>::const_iterator it = allowed.begin(); it != allowed.end(); it++)
-    //     std::cout <<BGREEN << (*it) << RESET << std::endl;
-
-    // if (!conn->_isAllowedMethod(method, allowed))
-    //     return ErrorResponse::createMethodNotAllowedResponse(conn ,allowed);
     const Location* location = conn->getLocation();
-
     Return* ret = conn->getReturnDirective();
     if (ret) return ReturnHandler::handle(conn);
     std::string root;
@@ -419,9 +389,6 @@ Response ResponseHandler::handleRequest(Connection* conn)
             lastPath = request.getRequestBody().getUploadHandler().path();
         }else
             lastPath = request.getRequestBody().getTempFile().path();
-        // std::string lastPath = "upload/chifile.txt" ;// TODO;
-        // if (request.getRequestBody().isCompleted())
-        // if (!lastPath.empty())
         response.addHeader("location", lastPath);
         response.setFilePath(fPath);
         response.setContentType(_getMimeType(fPath));

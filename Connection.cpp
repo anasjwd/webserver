@@ -1,6 +1,8 @@
+#include <csignal>
 # include <ctime>
 # include <cstddef>
 # include <cstdlib>
+#include <sys/wait.h>
 # include <unistd.h>
 # include <algorithm>
 # include <sys/epoll.h>
@@ -19,21 +21,74 @@
 # include "response/include/ResponseHandler.hpp"
 
 Connection::Connection()
-	:	fd(-1), req(NULL), connect(false), conServer(NULL),
-		lastActivityTime(time(NULL)), lastTimeoutCheck(time(NULL)),
-		closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0),
-		isCgi(false), cgiExecuted(false), cgiCompleted(false), cgiPid(-1), cgiReadState(0),
-		cachedLocation(NULL)
+    :   fd(-1), req(NULL), connect(false), conServer(NULL),
+        lastActivityTime(time(NULL)), lastTimeoutCheck(time(NULL)),
+        closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0),
+        isCgi(false), cgiExecuted(false), cgiCompleted(false), cgiPid(-1), cgiReadState(0),
+        cgiStartTime(0), cachedLocation(NULL)
 {
+    cgiPipeFromChild[0] = -1;
+    cgiPipeFromChild[1] = -1;
+    cgiPipeToChild[0] = -1;
+    cgiPipeToChild[1] = -1;
 }
 
 Connection::Connection(int clientFd)
-	:	fd(clientFd), req(NULL), connect(false), conServer(NULL),
-		lastActivityTime(time(NULL)), lastTimeoutCheck(time(NULL)),
-		closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0),
-		isCgi(false), cgiExecuted(false), cgiCompleted(false), cgiPid(-1), cgiReadState(0),
-		cachedLocation(NULL)
+    :   fd(clientFd), req(NULL), connect(false), conServer(NULL),
+        lastActivityTime(time(NULL)), lastTimeoutCheck(time(NULL)),
+        closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0),
+        isCgi(false), cgiExecuted(false), cgiCompleted(false), cgiPid(-1), cgiReadState(0),
+        cgiStartTime(0), cachedLocation(NULL)
 {
+    cgiPipeFromChild[0] = -1;
+    cgiPipeFromChild[1] = -1;
+    cgiPipeToChild[0] = -1;
+    cgiPipeToChild[1] = -1;
+}
+
+
+void Connection::resetCgiState() {
+    std::cout << "[DEBUG] Resetting CGI state for fd " << fd << std::endl;
+    
+    if (cgiPid > 0) {
+        std::cout << "[DEBUG] Killing existing CGI process " << cgiPid << std::endl;
+        kill(cgiPid, SIGTERM);
+        usleep(10000); // Wait 10ms
+        kill(cgiPid, SIGKILL);
+        waitpid(cgiPid, NULL, WNOHANG); // Clean up zombie
+    }
+    
+    isCgi = false;
+    cgiExecuted = false;
+    cgiCompleted = false;
+    cgiPid = -1;
+    cgiReadState = 0;
+    cgiStartTime = 0;
+    
+    if (cgiPipeFromChild[0] != -1) {
+        close(cgiPipeFromChild[0]);
+        cgiPipeFromChild[0] = -1;
+    }
+    if (cgiPipeFromChild[1] != -1) {
+        close(cgiPipeFromChild[1]);
+        cgiPipeFromChild[1] = -1;
+    }
+    if (cgiPipeToChild[0] != -1) {
+        close(cgiPipeToChild[0]);
+        cgiPipeToChild[0] = -1;
+    }
+    if (cgiPipeToChild[1] != -1) {
+        close(cgiPipeToChild[1]);
+        cgiPipeToChild[1] = -1;
+    }
+    
+    cgiHeaders.clear();
+    cgiBody.clear();
+    cgiOutput.clear();
+    
+    cgiResponse.clear();
+    
+    std::cout << "[DEBUG] CGI state reset complete for fd " << fd << std::endl;
 }
 
 Connection* Connection::findConnectionByFd(int fd, std::vector<Connection*>& connections)
@@ -91,7 +146,7 @@ bool	Connection::findServer(Http *http)
 							if (names[i] == hostname)
 							{
 								conServer = server;
-								cachedLocation = NULL; // Clear cache when server changes
+								cachedLocation = NULL;
 								return true;
 							}
 					}
@@ -103,7 +158,7 @@ bool	Connection::findServer(Http *http)
 				if (listen && listen->getPort() == port)
 				{
 					conServer = server;
-					cachedLocation = NULL; // Clear cache when server changes
+					cachedLocation = NULL; 
 					return true;
 				}
 			}
@@ -177,9 +232,7 @@ ClientMaxBodySize*	Connection::getClientMaxBodySize()
 {
 	ClientMaxBodySize* maxSize = static_cast<ClientMaxBodySize*>(getDirective(CLIENT_MAX_BODY_SIZE));
 	if (maxSize) return maxSize;
-	
-	// Check location context if not found in server
-	const Location* location = getLocation();
+		const Location* location = getLocation();
 	if (location) {
 		for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); 
 		dit != location->directives.end(); ++dit) 
@@ -195,7 +248,6 @@ ClientMaxBodySize*	Connection::getClientMaxBodySize()
 
 const Location* Connection::getLocation() const
 {
-	// Return cached location if available
 	if (cachedLocation)
 	{
 		std::cout << "[CACHE HIT] Using cached location for URI: " << (req ? req->getRequestLine().getUri() : uri) << std::endl;
@@ -212,9 +264,6 @@ const Location* Connection::getLocation() const
 		reqUri = uri;
 	else
 		return NULL;
-
-	// std::cout << "[CACHE MISS] Computing location for URI: " << reqUri << std::endl;
-	// Compute location once and cache it
 	cachedLocation = _findBestLocation(conServer->directives, reqUri);
 	return cachedLocation;
 }
@@ -301,56 +350,6 @@ const Location* Connection::_findBestLocation(const std::vector<IDirective*>& di
 	return NULL;
 }
 
-
-/* 
-const Location* Connection::getLocation() const
-{
-	if (!conServer)
-		return NULL;
-	std::string reqUri;
-	if (req && req->getRequestLine().getUri().size())
-		reqUri = req->getRequestLine().getUri();
-	else if (!uri.empty())
-		reqUri = uri;
-	else
-		return NULL;
-
-	const Location* bestLoc = NULL;
-	size_t bestMatchLen = 0;
-	for (std::vector<IDirective*>::const_iterator it = conServer->directives.begin(); it != conServer->directives.end(); ++it) {
-		if ((*it)->getType() != LOCATION)
-			continue;
-		const Location* loc = static_cast<const Location*>(*it);
-		if (!loc) continue;
-		char* locUri = loc->getUri();
-		bool exact = loc->isExactMatch();
-		if (!locUri) continue;
-		std::string locUriStr(locUri);
-		std::cout << "[getLocation] reqUri: '" << reqUri << "' locUri: '" << locUriStr << "' exact: " << exact << std::endl;
-		if (exact) {
-			if (reqUri == locUriStr) {
-				std::cout << "[getLocation] Exact match found!" << std::endl;
-				return loc;
-			}
-		} else {
-			if (!locUriStr.empty() &&
-			    (reqUri == locUriStr ||
-			     (reqUri.find(locUriStr + "/") == 0)) &&
-			    locUriStr.length() > bestMatchLen) {
-				bestMatchLen = locUriStr.length();
-				bestLoc = loc;
-			}
-		}
-	}
-	if (bestLoc) {
-		std::cout << BLUE << bestLoc->getUri() << RESET << std::endl;
-		std::cout << "[getLocation] Prefix match found!" << std::endl;
-		return bestLoc;
-	}
-	std::cout << "[getLocation] No match found." << std::endl;
-	return NULL;
-}
- */
 Root*	Connection::getRoot()
 {
 	Root*	root = static_cast<Root*>(getDirective(ROOT));
