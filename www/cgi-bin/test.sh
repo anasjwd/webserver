@@ -1,24 +1,28 @@
 #!/bin/bash
+
 echo "Content-Type: text/html"
+echo "Status: 200 OK"
 echo ""
-echo "<!DOCTYPE html>"
 echo "<html>"
-echo "<head>"
-echo "<title>Shell CGI Test</title>"
-echo "</head>"
+echo "<head><title>Shell CGI Test</title></head>"
 echo "<body>"
 echo "<h1>Shell CGI Test</h1>"
-echo "<p>This is a shell CGI script running on our webserver!</p>"
-echo "<p>Current time: $(date)</p>"
-echo "<p>Current user: $(whoami)</p>"
-echo "<p>Current directory: $(pwd)</p>"
+echo "<p>This is a test CGI script written in Bash.</p>"
 echo "<h2>Environment Variables:</h2>"
 echo "<ul>"
-for var in $(env | sort); do
-    echo "<li><strong>$(echo $var | cut -d'=' -f1):</strong> $(echo $var | cut -d'=' -f2-)</li>"
+for var in REQUEST_METHOD QUERY_STRING CONTENT_TYPE CONTENT_LENGTH SERVER_NAME SERVER_PORT; do
+    if [ -n "${!var}" ]; then
+        echo "<li><strong>$var:</strong> ${!var}</li>"
+    fi
 done
 echo "</ul>"
-echo "<br>"
-echo "<a href='/'>Back to Home</a>"
+echo "<h2>Request Method:</h2>"
+echo "<p>Method: $REQUEST_METHOD</p>"
+if [ "$REQUEST_METHOD" = "POST" ]; then
+    echo "<h2>POST Data:</h2>"
+    echo "<pre>"
+    cat
+    echo "</pre>"
+fi
 echo "</body>"
 echo "</html>" 
