@@ -475,35 +475,35 @@ ErrorPage* Connection::getErrorPageForCode(int code) {
 	return NULL;
 }
 
-void Connection::closeConnection(Connection* conn, std::vector<Connection*>& connections, int epollFd)
+void Connection::closeConnection(std::vector<Connection*>& connections, int epollFd)
 {
-	if (!conn || conn->closed)
+	if (this->closed)
 		return;
 
-	conn->closed = true;
+	closed = true;
 
-	if (epollFd != -1 && conn->fd != -1)
-		epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, NULL);
+	if (epollFd != -1 && fd != -1)
+		epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
 
-	if (conn->fileFd != -1)
+	if (fileFd != -1)
 	{
-		close(conn->fileFd);
-		conn->fileFd = -1;
+		close(fileFd);
+		fileFd = -1;
 	}
-	if (conn->fd != -1)
+	if (fd != -1)
 	{
-		close(conn->fd);
-		conn->fd = -1;
+		close(fd);
+		fd = -1;
 	}
 
-	delete conn->req;
-	conn->req = NULL;
+	delete req;
+	req = NULL;
 
 	connections.erase(
-		std::remove(connections.begin(), connections.end(), conn),
+		std::remove(connections.begin(), connections.end(), this),
 		connections.end()
 	);
-	if (std::find(connections.begin(), connections.end(), conn) != connections.end())
+	if (std::find(connections.begin(), connections.end(), this) != connections.end())
 	{
 		std::cout << "Failed to remove connection from vector" << std::endl;
 	}
@@ -511,13 +511,13 @@ void Connection::closeConnection(Connection* conn, std::vector<Connection*>& con
 	{
 		std::cout << "Connection successfully removed from vector" << std::endl;
 		std::cout << "Remaining connections: " << connections.size() << std::endl;
-		if (conn->req == NULL)
+		if (req == NULL)
 			std::cout << "Request pointer is NULL" << std::endl;
 		else
 			std::cout << "Request pointer is not NULL" << std::endl;
 	}
 
-	delete conn;
+	delete this;
 	// conn = NULL;
 	std::cout << "Connection closed and deleted" << std::endl;
 }
@@ -580,4 +580,33 @@ bool	Connection::isCgiTimedOut() const
 bool	Connection::isTimedOut() const
 {
 	return time(NULL) - lastActivityTime > TIMEOUT_SECONDS;
+}
+
+void	Connection::epollinProcess(Http* http, std::vector<Connection*> connections, struct epoll_event& ev, int epollFd)
+{
+	ssize_t	bytes;
+	char	buff[8192];
+
+	std::cout << RED << "EPOLLIN\n" << RESET;
+	bytes = read(fd, buff, 8192);
+	if (bytes <= 0)
+		closeConnection(connections, epollFd);
+	else
+	{
+		if (!req)
+		{
+			req = new Request(fd);
+			cachedLocation = NULL;
+			resetCgiState();
+		}
+		req->appendToBuffer(this, http, buff, bytes);
+		if (!checkMaxBodySize())
+			req->setState(false, PAYLOAD_TOO_LARGE);
+		if (req->isRequestDone())
+		{
+			ev.events = EPOLLOUT;
+			ev.data.fd = fd;
+			epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &ev);
+		}
+	}
 }

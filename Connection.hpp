@@ -71,7 +71,7 @@ class	Connection
 
 		// 
 		Connection*			findConnectionByFd(int, std::vector<Connection*>&);
-		void				closeConnection(Connection*, std::vector<Connection*>&, int);
+		void				closeConnection(std::vector<Connection*>&, int);
 		void				freeConnections(std::vector<Connection*>&);
 
 		Return*				getReturnDirective();
@@ -82,5 +82,6 @@ class	Connection
 
 
 		void resetCgiState();
+		void epollinProcess(Http*, std::vector<Connection*>, struct epoll_event&, int);
 
 };

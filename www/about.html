@@ -14,7 +14,7 @@
 					<li><a href="index.html">Home</a></li>
 					<li><a href="form.html">ReqTests</a></li>
 					<li><a href="cgi.html">The CGI</a></li>
-					<li><a href="about.html">About us</a></li>
+					<li><a href="about.html">About</a></li>
 					<li><button class="theme-toggle" id="themeToggle">🌙</button></li>
 				</ul>
 			</div>
@@ -89,10 +89,10 @@
 				<h2>Technical Specifications</h2>
 				<div class="content-section">
 					<ul>
-						<li><strong>Language:</strong> C++98 (with some C++11 features where allowed)</li>
+						<li><strong>Language:</strong> C++98</li>
 						<li><strong>Concurrency:</strong> Single-process, event-driven architecture</li>
 						<li><strong>Protocols:</strong> HTTP/1.1 (RFC 7230-7235)</li>
-						<li><strong>Supported Methods:</strong> GET, POST, DELETE, HEAD</li>
+						<li><strong>Supported Methods:</strong> GET, POST, DELETE</li>
 						<li><strong>Configuration:</strong> Multiple servers with different host:port combinations</li>
 						<li><strong>Performance:</strong> Handles 1000+ concurrent connections on modern hardware</li>
 					</ul>
@@ -102,20 +102,20 @@
 				<div class="team-members">
 					<div class="member-card">
 						<h4>Alassiqu</h4>
-						<p class="member-role">Core Server & Socket Management</p>
-						<p>Implemented the main event loop, connection handling, and request parsing components.</p>
+						<p class="member-role">Request Handling & POST Method</p>
+						<p>Implemented the complete request parsing pipeline and POST method handling, including chunked transfer encoding and multipart form data processing.</p>
 					</div>
 					
 					<div class="member-card">
 						<h4>Ajawad</h4>
-						<p class="member-role">Configuration & Response Handling</p>
-						<p>Developed the configuration parser and response generation system with proper HTTP headers.</p>
+						<p class="member-role">Core Server & Multiplexing</p>
+						<p>Developed the core server architecture, I/O multiplexing system, and implemented cookies and session management features.</p>
 					</div>
 					
 					<div class="member-card">
 						<h4>Ahanaf</h4>
-						<p class="member-role">CGI Implementation & Testing</p>
-						<p>Built the CGI handler and comprehensive test suite for all server components.</p>
+						<p class="member-role">Response System & CGI</p>
+						<p>Built the response generation system, implemented GET and DELETE methods, and developed the complete CGI handler with multiple interpreter support.</p>
 					</div>
 				</div>
 			</div>
