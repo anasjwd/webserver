@@ -303,6 +303,11 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					std::cout << "Error: failed to accept a client" << std::endl;
 					continue;
 				}
+				
+				int flags = fcntl(clientFd, F_GETFL, 0);
+				fcntl(clientFd, F_SETFL, flags | O_NONBLOCK);
+				int optval = 1;
+				setsockopt(clientFd, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval));
 
 				Connection* conn = new Connection(clientFd);
 				connections.push_back(conn);
@@ -322,8 +327,14 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				{
 					std::cout << RED << "EPOLLIN\n" << RESET;
 					bytes = read(conn->fd, buff, EIGHT_KB);
-					if (bytes <= 0)
+					if (bytes <= 0) {
+						if (bytes == 0) {
+							std::cout << "Client closed connection on fd " << conn->fd << std::endl;
+						} else {
+							std::cerr << "Read error on fd " << conn->fd << std::endl;
+						}
 						conn->closeConnection(conn, connections, epollFd);
+					}
 					else
 					{
 						if (!conn->req)
