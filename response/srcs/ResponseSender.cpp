@@ -8,7 +8,7 @@
 #include <sys/sendfile.h>
 #include <sys/socket.h>
 
-#define EIGHT_KB 8192
+#define EIGHT_KB 1048576
 
 bool ResponseSender::handleEpollOut(Connection* conn, int epollFd, std::vector<Connection*>& connections) {
     if (!conn->req) {
@@ -88,7 +88,7 @@ bool ResponseSender::handleEpollOut(Connection* conn, int epollFd, std::vector<C
         }
 
         if (conn->fileSendState == 3) {
-            conn->closeConnection(connections, epollFd);
+            conn->closeConnection(conn, connections, epollFd);
             return false;
         }
 
@@ -109,7 +109,7 @@ void ResponseSender::handleConnectionError(Connection* conn, std::vector<Connect
         send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
     }
     
-    conn->closeConnection(connections, epollFd);
+    conn->closeConnection(conn, connections, epollFd);
 }
 
 bool ResponseSender::sendHeaders(Connection* conn, Response* response, int epollFd, std::vector<Connection*>& connections) {

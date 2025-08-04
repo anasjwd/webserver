@@ -35,7 +35,7 @@
 # define	NONESSENTIAL	101
 # define	BACKLOG			511
 # define	MAX_EVENTS		512
-# define	EIGHT_KB		8192
+# define	EIGHT_KB		1048576
 
 /*
 	TODO:
@@ -224,7 +224,7 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 				conn->req->setState(false, REQUEST_TIMEOUT);
 			epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, &ev);
 			std::cout << "Closing connection fd " << conn->fd << std::endl;
-			conn->closeConnection(connections, epollFd);
+			conn->closeConnection(conn, connections, epollFd);
 		}
 		else if (conn && conn->isCgi && conn->isCgiTimedOut())
 		{
@@ -242,7 +242,7 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 
 			epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, &ev);
 			std::cout << "Closing cgi connection fd " << conn->fd << std::endl;
-			conn->closeConnection(connections, epollFd);
+			conn->closeConnection(conn, connections, epollFd);
 		}
 		if (connections.size() == 0)
 			break;
@@ -262,11 +262,12 @@ void	handleConnectionError(Connection* conn, std::vector<Connection*>& connectio
 		send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
 	}
 	
-	conn->closeConnection(connections, epollFd);
+	conn->closeConnection(conn, connections, epollFd);
 }
 
 void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 {
+	int it = 0;
 	Connection*					conn;
 	std::vector<Connection*>	connections;
 	int							numberOfEvents;
@@ -275,13 +276,16 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 
 	while (true)
 	{
+		std::cout << "passed here for the " << it << " th time.";
 		if (got_singint == true)
 			return conn->freeConnections(connections);
 		if (time(NULL) - lastTimeoutCheck >= 1)
 			checkForTimeouts(connections, ev, epollFd, lastTimeoutCheck);
 
 		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000); //TODO-ACHRAF: check if the 1000 is valid
-		for (int i = 0; i < numberOfEvents; i++)
+		std::cerr << ">>>>>>>>>>>>>>>>>>> NumOfEvents " << numberOfEvents << std::endl;
+		int i = 0;
+		for (; i < numberOfEvents; i++)
 		{
 			if (std::find(sockets.begin(), sockets.end(), events[i].data.fd) != sockets.end())
 			{
@@ -306,10 +310,11 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					continue;
 
 				if (events[i].events & EPOLLIN)
-					conn->epollinProcess(http, connections, ev, epollFd);
+					conn->epollinProcess(http, conn, connections, ev, epollFd);
 				else if (events[i].events & EPOLLOUT)
 				{
 					std::cout << "EPOLLOUT event triggered for fd " << conn->fd << std::endl;
+					it++;
 					if (!ResponseSender::handleEpollOut(conn, epollFd, connections)) {
 						conn = NULL;
 					}
@@ -317,10 +322,11 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				else if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP)
 				{
 					std::cout << "Connection error or hangup on fd " << conn->fd << std::endl;
-					conn->closeConnection(connections, epollFd);
+					conn->closeConnection(conn, connections, epollFd);
 					conn = NULL;
 				}
 			}
+			std::cerr << ">>>>>>>>>>>>>>>>>>> IIIIIIIII " << i << std::endl;
 		}
 	}
 }

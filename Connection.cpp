@@ -93,9 +93,13 @@ void Connection::resetCgiState() {
 
 Connection* Connection::findConnectionByFd(int fd, std::vector<Connection*>& connections)
 {
+	if (connections.size() == 0)
+		return NULL;
+	std::cout << "Size of connections: " << connections.size() << "\n";
 	for (std::vector<Connection*>::iterator it = connections.begin(); 
 		it != connections.end(); ++it)
 	{
+		std::cout << "test\n";
 		if ((*it)->fd == fd)
 			return *it;
 	}
@@ -475,35 +479,36 @@ ErrorPage* Connection::getErrorPageForCode(int code) {
 	return NULL;
 }
 
-void Connection::closeConnection(std::vector<Connection*>& connections, int epollFd)
+void Connection::closeConnection(Connection* conn, std::vector<Connection*>& connections, int epollFd)
 {
-	if (this->closed)
+	if (!conn || conn->closed)
 		return;
 
-	closed = true;
+	conn->closed = true;
 
-	if (epollFd != -1 && fd != -1)
-		epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
+	if (epollFd != -1 && conn->fd != -1)
+		epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, NULL);
 
-	if (fileFd != -1)
+	if (conn->fileFd != -1)
 	{
-		close(fileFd);
-		fileFd = -1;
+		close(conn->fileFd);
+		conn->fileFd = -1;
 	}
-	if (fd != -1)
+	if (conn->fd != -1)
 	{
-		close(fd);
-		fd = -1;
+		close(conn->fd);
+		conn->fd = -1;
 	}
 
-	delete req;
-	req = NULL;
+	delete conn->req;
+	conn->req = NULL;
 
-	connections.erase(
-		std::remove(connections.begin(), connections.end(), this),
-		connections.end()
-	);
-	if (std::find(connections.begin(), connections.end(), this) != connections.end())
+	// connections.erase(
+	// 	std::remove(connections.begin(), connections.end(), conn),
+	// 	connections.end()
+	// );
+	connections.erase(find(connections.begin(), connections.end(), conn));
+	if (std::find(connections.begin(), connections.end(), conn) != connections.end())
 	{
 		std::cout << "Failed to remove connection from vector" << std::endl;
 	}
@@ -511,14 +516,15 @@ void Connection::closeConnection(std::vector<Connection*>& connections, int epol
 	{
 		std::cout << "Connection successfully removed from vector" << std::endl;
 		std::cout << "Remaining connections: " << connections.size() << std::endl;
-		if (req == NULL)
+		if (conn->req == NULL)
 			std::cout << "Request pointer is NULL" << std::endl;
 		else
 			std::cout << "Request pointer is not NULL" << std::endl;
 	}
 
-	delete this;
+	delete conn;
 	// conn = NULL;
+	std::cout << ">>>>>>>>>>>>>> size = " << connections.size() << std::endl;
 	std::cout << "Connection closed and deleted" << std::endl;
 }
 
@@ -582,15 +588,15 @@ bool	Connection::isTimedOut() const
 	return time(NULL) - lastActivityTime > TIMEOUT_SECONDS;
 }
 
-void	Connection::epollinProcess(Http* http, std::vector<Connection*> connections, struct epoll_event& ev, int epollFd)
+void	Connection::epollinProcess(Http* http, Connection* conn, std::vector<Connection*>& connections, struct epoll_event& ev, int epollFd)
 {
 	ssize_t	bytes;
-	char	buff[8192];
+	char	buff[1048576];
 
 	std::cout << RED << "EPOLLIN\n" << RESET;
-	bytes = read(fd, buff, 8192);
+	bytes = read(fd, buff, 1048576);
 	if (bytes <= 0)
-		closeConnection(connections, epollFd);
+		conn->closeConnection(conn, connections, epollFd);
 	else
 	{
 		if (!req)
