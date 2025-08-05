@@ -70,5 +70,8 @@ class Response
 
         static Response createRedirectResponse(int statusCode, const std::string& location);
 
+        static std::string createErrorResponse(int statusCode, const std::string& errorMessage);
+        static std::string toString(int number);
+
         void clear();
 };
