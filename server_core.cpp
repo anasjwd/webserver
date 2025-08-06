@@ -229,17 +229,8 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 		else if (conn && conn->isCgi && conn->isCgiTimedOut())
 		{
 			std::cout << "Connection cgi timeout for fd " << conn->fd << std::endl;
-			Response res =  FileResponse::serve("www/error_504.html" , "text/html", 504);
-			  std::string responseStr = res.build();
-			// std::cout << "response headers\n";
-			// std::cout << CYAN <<  responseStr << RESET << std::endl;
-			send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
-			conn->fileFd = open(res.getFilePath().c_str(), O_RDONLY);
-			char fileBuf[EIGHT_KB]; 
-   			ssize_t bytesRead = read(conn->fileFd, fileBuf, sizeof(fileBuf) - 1);
-			std::cout << RED  << fileBuf << RESET << std::endl;
-			send(conn->fd, fileBuf, bytesRead, 0);
-
+			std::string res =  Response::createErrorResponse(504, "CGI TIMROUT");
+			send(conn->fd, res.c_str(), res.size(), MSG_NOSIGNAL);
 			epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, &ev);
 			std::cout << "Closing cgi connection fd " << conn->fd << std::endl;
 			conn->closeConnection(conn, connections, epollFd);
@@ -249,20 +240,6 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 		++it;
 	}
 	checkTime = time(NULL);
-}
-
-void	handleConnectionError(Connection* conn, std::vector<Connection*>& connections, int epollFd, const std::string& error)
-{
-	std::cout << "Connection error for fd " << conn->fd << ": " << error << std::endl;
-	
-	// Send error response if possible
-	if (conn->req) {
-		conn->res = ErrorResponse::createInternalErrorResponse(conn);
-		std::string responseStr = conn->res.build();
-		send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
-	}
-	
-	conn->closeConnection(conn, connections, epollFd);
 }
 
 void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
