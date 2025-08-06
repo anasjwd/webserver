@@ -86,7 +86,7 @@ bool	Request::_processChunkedTransfer()
 	return true;
 }
 
-void	Request::_connectionChecks(Http* http, Connection* conn)
+bool	Request::_connectionChecks(Http* http, Connection* conn)
 {
 	if (!conn->conServer)
 	{
@@ -97,8 +97,7 @@ void	Request::_connectionChecks(Http* http, Connection* conn)
 		if (!conn->_isAllowedMethod(method, allowed))
 		{
 			std::cout  << BGREEN << "not allowed method so without creating file" << RESET <<  std::endl;
-			conn->req->setState(false, METHOD_NOT_ALLOWED);
-			return ;
+			return conn->req->setState(false, METHOD_NOT_ALLOWED);
 		}
 		if (conn->getUpload())
 		{
@@ -107,8 +106,11 @@ void	Request::_connectionChecks(Http* http, Connection* conn)
 			_state = BODY;
 		}
 		else
-			_state = COMPLETE;
+			return setState(false, FORBIDDEN);
 	}
+	else
+		std::cout << "ConServer isn't NULL\n";
+	return true;
 }
 
 
@@ -124,9 +126,13 @@ bool	Request::_validateMethodBodyCompatibility(Http* http, Connection* conn)
 
 	if (hasBody)
 	{
+		std::cout << "Has body case::::::::::::::::::::" << std::endl;
+		if (!_connectionChecks(http, conn))
+			return false;
 		_rb.setExpected();
-		_connectionChecks(http, conn);
+		std::cout << "Connection checks passed!\n";
 	}
+	std::cout << "BodyExpected: " << _rb.isExpected() << "\n";
 
 	return true;
 }
@@ -267,6 +273,8 @@ bool	Request::bodySection()
 	{
 		if (!_rb.receiveData(_buffer.c_str(), _buffer.size()))
 			return setState(false, _rb.getStatusCode());
+		else
+			_rb.setCompleted();
 		_buffer.clear();
 	}
 
@@ -307,7 +315,7 @@ bool	Request::appendToBuffer(Connection* conn, Http* http, const char* data, siz
 				break;
 
 			case BODY:
-				if (conn && bodySection())
+				if (bodySection())
 					progress = true;
 				break;
 

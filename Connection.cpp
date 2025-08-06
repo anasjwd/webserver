@@ -191,10 +191,12 @@ IDirective*	Connection::getDirective(DIRTYPE type)
 
 bool		Connection::getUpload() const
 {
+	std::cout << "About to get Location\n";
 	const Location*	location = getLocation();
 	if (location == NULL)
 		return NULL;
-	
+
+	std::cout << "Location:" << location->getUri() << "\n";
 	for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); 
 	dit != location->directives.end(); ++dit) 
 	{
@@ -292,6 +294,7 @@ ClientMaxBodySize*	Connection::getClientMaxBodySize()
 
 const Location* Connection::getLocation() const
 {
+	std::cout << "In location\n";
 	if (cachedLocation)
 	{
 		std::cout << "[CACHE HIT] Using cached location for URI: " << (req ? req->getRequestLine().getUri() : uri) << std::endl;
@@ -299,7 +302,10 @@ const Location* Connection::getLocation() const
 	}
 
 	if (!conServer)
+	{
+		std::cout << "ConServer NULL\n";
 		return NULL;
+	}
 
 	std::string reqUri;
 	if (req && req->getRequestLine().getUri().size())
@@ -307,8 +313,13 @@ const Location* Connection::getLocation() const
 	else if (!uri.empty())
 		reqUri = uri;
 	else
+	{
+		std::cout << "NULL case!\n";
 		return NULL;
+	}
 	cachedLocation = _findBestLocation(conServer->directives, reqUri);
+	if (cachedLocation == NULL)
+		std::cout << "_findBestLocation is NULL\n";
 	return cachedLocation;
 }
 
@@ -650,6 +661,7 @@ void	Connection::epollinProcess(Http* http, Connection* conn, std::vector<Connec
 			req->setState(false, PAYLOAD_TOO_LARGE);
 		if (req->isRequestDone())
 		{
+			std::cout << RED << "Request done with state:" << req->getStatusCode() << RESET << "\n";
 			ev.events = EPOLLOUT;
 			ev.data.fd = fd;
 			epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &ev);

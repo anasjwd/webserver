@@ -244,7 +244,6 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 
 void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 {
-	int it = 0;
 	Connection*					conn;
 	std::vector<Connection*>	connections;
 	int							numberOfEvents;
@@ -253,7 +252,6 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 
 	while (true)
 	{
-		std::cout << "passed here for the " << it << " th time.";
 		if (got_singint == true)
 			return conn->freeConnections(connections);
 		if (time(NULL) - lastTimeoutCheck >= 1)
@@ -295,7 +293,6 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				else if (events[i].events & EPOLLOUT)
 				{
 					std::cout << "EPOLLOUT event triggered for fd " << conn->fd << std::endl;
-					it++;
 					if (!ResponseSender::handleEpollOut(conn, epollFd, connections)) {
 						conn = NULL;
 					}

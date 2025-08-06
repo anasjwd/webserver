@@ -115,6 +115,11 @@ bool	FileHandler::create(FileType type, char* uploadDir)
 	if (_isOpen)
 		close();
 
+	std::cout << "Creating file: " << type << ", expected 1;\n";
+	if (uploadDir)
+		std::cout << "UploadDir is: " << uploadDir << "\n";
+	else
+		std::cout << "UploadDir is: NULL\n";
 	try
 	{
 		switch (type)

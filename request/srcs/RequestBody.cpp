@@ -203,10 +203,7 @@ bool	RequestBody::receiveData(const char* data, size_t len)
 		return _processChunkData(data, len);
 
 	if (_fileHandler.write(data, len) == -1)
-	{
-        std::cout << "write:reqbody.cpp 1 \n";	
 		return setState(false, INTERNAL_SERVER_ERROR);
-	}
 
 	_bytesReceived += len;
 	if (_bytesReceived >= _contentLength)
