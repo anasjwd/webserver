@@ -155,23 +155,14 @@ Response CgiHandler::executeCgi(Connection* conn, const std::string& scriptPath)
 }
 
 void CgiHandler::writePostDataToCgi(Connection* conn) {
-    if (!conn->req || conn->req->getRequestLine().getMethod() != "POST") {
+    if (!conn->req || conn->req->getRequestLine().getMethod() != "POST")
         return;
-    }
     
     std::string postData;
-    if (conn->req->getRequestBody().isMultipart() && conn->req->getRequestBody().getUploadHandler().isOpen()) {
-        std::ifstream file(conn->req->getRequestBody().getUploadHandler().path().c_str());
-        if (file.is_open()) {
-            postData.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-            file.close();
-        }
-    } else {
-        std::ifstream file(conn->req->getRequestBody().getTempFile().path().c_str());
-        if (file.is_open()) {
-            postData.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-            file.close();
-        }
+    std::ifstream file(conn->req->getRequestBody().getTempFile().path().c_str());
+    if (file.is_open()) {
+        postData.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        file.close();
     }
     
     if (!postData.empty()) {
@@ -404,12 +395,9 @@ std::map<std::string, std::string> CgiHandler::buildEnvironment(Connection* conn
     env["HTTP_COOKIE"] = request.getRequestHeaders().getHeaderValue("cookie");
     
     if (method == "POST") {
+        env["UPLOADED_FILE_PATH"] = request.getRequestBody().getTempFile().path();     
         env["CONTENT_TYPE"] = request.getRequestHeaders().getHeaderValue("content-type");
         env["CONTENT_LENGTH"] = request.getRequestHeaders().getHeaderValue("content-length");
-        if (request.getRequestBody().isMultipart() && request.getRequestBody().getUploadHandler().isOpen()) 
-            env["UPLOADED_FILE_PATH"] = request.getRequestBody().getUploadHandler().path();
-        else
-            env["UPLOADED_FILE_PATH"] = request.getRequestBody().getTempFile().path();     
     }
     
     const std::map<std::string, std::string>& headers = request.getRequestHeaders().getHeadersMap();

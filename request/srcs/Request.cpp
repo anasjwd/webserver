@@ -8,8 +8,8 @@
 # include "../../Connection.hpp"
 
 Request::Request()
-	:	_fd(-1), _rl(""), _rh(""), _rb(), _state(BEGIN), _statusCode(START),
-		_requestDone(false)
+	:	_fd(-1), _rl(""), _rh(""), _rb(),
+		_state(BEGIN), _statusCode(START), _requestDone(false)
 {
 }
 
@@ -19,26 +19,13 @@ Request::Request(int fd)
 {
 }
 
-bool	Request::isMultipart(const std::string& contentType)
-{
-	if (contentType == "")
-		return false;
-	size_t semi_colon = contentType.find(";");
-	if (semi_colon != std::string::npos && contentType.substr(0, semi_colon) == "multipart/form-data")
-		return true;
-	return false;
-}
-
 bool	Request::_processBodyHeaders()
 {
 	std::string contentType = _rh.getHeaderValue("content-type");
 	if (!contentType.empty())
 		_rb.setContentType(contentType);
-	if (isMultipart(contentType))
-	{
-		_rb.setMultipart(true);
-		_rb.extractBoundary(contentType);
-	}
+
+	_rb.extractBoundary(contentType);
 
 	std::string contentLengthStr = _rh.getHeaderValue("content-length");
 	std::string transferEncoding = _rh.getHeaderValue("transfer-encoding");
