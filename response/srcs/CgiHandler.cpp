@@ -167,6 +167,7 @@ void CgiHandler::writePostDataToCgi(Connection* conn) {
     
     if (!postData.empty()) {
         write(conn->cgiPipeToChild[1], postData.c_str(), postData.length());
+        std::cout << "write:cgihandler.cpp \n";
     }
     
     close(conn->cgiPipeToChild[1]);

@@ -30,18 +30,26 @@ bool Location::validate(void)
 {
 	unsigned int size = directives.size();
 	DIRTYPE validTypes[] = {ERROR_PAGE, CLIENT_MAX_BODY_SIZE, ROOT,
-		LIMIT_EXCEPT, RETURN, INDEX, AUTOINDEX, LOCATION};
+		LIMIT_EXCEPT, RETURN, INDEX, AUTOINDEX, LOCATION, UPLOAD, UPLOAD_LOCATION};
 	unsigned int j;
 
 	for (unsigned int i = 0; i < size; i++)
 	{
-		for (j = 0; j < 8; j++)
+		for (j = 0; j < 11; j++)
 		{
 			if (directives[i]->getType() == validTypes[j])
 				break;
 		}
-		if (j == 8)
+		if (j == 11)
 			return ( false );
 	}
 	return ( true );
+}
+
+char* Location::getUri(void) const {
+	return ( uri );
+}
+
+bool Location::isExactMatch(void) const {
+	return ( exactMatch );
 }

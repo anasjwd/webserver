@@ -282,8 +282,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 		if (time(NULL) - lastTimeoutCheck >= 1)
 			checkForTimeouts(connections, ev, epollFd, lastTimeoutCheck);
 
-		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000); //TODO-ACHRAF: check if the 1000 is valid
-		std::cerr << ">>>>>>>>>>>>>>>>>>> NumOfEvents " << numberOfEvents << std::endl;
+		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000);
 		int i = 0;
 		for (; i < numberOfEvents; i++)
 		{
@@ -295,6 +294,11 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					std::cout << "Error: failed to accept a client" << std::endl;
 					continue;
 				}
+				
+				int flags = fcntl(clientFd, F_GETFL, 0);
+				fcntl(clientFd, F_SETFL, flags | O_NONBLOCK);
+				int optval = 1;
+				setsockopt(clientFd, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval));
 
 				connections.push_back(new Connection(clientFd));
 				std::cout << RED << "Connection created!\n" << RESET;
@@ -326,7 +330,6 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					conn = NULL;
 				}
 			}
-			std::cerr << ">>>>>>>>>>>>>>>>>>> IIIIIIIII " << i << std::endl;
 		}
 	}
 }
@@ -352,7 +355,6 @@ int main(int ac, char** av)
 	}
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGINT, sigintHandler);
-	signal(SIGPIPE, SIG_IGN);
 	http = parseConfig(av[1]);
 	if (http == NULL)
 		return ( 1 );

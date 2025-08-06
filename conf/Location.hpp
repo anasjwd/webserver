@@ -17,7 +17,7 @@ class Location : public BlockDirective {
 		void setUri(char* uri);
 		void setExactMatch(bool value);
 		bool validate(void);
-		char* getUri() const{return uri;}
-		bool isExactMatch() const{return exactMatch;}
+		char* getUri(void) const;
+		bool isExactMatch(void) const;
 };
 

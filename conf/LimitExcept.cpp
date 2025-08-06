@@ -29,3 +29,7 @@ void LimitExcept::setMethod(char* value, unsigned int idx)
 {
 	methods[idx] = value;
 }
+
+char** LimitExcept::getMethods(void) const {
+	return ( methods );
+}

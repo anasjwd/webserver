@@ -2,15 +2,19 @@
 #include <iostream>
 
 Index::Index(void)
-{}
+{
+	files = NULL;
+}
 
 Index::~Index(void)
 {
-	for (unsigned int i = 0; files[i] != NULL; i++)
-	{
-		free(files[i]);
+	if (files != NULL) {
+		for (unsigned int i = 0; files[i] != NULL; i++)
+		{
+			free(files[i]);
+		}
+		delete[] files;
 	}
-	delete[] files;
 }
 
 DIRTYPE Index::getType(void) const
