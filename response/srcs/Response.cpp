@@ -92,14 +92,12 @@ std::string Response::build() {
     if (_headers.find("Server") == _headers.end()) {
         _headers["Server"] = "WebServ/1.1";
     }
-    if (_statusCode != 204 && _statusCode != 304) {
-        if (_headers.find("Content-Length") == _headers.end()) {
+    if (_headers.find("Content-Length") == _headers.end()) {
             std::ostringstream oss;
             oss << _fileSize;
             _headers["Content-Length"] = oss.str();    
-        }
     }
-    if (_statusCode != 204 && _statusCode != 304 && !_filePath.empty()) {
+    if (!_filePath.empty()) {
         if (_headers.find("Content-Type") == _headers.end()) {
             _headers["Content-Type"] = "text/plain";
         }
@@ -107,7 +105,7 @@ std::string Response::build() {
     // _headers["Set-Cookie"] = "name=ahanaf";
 
 //     _headers["Set-Cookie"] = "num=20";
-    // _headers["Connection"] = "close"; // 
+    _headers["Connection"] = "close"; // 
     std::vector<std::pair<std::string, std::string> > sortedHeaders(_headers.begin(), _headers.end());
     std::sort(sortedHeaders.begin(), sortedHeaders.end());
     for (size_t i = 0; i < sortedHeaders.size(); ++i) {
@@ -140,7 +138,6 @@ void Response::setFilePath(const std::string& path) {
 
 void Response::setFileSize(size_t size) {
     _fileSize = size;
-    std::cout << "size is " << size << std::endl;
     _isBuilt = false;
 }
 

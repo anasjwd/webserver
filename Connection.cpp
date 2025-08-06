@@ -25,7 +25,7 @@
 Connection::Connection()
     :   fd(-1), req(NULL), connect(false), conServer(NULL),
         lastActivityTime(time(NULL)), lastTimeoutCheck(time(NULL)),
-        closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0),
+        closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0), headersSent(false),
         isCgi(false), cgiExecuted(false), cgiCompleted(false), cgiPid(-1), cgiReadState(0),
         cgiStartTime(0), cachedLocation(NULL)
 {
@@ -38,7 +38,7 @@ Connection::Connection()
 Connection::Connection(int clientFd)
     :   fd(clientFd), req(NULL), connect(false), conServer(NULL),
         lastActivityTime(time(NULL)), lastTimeoutCheck(time(NULL)),
-        closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0),
+        closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0), headersSent(false),
         isCgi(false), cgiExecuted(false), cgiCompleted(false), cgiPid(-1), cgiReadState(0),
         cgiStartTime(0), cachedLocation(NULL)
 {

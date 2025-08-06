@@ -31,6 +31,7 @@ class	Connection
 		int				fileFd;
 		int				fileSendState; // 0: not started, 1: headers sent, 2: sending body, 3: done
 		ssize_t			fileSendOffset;
+		bool 			headersSent;
 
 		bool			isCgi;
 		bool			cgiExecuted;
