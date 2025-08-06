@@ -357,6 +357,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					if (!ResponseSender::handleEpollOut(conn, epollFd, connections)) {
 						conn = NULL;
 					}
+					std::cout << "_______________________________\n";
 				}
 				else if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP)
 				{
@@ -390,7 +391,7 @@ int main(int ac, char** av)
 	}
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGINT, sigintHandler);
-	signal(SIGPIPE, SIG_IGN);
+	//signal(SIGPIPE, SIG_IGN);
 	http = parseConfig(av[1]);
 	if (http == NULL)
 		return ( 1 );

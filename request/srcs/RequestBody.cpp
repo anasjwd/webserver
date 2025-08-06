@@ -61,8 +61,11 @@ bool	RequestBody::_processChunkData(const char* data, size_t len)
 		size_t available = buffer.size() - _chunkParsePos;
 		size_t toWrite = std::min(_currentChunkSize - _bytesReceivedInChunk, available);
 
-		if (!_fileHandler.write(buffer.data() + _chunkParsePos, toWrite))
+		if (_fileHandler.write(buffer.data() + _chunkParsePos, toWrite) == -1)
+		{
+			std::cout << "write:reqbody.cpp 4 \n";	
 			return setState(false, INTERNAL_SERVER_ERROR);
+		}
 
 		_chunkParsePos += toWrite;
 		_bytesReceivedInChunk += toWrite;
@@ -90,8 +93,9 @@ bool RequestBody::_processMultipartChunk(const char* data, size_t len)
 
 	if (!_isCurrentPartFile)
 	{
-		if (!_fileHandler.write(data, len))
+		if (_fileHandler.write(data, len) == -1)
 		{
+	        std::cout << "write:reqbody.cpp 3 \n";	
 			std::cerr << "[Multipart] Failed to write to _fileHandler\n";
 			return setState(false, INTERNAL_SERVER_ERROR);
 		}
@@ -142,8 +146,9 @@ bool RequestBody::_processMultipartChunk(const char* data, size_t len)
 		if (_isCurrentPartFile)
 		{
 			size_t partLen = partDataEnd - partDataStart;
-			if (!_uploadHandler.write(_multipartBuffer.data() + partDataStart, partLen))
+			if (_uploadHandler.write(_multipartBuffer.data() + partDataStart, partLen) == -1)
 			{
+		        std::cout << "write:reqbody.cpp 2 \n";	
 				std::cerr << "[Multipart] Failed to write to upload file\n";
 				return setState(false, INTERNAL_SERVER_ERROR);
 			}
@@ -307,8 +312,11 @@ bool	RequestBody::receiveData(const char* data, size_t len)
 	if (_isChunked) // chunked | contnt-length
 		return _processChunkData(data, len);
 
-	if (!_fileHandler.write(data, len))
+	if (_fileHandler.write(data, len) == -1)
+	{
+        std::cout << "write:reqbody.cpp 1 \n";	
 		return setState(false, INTERNAL_SERVER_ERROR);
+	}
 
 	_bytesReceived += len;
 	if (_bytesReceived >= _contentLength)

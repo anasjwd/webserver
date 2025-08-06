@@ -9,8 +9,8 @@ char* readCfgFileContent(const char* filename)
 	cfgFile.open(filename);
 	if (!cfgFile.is_open())
 	{
-		std::cerr << "Error\n";
-		return NULL; // TODO: throw an exception instead
+		std::cerr << "Error: Failed to open config file\n";
+		return NULL;
 	}
 	cfgFile.seekg(0, std::ios::end);
 	contentLength = cfgFile.tellg();
@@ -22,8 +22,7 @@ char* readCfgFileContent(const char* filename)
 	return content;
 }
 
-Http* parseConfig(char* fileName)
-{
+Http* parseConfig(char* fileName) {
 	char* content = readCfgFileContent(fileName);
 	if (content == NULL)
 		return ( NULL );

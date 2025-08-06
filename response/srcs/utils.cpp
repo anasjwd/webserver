@@ -9,6 +9,7 @@
 #include <ctime>
 #include <cerrno>
 #include <cstring>
+#include <iostream>
 
 std::string loadFile(const std::string& path) {
     std::string dir = "tmp/response";
@@ -43,6 +44,7 @@ std::string loadFile(const std::string& path) {
         ssize_t totalWritten = 0;
         while (totalWritten < bytesRead) {
             ssize_t bytesWritten = write(dstFd, buf + totalWritten, bytesRead - totalWritten);
+            std::cout << "write:utils.cpp -> " << bytesWritten << "\n";
             if (bytesWritten == -1) {
                 close(srcFd);
                 close(dstFd);

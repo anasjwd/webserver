@@ -55,8 +55,8 @@ typedef struct s_token {
 #include "Return.hpp"
 #include "Index.hpp"
 #include "AutoIndex.hpp"
-#include "Allow.hpp"
-#include "Deny.hpp"
+#include "Upload.hpp"
+#include "UploadLocation.hpp"
 
 Http* parseConfig(char* fileName);
 
