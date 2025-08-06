@@ -8,8 +8,8 @@
 # include "../../Connection.hpp"
 
 Request::Request()
-	:	_fd(-1), _rl(""), _rh(""), _rb(), _state(BEGIN), _statusCode(START),
-		_requestDone(false)
+	:	_fd(-1), _rl(""), _rh(""), _rb(),
+		_state(BEGIN), _statusCode(START), _requestDone(false)
 {
 }
 
@@ -19,26 +19,13 @@ Request::Request(int fd)
 {
 }
 
-bool	Request::isMultipart(const std::string& contentType)
-{
-	if (contentType == "")
-		return false;
-	size_t semi_colon = contentType.find(";");
-	if (semi_colon != std::string::npos && contentType.substr(0, semi_colon) == "multipart/form-data")
-		return true;
-	return false;
-}
-
 bool	Request::_processBodyHeaders()
 {
 	std::string contentType = _rh.getHeaderValue("content-type");
 	if (!contentType.empty())
 		_rb.setContentType(contentType);
-	if (isMultipart(contentType))
-	{
-		_rb.setMultipart(true);
-		_rb.extractBoundary(contentType);
-	}
+
+	_rb.extractBoundary(contentType);
 
 	std::string contentLengthStr = _rh.getHeaderValue("content-length");
 	std::string transferEncoding = _rh.getHeaderValue("transfer-encoding");
@@ -99,25 +86,53 @@ bool	Request::_processChunkedTransfer()
 	return true;
 }
 
-bool	Request::_validateMethodBodyCompatibility()
+bool	Request::_connectionChecks(Http* http, Connection* conn)
+{
+	if (!conn->conServer)
+	{
+		conn->findServer(http);
+		std::string method = _rl.getMethod();
+		std::vector<std::string> allowed = conn->_getAllowedMethods();
+
+		if (!conn->_isAllowedMethod(method, allowed))
+		{
+			std::cout  << BGREEN << "not allowed method so without creating file" << RESET <<  std::endl;
+			return conn->req->setState(false, METHOD_NOT_ALLOWED);
+		}
+		if (conn->getUpload())
+		{
+			char* uploadDir =  conn->getUploadLocation();
+			_rb.create(POST_BODY, uploadDir);
+			_state = BODY;
+		}
+		else
+			return setState(false, FORBIDDEN);
+	}
+	else
+		std::cout << "ConServer isn't NULL\n";
+	return true;
+}
+
+
+bool	Request::_validateMethodBodyCompatibility(Http* http, Connection* conn)
 {
 	const std::string& method = _rl.getMethod();
 	bool hasBody = _rb.getContentLength() > 0 || _rb.isChunked();
 
+	if (method == "GET" || method == "DELETE")
+		return setState(true, OK);
 	if (!hasBody && method == "POST")
 		return setState(false, LENGTH_REQUIRED);
 
-	if (!hasBody && (method == "GET" || method == "DELETE"))
-		return setState(true, OK);
-
 	if (hasBody)
 	{
+		std::cout << "Has body case::::::::::::::::::::" << std::endl;
+		if (!_connectionChecks(http, conn))
+			return false;
 		_rb.setExpected();
-		if (method == "GET" || method == "DELETE")
-			_rb.create(TEMP_BODY);
-		else
-			_rb.create(POST_BODY);
+		std::cout << "Connection checks passed!\n";
 	}
+	std::cout << "BodyExpected: " << _rb.isExpected() << "\n";
 
 	return true;
 }
@@ -245,33 +260,9 @@ bool	Request::headerSection(Connection* conn, Http* http)
 
 	_buffer.erase(0, end_header + 4);
 
-	if (!_processBodyHeaders() || !_validateMethodBodyCompatibility())
+	if (!_processBodyHeaders() || !_validateMethodBodyCompatibility(http, conn))
 		return false;
 
-	if (_rb.isExpected())
-		_state = BODY;
-	else
-	{
-		if (!_buffer.empty())
-			return setState(false, BAD_REQUEST);
-		_state = COMPLETE;
-	}
-
-	if (!conn->conServer)
-	{
-		conn->findServer(http);
-		std::string method = _rl.getMethod();
-		// std::cout << "Curr method: " << method << ", to be checked if allowed!\n";
-		std::vector<std::string> allowed = conn->_getAllowedMethods();
-		for (size_t i = 0; i < allowed.size(); i++)
-			// std::cout << "Allowed method " << i << " is -> " << allowed[i] << "\n";
-
-		if (!conn->_isAllowedMethod(method, allowed))
-		{
-			std::cout  << BGREEN << "not allowed method so without creating file" << RESET <<  std::endl;
-			return conn->req->setState(false, METHOD_NOT_ALLOWED);
-		}
-	}
 	return true;
 }
 
@@ -282,6 +273,8 @@ bool	Request::bodySection()
 	{
 		if (!_rb.receiveData(_buffer.c_str(), _buffer.size()))
 			return setState(false, _rb.getStatusCode());
+		else
+			_rb.setCompleted();
 		_buffer.clear();
 	}
 
@@ -322,7 +315,7 @@ bool	Request::appendToBuffer(Connection* conn, Http* http, const char* data, siz
 				break;
 
 			case BODY:
-				if (conn && bodySection())
+				if (bodySection())
 					progress = true;
 				break;
 

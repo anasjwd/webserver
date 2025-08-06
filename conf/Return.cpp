@@ -24,3 +24,11 @@ void Return::setUrl(char* value)
 {
 	url = value;
 }
+
+unsigned int Return::getCode(void) const {
+	return ( code );
+}
+
+char* Return::getUrl(void) const {
+	return ( url );
+}

@@ -107,7 +107,7 @@ void	ResponseSender::handleConnectionError(Connection* conn, std::vector<Connect
 	std::cout << "Connection errot for fd " << conn->fd << ": " << errorMessage << std::endl;
     if (conn->req) {
         std::string completeResponse = Response::createErrorResponse(500, errorMessage);
-        send(conn->fd, completeResponse.c_str(), completeResponse.size(), 0);
+        send(conn->fd, completeResponse.c_str(), completeResponse.size(), MSG_NOSIGNAL);
     }
 	
 	conn->closeConnection(conn, connections, epollFd);
@@ -116,7 +116,9 @@ void	ResponseSender::handleConnectionError(Connection* conn, std::vector<Connect
 
 bool ResponseSender::sendHeaders(Connection* conn, Response* response, int epollFd, std::vector<Connection*>& connections) {
     std::string responseStr = response->build();
-    ssize_t sent = send(conn->fd, responseStr.c_str(), responseStr.size(), 0);
+    std::cout << "response headers\n";
+    std::cout << CYAN <<  responseStr << RESET << std::endl;
+    ssize_t sent = send(conn->fd, responseStr.c_str(), responseStr.size(), MSG_NOSIGNAL);
     
     if (sent == -1) {
         handleConnectionError(conn, connections, epollFd, "Header send error");
@@ -152,7 +154,7 @@ bool ResponseSender::sendFileBody(Connection* conn, Response* response, int epol
         return false;
     }
     else {
-        ssize_t bytesSent = send(conn->fd, fileBuf, bytesRead, 0);
+        ssize_t bytesSent = send(conn->fd, fileBuf, bytesRead, MSG_NOSIGNAL);
         if (bytesSent == -1) {
             conn->fileSendState = 3;
             close(conn->fileFd);

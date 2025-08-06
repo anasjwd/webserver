@@ -15,3 +15,7 @@ void ClientMaxBodySize::setSize(unsigned long long value)
 {
 	size = value;
 }
+
+unsigned long long ClientMaxBodySize::getSize(void) const {
+	return ( size );
+}

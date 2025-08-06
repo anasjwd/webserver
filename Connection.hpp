@@ -58,9 +58,11 @@ class	Connection
 		IDirective*			getDirective(DIRTYPE type);
 
 		// Alassiqu:
-		LimitExcept*		getLimitExcept() const;
+		bool				getUpload() const;
 		bool				checkMaxBodySize();
 		ClientMaxBodySize*	getClientMaxBodySize();
+		LimitExcept*		getLimitExcept() const;
+		char*				getUploadLocation() const;
 
 		// ahanaf
 		Root*				getRoot();

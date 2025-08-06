@@ -27,7 +27,6 @@
 # include "conf/cfg_parser.hpp"
 # include "request/incs/Defines.hpp"
 # include "request/incs/Request.hpp"
-#include "response/include/FileResponse.hpp"
 # include "response/include/Response.hpp"
 # include "response/include/ErrorResponse.hpp"
 # include "response/include/ResponseHandler.hpp"
@@ -230,8 +229,8 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 		else if (conn && conn->isCgi && conn->isCgiTimedOut())
 		{
 			std::cout << "Connection cgi timeout for fd " << conn->fd << std::endl;
-			std::string res = Response::createErrorResponse(504, "cgi timeout");
-        	send(conn->fd, res.c_str(), res.size(), 0); // TODO hande send fails
+			std::string res =  Response::createErrorResponse(504, "CGI TIMROUT");
+			send(conn->fd, res.c_str(), res.size(), MSG_NOSIGNAL);
 			epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, &ev);
 			std::cout << "Closing cgi connection fd " << conn->fd << std::endl;
 			conn->closeConnection(conn, connections, epollFd);
@@ -242,7 +241,6 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 	}
 	checkTime = time(NULL);
 }
-
 
 void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 {
@@ -261,8 +259,9 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 		if (time(NULL) - lastTimeoutCheck >= 1)
 			checkForTimeouts(connections, ev, epollFd, lastTimeoutCheck);
 
-		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000); //TODO-ACHRAF: check if the 1000 is valid
-		for (int i = 0; i < numberOfEvents; i++)
+		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000);
+		int i = 0;
+		for (; i < numberOfEvents; i++)
 		{
 			if (std::find(sockets.begin(), sockets.end(), events[i].data.fd) != sockets.end())
 			{
@@ -272,6 +271,11 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					std::cout << "Error: failed to accept a client" << std::endl;
 					continue;
 				}
+				
+				int flags = fcntl(clientFd, F_GETFL, 0);
+				fcntl(clientFd, F_SETFL, flags | O_NONBLOCK);
+				int optval = 1;
+				setsockopt(clientFd, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval));
 
 				Connection* conn = new Connection(clientFd);
 				connections.push_back(conn);
@@ -320,6 +324,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				}
 				else if (events[i].events & EPOLLOUT)
 				{
+					std::cout << "EPOLLOUT event triggered for fd " << conn->fd << std::endl;
 					if (!ResponseSender::handleEpollOut(conn, epollFd, connections)) {
 						conn = NULL;
 					}
@@ -356,7 +361,6 @@ int main(int ac, char** av)
 	}
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGINT, sigintHandler);
-	// signal(SIGPIPE, SIG_IGN);
 	http = parseConfig(av[1]);
 	if (http == NULL)
 		return ( 1 );

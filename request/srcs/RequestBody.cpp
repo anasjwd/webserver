@@ -7,16 +7,13 @@
 
 RequestBody::RequestBody()
 	:	_expected(false), _isChunked(false), _statusCode(OK),
-		_isMultipart(false), _isCompleted(false), _contentLength(0),
-		_bytesReceived(0), _chunkParsePos(0), _currentChunkSize(0),
-		_bytesReceivedInChunk(0)
+		_isCompleted(false), _contentLength(0), _bytesReceived(0),
+		_chunkParsePos(0), _currentChunkSize(0), _bytesReceivedInChunk(0)
 {
 }
 
 RequestBody::~RequestBody()
 {
-	if (_uploadHandler.fd() != -1)
-		std::cout << "Uploaded file path: " << _uploadHandler.path() << "\n";
 	if (_fileHandler.fd() != -1)
 		std::cout << "Body file path: " << _fileHandler.path() << "\n";
 }
@@ -61,8 +58,11 @@ bool	RequestBody::_processChunkData(const char* data, size_t len)
 		size_t available = buffer.size() - _chunkParsePos;
 		size_t toWrite = std::min(_currentChunkSize - _bytesReceivedInChunk, available);
 
-		if (!_fileHandler.write(buffer.data() + _chunkParsePos, toWrite))
+		if (_fileHandler.write(buffer.data() + _chunkParsePos, toWrite) == -1)
+		{
+			std::cout << "write:reqbody.cpp 4 \n";	
 			return setState(false, INTERNAL_SERVER_ERROR);
+		}
 
 		_chunkParsePos += toWrite;
 		_bytesReceivedInChunk += toWrite;
@@ -82,99 +82,12 @@ bool	RequestBody::_processChunkData(const char* data, size_t len)
 	return true;
 }
 
-bool RequestBody::_processMultipartChunk(const char* data, size_t len)
-{
-	std::cout << "\n[Multipart] Processing " << len << " bytes\n";
-
-	_multipartBuffer.append(data, len);
-
-	if (!_isCurrentPartFile)
-	{
-		if (!_fileHandler.write(data, len))
-		{
-			std::cerr << "[Multipart] Failed to write to _fileHandler\n";
-			return setState(false, INTERNAL_SERVER_ERROR);
-		}
-		_bytesReceived += len;
-	}
-
-	if (!_inPart)
-	{
-		size_t dispPos = _multipartBuffer.find("Content-Disposition: form-data;");
-		if (dispPos == std::string::npos)
-			return true;
-
-		size_t filenamePos = _multipartBuffer.find("filename=\"", dispPos);
-		if (filenamePos != std::string::npos)
-		{
-			size_t start = filenamePos + 10;
-			size_t end = _multipartBuffer.find('"', start);
-			if (end != std::string::npos)
-			{
-				_currentFilename = _multipartBuffer.substr(start, end - start);
-				_isCurrentPartFile = true;
-				std::cout << "[Multipart] Found file part: " << _currentFilename << "\n";
-
-				if (!_uploadHandler.create(UPLOAD_FILE, _currentFilename))
-				{
-					std::cerr << "[Multipart] Failed to create upload file\n";
-					return setState(false, INTERNAL_SERVER_ERROR);
-				}
-				std::cout << "fd upload: " << _uploadHandler.fd() << ", path: " << _uploadHandler.path() << "\n";
-			}
-		}
-		_inPart = true;
-	}
-
-	std::string boundaryLine = "--" + _boundary;
-	size_t boundaryPos;
-	std::cout << "[Multipart] Looking for boundary: '" << boundaryLine << "' in buffer of size " << _multipartBuffer.size() << std::endl;
-	while ((boundaryPos = _multipartBuffer.find(boundaryLine)) != std::string::npos)
-	{
-		std::cout << "[Multipart] Found boundary\n";
-
-		size_t partDataStart = _multipartBuffer.find(CRLFCRLF);
-		if (partDataStart == std::string::npos)
-			break;
-
-		partDataStart += 4;
-		size_t partDataEnd = boundaryPos - 2;
-		if (_isCurrentPartFile)
-		{
-			size_t partLen = partDataEnd - partDataStart;
-			if (!_uploadHandler.write(_multipartBuffer.data() + partDataStart, partLen))
-			{
-				std::cerr << "[Multipart] Failed to write to upload file\n";
-				return setState(false, INTERNAL_SERVER_ERROR);
-			}
-			std::cout << "[Multipart] Wrote " << partLen << " bytes to upload file\n";
-		}
-
-		// Advance past this boundary
-		_multipartBuffer.erase(0, boundaryPos + boundaryLine.size());
-		_isCurrentPartFile = false;
-		_inPart = false;
-
-		if (_multipartBuffer.find("--") == 0)
-		{
-			std::cout << "[Multipart] Final boundary found\n";
-			_isCompleted = true;
-			return true;
-		}
-	}
-
-	return true;
-}
-
-
-
 void	RequestBody::clear()
 {
 	_statusCode = OK;
 
 	_expected = false;
 	_isChunked = false;
-	_isMultipart = false;
 	_isCompleted = false;
 
 	_boundary.clear();
@@ -187,7 +100,7 @@ void	RequestBody::clear()
 	_bytesReceivedInChunk = 0;
 }
 
-bool	RequestBody::create(FileType type)
+bool	RequestBody::create(FileType type, char *uploadDir)
 {
 	if (_fileHandler.fd() != -1)
 	{
@@ -195,7 +108,7 @@ bool	RequestBody::create(FileType type)
 		return setState(false, INTERNAL_SERVER_ERROR);
 	}
 
-	if (!_fileHandler.create(type))
+	if (!_fileHandler.create(type, uploadDir))
 	{
 		std::cerr << "Failed to create temporary file for request body\n";
 		return setState(false, INTERNAL_SERVER_ERROR);
@@ -213,11 +126,6 @@ bool	RequestBody::isChunked() const
 bool	RequestBody::isExpected() const
 {
 	return _expected;
-}
-
-bool	RequestBody::isMultipart() const
-{
-	return _isMultipart;
 }
 
 bool	RequestBody::isCompleted() const
@@ -241,11 +149,6 @@ void	RequestBody::setChunked(bool isChunked)
 	_isChunked = isChunked;
 }
 
-void	RequestBody::setMultipart(bool isMultipart)
-{
-	_isMultipart = isMultipart;
-}
-
 void	RequestBody::setContentLength(size_t length)
 {
 	_contentLength = length;
@@ -262,14 +165,9 @@ void	RequestBody::setContentType(const std::string& contentType)
 	_contentType = contentType;
 }
 
-FileHandler	RequestBody::getTempFile() const
+const FileHandler&	RequestBody::getTempFile() const
 {
 	return _fileHandler;
-}
-
-const FileHandler&	RequestBody::getUploadHandler() const
-{
-	return _uploadHandler;
 }
 
 HttpStatusCode	RequestBody::getStatusCode() const
@@ -301,13 +199,10 @@ bool	RequestBody::receiveData(const char* data, size_t len)
 	if (!_expected || _isCompleted || !data || len == 0)
 		return false;
 
-	std::cout << "\n\nChunked: " << _isChunked << ", multipart: " << _isMultipart << "\n\n";
-	if (_isMultipart)
-		return _processMultipartChunk(data, len);
-	if (_isChunked) // chunked | contnt-length
+	if (_isChunked)
 		return _processChunkData(data, len);
 
-	if (!_fileHandler.write(data, len))
+	if (_fileHandler.write(data, len) == -1)
 		return setState(false, INTERNAL_SERVER_ERROR);
 
 	_bytesReceived += len;

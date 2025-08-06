@@ -461,6 +461,51 @@ IDirective* parseAutoIndex(
 	return ( autoindex );
 }
 
+IDirective* parseUploadDirective(std::vector<t_token*>& tokens,
+		unsigned int& pos,
+		unsigned int tokensSize)
+{
+	if (pos >= tokensSize || tokens[pos]->type == DIR_END)
+		throw DirectiveException("incomplete autoindex directive");
+
+	Upload* upload = new Upload();
+	if (strcmp(tokens[pos]->data, "on") == 0)
+		upload->setState(true);
+	else if (strcmp(tokens[pos]->data, "off") == 0)
+		upload->setState(false);
+	else {
+		delete upload;
+		throw DirectiveException("invalid content for upload directive");
+	}
+	++pos;
+	if (pos >= tokensSize || tokens[pos]->type != DIR_END) {
+		delete upload;
+		throw DirectiveException("incomplete upload directive - missing \";\"");
+	}
+	else
+		++pos;
+	return ( upload );
+}
+
+IDirective* parseUploadLocationDirective(std::vector<t_token*>& tokens,
+		unsigned int& pos,
+		unsigned int tokensSize)
+{
+	if (pos >= tokensSize || tokens[pos]->type == DIR_END)
+		throw DirectiveException("incomplete upload_location directive");
+
+	UploadLocation* uploadLocation = new UploadLocation();
+	uploadLocation->setLocation(strdup(tokens[pos++]->data));
+	if (pos >= tokensSize || tokens[pos]->type != DIR_END)
+	{
+		delete uploadLocation;
+		throw DirectiveException("incomplete root directive - missing \";\"");
+	}
+	++pos;
+	std::cout << ">>>>>>> " << uploadLocation->getLocation() << std::endl;
+	return ( uploadLocation );
+}
+
 IDirective* createNode(
 		std::vector<t_token*>& tokens,
 		unsigned int& pos,
@@ -468,7 +513,8 @@ IDirective* createNode(
 {
 	char types[][21] = {"server", "listen", "server_name",
 		"error_page", "client_max_body_size", "location", "root",
-		"limit_except", "return", "index", "autoindex", "deny", "allow"};
+		"limit_except", "return", "index", "autoindex", "upload",
+		"upload_location"};
 	IDirective* (*parsers[])(std::vector<t_token*>&,unsigned int&,unsigned int) = {
 		parseServerBlock,
 		parseListenDirective,
@@ -480,11 +526,13 @@ IDirective* createNode(
 		parseLimitExceptDirective,
 		parseReturnDirective,
 		parseIndexDirective,
-		parseAutoIndex
+		parseAutoIndex,
+		parseUploadDirective,
+		parseUploadLocationDirective
 	};
 	std::cout << pos << " > " << tokens[pos]->data << std::endl;
 
-	for (int i = 0; i < 11; i++)
+	for (int i = 0; i < 13; i++)
 	{
 		if (strcmp(types[i], tokens[pos]->data) == 0)
 		{

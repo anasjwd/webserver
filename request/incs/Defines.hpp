@@ -16,8 +16,7 @@
 enum    FileType
 {
 	TEMP_BODY,
-	POST_BODY,
-	UPLOAD_FILE
+	POST_BODY
 };
 
 enum	RequestState
@@ -37,6 +36,7 @@ enum	HttpStatusCode
 	CREATED = 201,
 	ACCEPTED = 202,
 	BAD_REQUEST = 400,
+	FORBIDDEN = 403,
 	METHOD_NOT_ALLOWED = 405,
 	REQUEST_TIMEOUT = 408,
 	LENGTH_REQUIRED = 411,

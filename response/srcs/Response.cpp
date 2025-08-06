@@ -192,8 +192,3 @@ std::string Response::createErrorResponse(int statusCode, const std::string& err
     std::string headers = response.build();
     return headers + bodyContent;
 }
-std::string Response::toString(int number) {
-    std::ostringstream ss;
-    ss << number;
-    return ss.str();
-}

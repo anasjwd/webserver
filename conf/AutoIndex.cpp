@@ -15,3 +15,7 @@ void AutoIndex::setState(bool value)
 {
 	state = value;
 }
+
+bool AutoIndex::getState(void) const {
+	return ( state );
+}
