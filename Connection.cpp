@@ -121,17 +121,27 @@ static std::vector<Server*> getServersFromHttp(Http* http)
 
 bool	Connection::findServer(Http *http)
 {
+	std::cout << "!!!!!!!!!!!!!!!!!!!!!!Trying to find the server!!!!!!!!!!!!!\n";
 	if (!req || req->getState() < HEADERS || !req->getRequestHeaders().hasHeader("host"))
+	{
+		std::cout << "Passed first condition\n";
 		return false;
+	}
 	if (req->getState() >= HEADERS && !req->getRequestHeaders().hasHeader("host"))
+	{
+		std::cout << "Passed second condition\n";
 		return false;
+	}
 
 	unsigned int port = req->getRequestHeaders().getHostPort();
 	std::string hostname = req->getRequestHeaders().getHostName();
 	std::vector<Server*> servers = getServersFromHttp(http);
 	
 	if (servers.empty())
+	{
+		std::cout << "Passed third condition\n";
 		return false;
+	}
 		
 	for (std::vector<Server*>::const_iterator it = servers.begin(); it != servers.end(); ++it) {
 		Server* server = *it;
@@ -153,6 +163,7 @@ bool	Connection::findServer(Http *http)
 							{
 								conServer = server;
 								cachedLocation = NULL;
+								std::cout << "Con server found1!\n";
 								return true;
 							}
 					}
@@ -165,6 +176,7 @@ bool	Connection::findServer(Http *http)
 				{
 					conServer = server;
 					cachedLocation = NULL; 
+					std::cout << "Con server found2!\n";
 					return true;
 				}
 			}
@@ -172,6 +184,9 @@ bool	Connection::findServer(Http *http)
 	}
 	if (conServer == NULL)
 		conServer = servers[0];
+	if (conServer == NULL)
+		std::cout << "Con server still NULL.\n";
+
 	return false;
 }
 
@@ -317,6 +332,8 @@ const Location* Connection::getLocation() const
 		std::cout << "NULL case!\n";
 		return NULL;
 	}
+
+	std::cout << "Uri: " << reqUri << "\n";
 	cachedLocation = _findBestLocation(conServer->directives, reqUri);
 	if (cachedLocation == NULL)
 		std::cout << "_findBestLocation is NULL\n";
@@ -656,7 +673,7 @@ void	Connection::epollinProcess(Http* http, Connection* conn, std::vector<Connec
 			cachedLocation = NULL;
 			resetCgiState();
 		}
-		req->appendToBuffer(this, http, buff, bytes);
+		req->appendToBuffer(conn, http, buff, bytes);
 		if (!checkMaxBodySize())
 			req->setState(false, PAYLOAD_TOO_LARGE);
 		if (req->isRequestDone())

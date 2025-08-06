@@ -91,6 +91,8 @@ bool	Request::_connectionChecks(Http* http, Connection* conn)
 	if (!conn->conServer)
 	{
 		conn->findServer(http);
+		if (conn->conServer == NULL)
+			std::cout << "************************ Server not found! ************************\n";
 		std::string method = _rl.getMethod();
 		std::vector<std::string> allowed = conn->_getAllowedMethods();
 
@@ -261,7 +263,16 @@ bool	Request::headerSection(Connection* conn, Http* http)
 	_buffer.erase(0, end_header + 4);
 
 	if (!_processBodyHeaders() || !_validateMethodBodyCompatibility(http, conn))
+	{
+		std::cout << "Out here with: " << getStatusCode() << "\n";
 		return false;
+	}
+
+	std::cout << "Has body case::::::::::::::::::::" << std::endl;
+	if (!_connectionChecks(http, conn))
+		return false;
+	_rb.setExpected();
+	std::cout << "Connection checks passed!\n";
 
 	return true;
 }
