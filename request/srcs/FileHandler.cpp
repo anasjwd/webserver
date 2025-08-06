@@ -1,5 +1,6 @@
 # include <cstdio>
 # include <cstdlib>
+# include <climits>
 # include <cstring>
 # include <iostream>
 # include <unistd.h>
@@ -22,48 +23,20 @@ FileHandler::~FileHandler()
 		remove();
 	}
 }
-
-bool	FileHandler::_createBodyFile(bool isTemp)
+bool	FileHandler::_createBodyFile(bool isTemp, char* uploadDir)
 {
-	char path[] = "/tmp/webserv_request_body_XXXXXX";
+	char pathTemplate[PATH_MAX];
 
-	_fd = mkstemp(path);
-	if (_fd == -1)
-		return false;
+	if (uploadDir)
+		std::snprintf(pathTemplate, sizeof(pathTemplate), "%s/webserv_request_body_XXXXXX", uploadDir);
+	else
+		std::strcpy(pathTemplate, "/tmp/webserv_request_body_XXXXXX");
 
 	_size = 0;
 	_offset = 0;
-	_path = path;
 	_isOpen = true;
 	_isTemp = isTemp;
-	return true;
-}
-
-bool	FileHandler::_createUploadFile(const std::string& filename)
-{
-	std::cout << "Creating upload file named: " << filename << "\n"; 
-	if (filename.empty())
-		throw std::runtime_error("Filename required for upload file");
-
-	char buf[WS_PATH_MAX];
-
-	if (getcwd(buf, WS_PATH_MAX))
-		_uploadDir = std::string(buf) + "/upload";
-
-	if (!exists(_uploadDir) && !createDirectory(_uploadDir))
-		throw std::runtime_error("Failed to create upload directory");
-
-	std::string full_path = getUploadPath(filename);
-	_fd = ::open(full_path.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0644);
-	if (_fd == -1)
-		return false;
-
-	_size = 0;
-	_offset = 0;
-	_isOpen = true;
-	_isTemp = false;
-	_path = full_path;
-	std::cout << "Succesfully created!\n"; 
+	_path = pathTemplate;
 	return true;
 }
 
@@ -137,7 +110,7 @@ ssize_t	FileHandler::write(const char* data, size_t size)
 	return written;
 }
 
-bool	FileHandler::create(FileType type, const std::string& filename)
+bool	FileHandler::create(FileType type, char* uploadDir)
 {
 	if (_isOpen)
 		close();
@@ -147,11 +120,9 @@ bool	FileHandler::create(FileType type, const std::string& filename)
 		switch (type)
 		{
 			case TEMP_BODY:
-				return _createBodyFile(true);
+				return _createBodyFile(true, NULL);
 			case POST_BODY:
-				return _createBodyFile(false);
-			case UPLOAD_FILE:
-				return _createUploadFile(filename);
+				return _createBodyFile(false, uploadDir);
 			default:
 				throw std::runtime_error("Invalid file type");
 		}
@@ -221,11 +192,6 @@ bool	FileHandler::isTemp() const
 size_t	FileHandler::offset() const
 {
 	return _offset;
-}
-
-std::string	FileHandler::getUploadPath(const std::string& filename)
-{
-	return _uploadDir + "/" + filename;
 }
 
 bool	FileHandler::exists(const std::string& path)

@@ -100,7 +100,7 @@ void	RequestBody::clear()
 	_bytesReceivedInChunk = 0;
 }
 
-bool	RequestBody::create(FileType type)
+bool	RequestBody::create(FileType type, char *uploadDir)
 {
 	if (_fileHandler.fd() != -1)
 	{
@@ -108,7 +108,7 @@ bool	RequestBody::create(FileType type)
 		return setState(false, INTERNAL_SERVER_ERROR);
 	}
 
-	if (!_fileHandler.create(type))
+	if (!_fileHandler.create(type, uploadDir))
 	{
 		std::cerr << "Failed to create temporary file for request body\n";
 		return setState(false, INTERNAL_SERVER_ERROR);

@@ -25,9 +25,10 @@ class	Request
 		bool			_processBodyHeaders();
 		bool			_processContentLength();
 		bool			_processChunkedTransfer();
-		bool			_validateMethodBodyCompatibility();
-		std::string		_extractBoundary(const std::string&);
+		void			_connectionChecks(Http*, Connection*);
 		bool			_isChunkedTransferEncoding(const std::string&);
+		bool			_validateMethodBodyCompatibility(Http*, Connection *);
+
 
 	public:
 		Request();

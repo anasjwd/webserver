@@ -16,8 +16,7 @@
 enum    FileType
 {
 	TEMP_BODY,
-	POST_BODY,
-	UPLOAD_FILE
+	POST_BODY
 };
 
 enum	RequestState

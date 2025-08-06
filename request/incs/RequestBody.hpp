@@ -28,11 +28,10 @@ class	RequestBody
 		~RequestBody();
 
 		void						clear();
-		bool						create(FileType);
+		bool						create(FileType, char*);
 
 		bool						isChunked() const;
 		bool						isExpected() const;
-		bool						isMultipart() const;
 		bool						isCompleted() const;
 
 		void						setExpected();

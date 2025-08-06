@@ -86,24 +86,46 @@ bool	Request::_processChunkedTransfer()
 	return true;
 }
 
-bool	Request::_validateMethodBodyCompatibility()
+void	Request::_connectionChecks(Http* http, Connection* conn)
+{
+	if (!conn->conServer)
+	{
+		conn->findServer(http);
+		std::string method = _rl.getMethod();
+		std::vector<std::string> allowed = conn->_getAllowedMethods();
+
+		if (!conn->_isAllowedMethod(method, allowed))
+		{
+			std::cout  << BGREEN << "not allowed method so without creating file" << RESET <<  std::endl;
+			conn->req->setState(false, METHOD_NOT_ALLOWED);
+			return ;
+		}
+		if (conn->getUpload())
+		{
+			char* uploadDir =  conn->getUploadLocation();
+			_rb.create(POST_BODY, uploadDir);
+			_state = BODY;
+		}
+		else
+			_state = COMPLETE;
+	}
+}
+
+
+bool	Request::_validateMethodBodyCompatibility(Http* http, Connection* conn)
 {
 	const std::string& method = _rl.getMethod();
 	bool hasBody = _rb.getContentLength() > 0 || _rb.isChunked();
 
+	if (method == "GET" || method == "DELETE")
+		return setState(true, OK);
 	if (!hasBody && method == "POST")
 		return setState(false, LENGTH_REQUIRED);
-
-	if (!hasBody && (method == "GET" || method == "DELETE"))
-		return setState(true, OK);
 
 	if (hasBody)
 	{
 		_rb.setExpected();
-		if (method == "GET" || method == "DELETE")
-			_rb.create(TEMP_BODY);
-		else
-			_rb.create(POST_BODY);
+		_connectionChecks(http, conn);
 	}
 
 	return true;
@@ -232,33 +254,9 @@ bool	Request::headerSection(Connection* conn, Http* http)
 
 	_buffer.erase(0, end_header + 4);
 
-	if (!_processBodyHeaders() || !_validateMethodBodyCompatibility())
+	if (!_processBodyHeaders() || !_validateMethodBodyCompatibility(http, conn))
 		return false;
 
-	if (_rb.isExpected())
-		_state = BODY;
-	else
-	{
-		if (!_buffer.empty())
-			return setState(false, BAD_REQUEST);
-		_state = COMPLETE;
-	}
-
-	if (!conn->conServer)
-	{
-		conn->findServer(http);
-		std::string method = _rl.getMethod();
-		// std::cout << "Curr method: " << method << ", to be checked if allowed!\n";
-		std::vector<std::string> allowed = conn->_getAllowedMethods();
-		for (size_t i = 0; i < allowed.size(); i++)
-			// std::cout << "Allowed method " << i << " is -> " << allowed[i] << "\n";
-
-		if (!conn->_isAllowedMethod(method, allowed))
-		{
-			std::cout  << BGREEN << "not allowed method so without creating file" << RESET <<  std::endl;
-			return conn->req->setState(false, METHOD_NOT_ALLOWED);
-		}
-	}
 	return true;
 }
 

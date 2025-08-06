@@ -19,6 +19,8 @@
 # include "request/incs/Defines.hpp"
 # include "conf/ClientMaxBodySize.hpp"
 # include "response/include/ResponseHandler.hpp"
+# include "conf/Upload.hpp"
+# include "conf/UploadLocation.hpp"
 
 Connection::Connection()
     :   fd(-1), req(NULL), connect(false), conServer(NULL),
@@ -183,6 +185,44 @@ IDirective*	Connection::getDirective(DIRTYPE type)
 	{
 		if ((*dit) && (*dit)->getType() == type)
 			return *dit;
+	}
+	return NULL;
+}
+
+bool		Connection::getUpload() const
+{
+	const Location*	location = getLocation();
+	if (location == NULL)
+		return NULL;
+	
+	for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); 
+	dit != location->directives.end(); ++dit) 
+	{
+		if ((*dit)->getType() == UPLOAD)
+		{
+			Upload* upload = static_cast<Upload*>(*dit);
+			if (upload)
+				return upload->getState();
+		}
+	}
+	return NULL;
+}
+
+char*		Connection::getUploadLocation() const
+{
+	const Location*	location = getLocation();
+	if (location == NULL)
+		return NULL;
+	
+	for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); 
+	dit != location->directives.end(); ++dit) 
+	{
+		if ((*dit)->getType() == UPLOAD_LOCATION)
+		{
+			UploadLocation* upload = static_cast<UploadLocation*>(*dit);
+			if (upload)
+				return upload->getLocation();
+		}
 	}
 	return NULL;
 }
