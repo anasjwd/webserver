@@ -82,5 +82,6 @@ class	Connection
 
 
 		void resetCgiState();
+		void epollinProcess(Http*, Connection*, std::vector<Connection*>&, struct epoll_event&, int);
 
 };

@@ -93,9 +93,13 @@ void Connection::resetCgiState() {
 
 Connection* Connection::findConnectionByFd(int fd, std::vector<Connection*>& connections)
 {
+	if (connections.size() == 0)
+		return NULL;
+	std::cout << "Size of connections: " << connections.size() << "\n";
 	for (std::vector<Connection*>::iterator it = connections.begin(); 
 		it != connections.end(); ++it)
 	{
+		std::cout << "test\n";
 		if ((*it)->fd == fd)
 			return *it;
 	}
@@ -499,10 +503,11 @@ void Connection::closeConnection(Connection* conn, std::vector<Connection*>& con
 	delete conn->req;
 	conn->req = NULL;
 
-	connections.erase(
-		std::remove(connections.begin(), connections.end(), conn),
-		connections.end()
-	);
+	// connections.erase(
+	// 	std::remove(connections.begin(), connections.end(), conn),
+	// 	connections.end()
+	// );
+	connections.erase(find(connections.begin(), connections.end(), conn));
 	if (std::find(connections.begin(), connections.end(), conn) != connections.end())
 	{
 		std::cout << "Failed to remove connection from vector" << std::endl;
@@ -519,6 +524,7 @@ void Connection::closeConnection(Connection* conn, std::vector<Connection*>& con
 
 	delete conn;
 	// conn = NULL;
+	std::cout << ">>>>>>>>>>>>>> size = " << connections.size() << std::endl;
 	std::cout << "Connection closed and deleted" << std::endl;
 }
 
@@ -580,4 +586,33 @@ bool	Connection::isCgiTimedOut() const
 bool	Connection::isTimedOut() const
 {
 	return time(NULL) - lastActivityTime > TIMEOUT_SECONDS;
+}
+
+void	Connection::epollinProcess(Http* http, Connection* conn, std::vector<Connection*>& connections, struct epoll_event& ev, int epollFd)
+{
+	ssize_t	bytes;
+	char	buff[1048576];
+
+	std::cout << RED << "EPOLLIN\n" << RESET;
+	bytes = read(fd, buff, 1048576);
+	if (bytes <= 0)
+		conn->closeConnection(conn, connections, epollFd);
+	else
+	{
+		if (!req)
+		{
+			req = new Request(fd);
+			cachedLocation = NULL;
+			resetCgiState();
+		}
+		req->appendToBuffer(this, http, buff, bytes);
+		if (!checkMaxBodySize())
+			req->setState(false, PAYLOAD_TOO_LARGE);
+		if (req->isRequestDone())
+		{
+			ev.events = EPOLLOUT;
+			ev.data.fd = fd;
+			epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &ev);
+		}
+	}
 }

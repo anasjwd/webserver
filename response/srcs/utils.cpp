@@ -38,7 +38,7 @@ std::string loadFile(const std::string& path) {
         close(srcFd);
         return "";
     }
-    char buf[8192];
+    char buf[1048576];
     ssize_t bytesRead;
     while ((bytesRead = read(srcFd, buf, sizeof(buf))) > 0) {
         ssize_t totalWritten = 0;

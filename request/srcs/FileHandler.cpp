@@ -121,7 +121,10 @@ ssize_t	FileHandler::read(char* buffer, size_t size)
 ssize_t	FileHandler::write(const char* data, size_t size)
 {
 	if (!_isOpen)
+	{
+		std::cout << "Filehandler::write fail: file not open!\n";
 		return -1;
+	}
 
 	ssize_t written = ::write(_fd, data, size);
 	if (written > 0)
@@ -130,6 +133,7 @@ ssize_t	FileHandler::write(const char* data, size_t size)
 		if (_offset > _size)
 			_size = _offset;
 	}	
+	std::cout << "Filehandler::write size:" << written << "\n";
 	return written;
 }
 

@@ -8,7 +8,7 @@
 #include <sys/sendfile.h>
 #include <sys/socket.h>
 
-#define EIGHT_KB 8192
+#define EIGHT_KB 1048576
 
 bool ResponseSender::handleEpollOut(Connection* conn, int epollFd, std::vector<Connection*>& connections) {
     if (!conn->req) {
