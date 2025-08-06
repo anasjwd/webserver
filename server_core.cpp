@@ -289,7 +289,34 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					continue;
 
 				if (events[i].events & EPOLLIN)
-					conn->epollinProcess(http, conn, connections, ev, epollFd);
+				{
+					ssize_t bytes;
+					char	buff[1048576];
+
+					std::cout << RED << "EPOLLIN\n" << RESET;
+					bytes = read(conn->fd, buff, 1048576);
+					if (bytes <= 0)
+						conn->closeConnection(conn, connections, epollFd);
+					else
+					{
+						if (!conn->req)
+						{
+							conn->req = new Request(conn->fd);
+							conn->cachedLocation = NULL;
+							conn->resetCgiState();
+						}
+						conn->req->appendToBuffer(conn, http, buff, bytes);
+						if (!conn->checkMaxBodySize())
+							conn->req->setState(false, PAYLOAD_TOO_LARGE);
+						if (conn->req->isRequestDone())
+						{
+							std::cout << RED << "Request done with state:" << conn->req->getStatusCode() << RESET << "\n";
+							ev.events = EPOLLOUT;
+							ev.data.fd = conn->fd;
+							epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
+						}
+					}
+				}
 				else if (events[i].events & EPOLLOUT)
 				{
 					std::cout << "EPOLLOUT event triggered for fd " << conn->fd << std::endl;

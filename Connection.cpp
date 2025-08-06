@@ -658,30 +658,35 @@ bool	Connection::isTimedOut() const
 
 void	Connection::epollinProcess(Http* http, Connection* conn, std::vector<Connection*>& connections, struct epoll_event& ev, int epollFd)
 {
-	ssize_t	bytes;
-	char	buff[1048576];
+	(void)ev;
+	(void)http;
+	(void)conn;
+	(void)epollFd;
+	(void)connections;
+	// ssize_t	bytes;
+	// char	buff[1048576];
 
-	std::cout << RED << "EPOLLIN\n" << RESET;
-	bytes = read(fd, buff, 1048576);
-	if (bytes <= 0)
-		conn->closeConnection(conn, connections, epollFd);
-	else
-	{
-		if (!req)
-		{
-			req = new Request(fd);
-			cachedLocation = NULL;
-			resetCgiState();
-		}
-		req->appendToBuffer(conn, http, buff, bytes);
-		if (!checkMaxBodySize())
-			req->setState(false, PAYLOAD_TOO_LARGE);
-		if (req->isRequestDone())
-		{
-			std::cout << RED << "Request done with state:" << req->getStatusCode() << RESET << "\n";
-			ev.events = EPOLLOUT;
-			ev.data.fd = fd;
-			epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &ev);
-		}
-	}
+	// std::cout << RED << "EPOLLIN\n" << RESET;
+	// bytes = read(fd, buff, 1048576);
+	// if (bytes <= 0)
+	// 	conn->closeConnection(conn, connections, epollFd);
+	// else
+	// {
+	// 	if (!req)
+	// 	{
+	// 		req = new Request(fd);
+	// 		cachedLocation = NULL;
+	// 		resetCgiState();
+	// 	}
+	// 	req->appendToBuffer(conn, http, buff, bytes);
+	// 	if (!checkMaxBodySize())
+	// 		req->setState(false, PAYLOAD_TOO_LARGE);
+	// 	if (req->isRequestDone())
+	// 	{
+	// 		std::cout << RED << "Request done with state:" << req->getStatusCode() << RESET << "\n";
+	// 		ev.events = EPOLLOUT;
+	// 		ev.data.fd = fd;
+	// 		epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &ev);
+	// 	}
+	// }
 }
