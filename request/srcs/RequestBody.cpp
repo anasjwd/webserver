@@ -100,7 +100,7 @@ void	RequestBody::clear()
 	_bytesReceivedInChunk = 0;
 }
 
-bool	RequestBody::create(FileType type)
+bool	RequestBody::create(FileType type, char *uploadDir)
 {
 	if (_fileHandler.fd() != -1)
 	{
@@ -108,7 +108,7 @@ bool	RequestBody::create(FileType type)
 		return setState(false, INTERNAL_SERVER_ERROR);
 	}
 
-	if (!_fileHandler.create(type))
+	if (!_fileHandler.create(type, uploadDir))
 	{
 		std::cerr << "Failed to create temporary file for request body\n";
 		return setState(false, INTERNAL_SERVER_ERROR);
@@ -203,10 +203,7 @@ bool	RequestBody::receiveData(const char* data, size_t len)
 		return _processChunkData(data, len);
 
 	if (_fileHandler.write(data, len) == -1)
-	{
-        std::cout << "write:reqbody.cpp 1 \n";	
 		return setState(false, INTERNAL_SERVER_ERROR);
-	}
 
 	_bytesReceived += len;
 	if (_bytesReceived >= _contentLength)
