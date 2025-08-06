@@ -69,6 +69,7 @@ class Response
         size_t getFileSize() const { return _fileSize; }
 
         static Response createRedirectResponse(int statusCode, const std::string& location);
+        static std::string createErrorResponse(int statusCode, const std::string& errorMessage);
 
         void clear();
 };

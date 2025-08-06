@@ -356,7 +356,7 @@ Response ResponseHandler::handleRequest(Connection* conn)
                 response.addHeader("Connection", "close");
                 std::string responseStr = response.build();
                 responseStr += listing;
-                send(conn->fd, responseStr.c_str(), responseStr.size(), 0);//TODO
+                send(conn->fd, responseStr.c_str(), responseStr.size(), MSG_NOSIGNAL);//TODO
                 conn->fileSendState = 3;
                 return response;
             }
