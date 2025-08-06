@@ -12,26 +12,16 @@ class	RequestBody
 		bool						_isChunked;
 		HttpStatusCode				_statusCode;
 		FileHandler					_fileHandler;
-		bool						_isMultipart;
 		bool						_isCompleted;
 		std::string					_contentType;
 		size_t						_contentLength;
 		size_t						_bytesReceived;
-
-		bool						_inPart;
-		FileHandler					_uploadHandler;
-		std::string					_currentFilename;
-		std::string					_multipartBuffer;
-		bool						_isCurrentPartFile;
-
 		size_t						_chunkParsePos;
 		size_t						_currentChunkSize;
 		size_t						_bytesReceivedInChunk;
 
-
 		bool						_parseChunkSize(const std::string&);
 		bool						_processChunkData(const char*, size_t);
-		bool						_processMultipartChunk(const char*, size_t);
 
 	public:
 		RequestBody();
@@ -48,19 +38,15 @@ class	RequestBody
 		void						setExpected();
 		void						setCompleted();
 		void						setChunked(bool);
-		void						setMultipart(bool);
 		void						setContentLength(size_t);
 		bool						setState(bool, HttpStatusCode);
 		void						setContentType(const std::string&);
 
-		FileHandler   				getTempFile() const;
+		const FileHandler&			getTempFile() const;
 		HttpStatusCode				getStatusCode() const;
-		const FileHandler&			getUploadHandler() const;
 		size_t						getContentLength() const;
 		size_t						getBytesReceived() const;
 
 		bool						receiveData(const char*, size_t);
 		bool						extractBoundary(const std::string&);
-
-
 };

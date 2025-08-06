@@ -384,11 +384,7 @@ Response ResponseHandler::handleRequest(Connection* conn)
             return ErrorResponse::createNotFoundResponse(conn);
         }
         Response response(201);
-        std::string lastPath;
-        if (request.getRequestBody().isMultipart() && request.getRequestBody().getUploadHandler().isOpen()) {
-            lastPath = request.getRequestBody().getUploadHandler().path();
-        }else
-            lastPath = request.getRequestBody().getTempFile().path();
+        std::string lastPath = request.getRequestBody().getTempFile().path();
         response.addHeader("location", lastPath);
         response.setFilePath(fPath);
         response.setContentType(_getMimeType(fPath));
