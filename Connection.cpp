@@ -301,6 +301,31 @@ ClientMaxBodySize*	Connection::getClientMaxBodySize()
 	return NULL;
 }
 
+std::string  Connection::_normalizeUri(const std::string& uri) {
+    std::string result;
+    bool prevSlash = false;
+    
+    for (size_t i = 0; i < uri.size(); ++i) {
+        if (uri[i] == '/') {
+            if (!prevSlash) {
+                result += '/';
+            }
+            prevSlash = true;
+        } else {
+            result += uri[i];
+            prevSlash = false;
+        }
+    }
+    return result.empty() ? "/" : result;
+}
+
+std::string ResponseHandler::_getRootPath(Connection* conn) {
+    if (!conn) return "www";
+    Root* root = conn->getRoot();
+    if (root && root->getPath()) return std::string(root->getPath());
+    return "www";
+}
+
 const Location* Connection::getLocation() const
 {
 	std::cout << "In location\n";
@@ -326,6 +351,7 @@ const Location* Connection::getLocation() const
 		std::cout << "NULL case!\n";
 		return NULL;
 	}
+	reqUri = _normalizeUri(reqUri);
 	cachedLocation = _findBestLocation(conServer->directives, reqUri);
 	if (cachedLocation == NULL)
 		std::cout << "_findBestLocation is NULL\n";

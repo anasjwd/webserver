@@ -23,30 +23,7 @@
 #include <sstream>
 
 
-static std::string _normalizeUri(const std::string& uri) {
-    std::string result;
-    bool prevSlash = false;
-    
-    for (size_t i = 0; i < uri.size(); ++i) {
-        if (uri[i] == '/') {
-            if (!prevSlash) {
-                result += '/';
-            }
-            prevSlash = true;
-        } else {
-            result += uri[i];
-            prevSlash = false;
-        }
-    }
-    return result.empty() ? "/" : result;
-}
 
-std::string ResponseHandler::_getRootPath(Connection* conn) {
-    if (!conn) return "www";
-    Root* root = conn->getRoot();
-    if (root && root->getPath()) return std::string(root->getPath());
-    return "www";
-}
 std::vector<std::string> ResponseHandler::_getIndexFiles(Connection* conn) {
     std::vector<std::string> indexFiles;
     if (!conn) {
@@ -103,39 +80,67 @@ std::map<int, std::string> ResponseHandler::_getErrorPages(Connection* conn) {
 
 std::string ResponseHandler::_buildFilePath(const std::string& uri, const std::string& root, const Location* location) {
     std::string path = root;
-    
-    // Remove trailing slashes from root
-    while (!path.empty() && path[path.length() - 1] == '/') {
-        path.erase(path.length() - 1);
-    }
+    while (!path.empty() && path[path.length() - 1] == '/') path.erase(path.length() - 1);
 
     std::string cleanUri = uri;
-    
     if (location && location->getUri()) {
         std::string locUri = std::string(location->getUri());
         
         if (!locUri.empty() && locUri[0] == '.') {
-            // For CGI, just append the full URI (don't strip anything)
-            while (!cleanUri.empty() && cleanUri[0] == '/') {
-                cleanUri = cleanUri.substr(1);
-            }
-            if (!cleanUri.empty()) {
-                path += "/" + cleanUri;
-            }
+            while (!cleanUri.empty() && cleanUri[0] == '/') cleanUri = cleanUri.substr(1);
+            if (!cleanUri.empty()) path += "/" + cleanUri;
+
             return path;
         }
+        
+        if (!locUri.empty() && locUri[0] == '/') locUri = locUri.substr(1);
+        std::string prefix = "/" + locUri;
+        if (cleanUri.find(prefix) == 0) {
+            cleanUri = cleanUri.substr(prefix.length());
+            if (!cleanUri.empty() && cleanUri[0] == '/') cleanUri = cleanUri.substr(1);
+        }
     }
-    
-    while (!cleanUri.empty() && cleanUri[0] == '/') {
-        cleanUri = cleanUri.substr(1);
-    }
-    
-    if (!cleanUri.empty()) {
-        path += "/" + cleanUri;
-    }
-    
+    while (!cleanUri.empty() && cleanUri[0] == '/') cleanUri = cleanUri.substr(1);
+    if (!cleanUri.empty()) path += "/" + cleanUri;
     return path;
 }
+
+
+// std::string ResponseHandler::_buildFilePath(const std::string& uri, const std::string& root, const Location* location) {
+//     std::string path = root;
+    
+//     // Remove trailing slashes from root
+//     while (!path.empty() && path[path.length() - 1] == '/') {
+//         path.erase(path.length() - 1);
+//     }
+
+//     std::string cleanUri = uri;
+    
+//     if (location && location->getUri()) {
+//         std::string locUri = std::string(location->getUri());
+        
+//         if (!locUri.empty() && locUri[0] == '.') {
+//             // For CGI, just append the full URI (don't strip anything)
+//             while (!cleanUri.empty() && cleanUri[0] == '/') {
+//                 cleanUri = cleanUri.substr(1);
+//             }
+//             if (!cleanUri.empty()) {
+//                 path += "/" + cleanUri;
+//             }
+//             return path;
+//         }
+//     }
+    
+//     while (!cleanUri.empty() && cleanUri[0] == '/') {
+//         cleanUri = cleanUri.substr(1);
+//     }
+    
+//     if (!cleanUri.empty()) {
+//         path += "/" + cleanUri;
+//     }
+    
+//     return path;
+// }
 
 std::string ResponseHandler::_getMimeType(const std::string& path) {
     size_t dotPos = path.find_last_of('.');
@@ -334,7 +339,7 @@ Response ResponseHandler::handleRequest(Connection* conn)
     else
         root = _getRootPath(conn);
     std::cout << CYAN << "root " << root <<  RESET << std::endl;
-    std::string uri = _normalizeUri(request.getRequestLine().getUri());
+    std::string uri = conn->_normalizeUri(request.getRequestLine().getUri());
     std::string filePath = _buildFilePath(uri, root, location);
     std::cout << CYAN << "filepath " <<  filePath <<  RESET << std::endl;
     
@@ -354,11 +359,11 @@ Response ResponseHandler::handleRequest(Connection* conn)
         std::vector<std::string> indexFiles = _getIndexFiles(conn);
         if (isDir) {
             std::cout << CYAN <<  "uri " << uri << " is dirictory " << RESET << std::endl; 
-            if (isDir && uri[uri.size() - 1] != '/') {
-                Response res(301);
-                res.addHeader("Location", uri + '/');
-                return res;
-            }
+            // if (isDir && uri[uri.size() - 1] != '/') {
+            //     Response res(301);
+            //     res.addHeader("Location", uri + '/');
+            //     return res;
+            // }
             for (size_t i = 0; i < indexFiles.size(); ++i) {
                 std::string indexPath = filePath;
                 if (!indexPath.empty() && indexPath[indexPath.size() - 1] != '/')

@@ -106,7 +106,7 @@ void	ResponseSender::handleConnectionError(Connection* conn, std::vector<Connect
 {	
 	std::cout << "Connection errot for fd " << conn->fd << ": " << errorMessage << std::endl;
     if (conn->req) {
-        std::string completeResponse = Response::createErrorResponse(500, errorMessage);
+        std::string completeResponse = Response::createErrorResponse(200, errorMessage);
         send(conn->fd, completeResponse.c_str(), completeResponse.size(), MSG_NOSIGNAL);
     }
 	

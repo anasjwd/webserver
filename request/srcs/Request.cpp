@@ -122,10 +122,11 @@ bool	Request::_validateMethodBodyCompatibility(Http* http, Connection* conn)
 {
 	const std::string& method = _rl.getMethod();
 	bool hasBody = _rb.getContentLength() > 0 || _rb.isChunked();
+	bool hasContentLength = !_rh.getHeaderValue("content-length").empty();
 
 	if (method == "GET" || method == "DELETE")
 		return setState(true, OK);
-	if (!hasBody && method == "POST")
+	if (!hasContentLength && method == "POST")
 		return setState(false, LENGTH_REQUIRED);
 
 	if (hasBody)
@@ -135,6 +136,11 @@ bool	Request::_validateMethodBodyCompatibility(Http* http, Connection* conn)
 			return false;
 		_rb.setExpected();
 		std::cout << "Connection checks passed!\n";
+	}
+	else if (method == "POST" && hasContentLength)
+	{
+		// POST with Content-Length: 0 is valid
+		return setState(true, OK);
 	}
 	std::cout << "BodyExpected: " << _rb.isExpected() << "\n";
 
