@@ -300,6 +300,13 @@ std::string ResponseHandler::_generateDirectoryListing(const std::string& path, 
     return html;
 }
 
+std::string ResponseHandler::_getRootPath(Connection* conn) {
+    if (!conn) return "www";
+    Root* root = conn->getRoot();
+    if (root && root->getPath()) return std::string(root->getPath());
+    return "www";
+}
+
 Response ResponseHandler::handleRequest(Connection* conn) 
 {
     std::cout << RED  << "in handle request "<< RESET << std::endl;

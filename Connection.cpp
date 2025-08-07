@@ -319,12 +319,7 @@ std::string  Connection::_normalizeUri(const std::string& uri) {
     return result.empty() ? "/" : result;
 }
 
-std::string ResponseHandler::_getRootPath(Connection* conn) {
-    if (!conn) return "www";
-    Root* root = conn->getRoot();
-    if (root && root->getPath()) return std::string(root->getPath());
-    return "www";
-}
+
 
 const Location* Connection::getLocation() const
 {
