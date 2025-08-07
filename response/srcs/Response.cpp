@@ -102,10 +102,8 @@ std::string Response::build() {
             _headers["Content-Type"] = "text/plain";
         }
     }
-    // _headers["Set-Cookie"] = "name=ahanaf";
 
-//     _headers["Set-Cookie"] = "num=20";
-    _headers["Connection"] = "close"; // 
+    _headers["Connection"] = "close"; 
     std::vector<std::pair<std::string, std::string> > sortedHeaders(_headers.begin(), _headers.end());
     std::sort(sortedHeaders.begin(), sortedHeaders.end());
     for (size_t i = 0; i < sortedHeaders.size(); ++i) {
@@ -145,16 +143,6 @@ Response Response::createRedirectResponse(int statusCode, const std::string& loc
     Response response(statusCode);
     std::cout << GREEN << location << RESET << std::endl;
     response.addHeader("Location", location);
-    response.setContentType("text/html");
-    
-    std::string tempPath = "/tmp/webserv_redirect.html";
-    std::ofstream tempFile(tempPath.c_str());
-    tempFile << "<html><head><title>Redirect</title></head><body>"
-             << "<h1>Redirect</h1><p>The document has moved <a href=\"" 
-             << location << "\">here</a>.</p></body></html>";
-    tempFile.close();
-    
-    response.setFileBody(tempPath);
     return response;
 }
 

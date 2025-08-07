@@ -121,17 +121,26 @@ static std::vector<Server*> getServersFromHttp(Http* http)
 
 bool	Connection::findServer(Http *http)
 {
+	std::cout << "1\n";
+	std::cout << req->getState() << " " << HEADERS << std::endl;
+	std::cout << req->getRequestHeaders().hasHeader("host") << std::endl;
+
 	if (!req || req->getState() < HEADERS || !req->getRequestHeaders().hasHeader("host"))
 		return false;
+	std::cout << "2\n";
+
 	if (req->getState() >= HEADERS && !req->getRequestHeaders().hasHeader("host"))
 		return false;
+	std::cout << "3\n";
 
 	unsigned int port = req->getRequestHeaders().getHostPort();
 	std::string hostname = req->getRequestHeaders().getHostName();
 	std::vector<Server*> servers = getServersFromHttp(http);
+	std::cout << "4\n";
 	
 	if (servers.empty())
 		return false;
+	std::cout << "5\n";
 		
 	for (std::vector<Server*>::const_iterator it = servers.begin(); it != servers.end(); ++it) {
 		Server* server = *it;
@@ -194,7 +203,7 @@ bool		Connection::getUpload() const
 	std::cout << "About to get Location\n";
 	const Location*	location = getLocation();
 	if (location == NULL)
-		return NULL;
+		return false;
 
 	std::cout << "Location:" << location->getUri() << "\n";
 	for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); 
@@ -207,7 +216,7 @@ bool		Connection::getUpload() const
 				return upload->getState();
 		}
 	}
-	return NULL;
+	return false;
 }
 
 char*		Connection::getUploadLocation() const
@@ -223,7 +232,10 @@ char*		Connection::getUploadLocation() const
 		{
 			UploadLocation* upload = static_cast<UploadLocation*>(*dit);
 			if (upload)
+			{
+				std::cout << "Upload location: " << upload->getLocation() << std::endl;
 				return upload->getLocation();
+			}
 		}
 	}
 	return NULL;
@@ -292,6 +304,31 @@ ClientMaxBodySize*	Connection::getClientMaxBodySize()
 	return NULL;
 }
 
+std::string  Connection::_normalizeUri(const std::string& uri) {
+    std::string result;
+    bool prevSlash = false;
+    
+    for (size_t i = 0; i < uri.size(); ++i) {
+        if (uri[i] == '/') {
+            if (!prevSlash) {
+                result += '/';
+            }
+            prevSlash = true;
+        } else {
+            result += uri[i];
+            prevSlash = false;
+        }
+    }
+    return result.empty() ? "/" : result;
+}
+
+std::string ResponseHandler::_getRootPath(Connection* conn) {
+    if (!conn) return "www";
+    Root* root = conn->getRoot();
+    if (root && root->getPath()) return std::string(root->getPath());
+    return "www";
+}
+
 const Location* Connection::getLocation() const
 {
 	std::cout << "In location\n";
@@ -308,7 +345,7 @@ const Location* Connection::getLocation() const
 	}
 
 	std::string reqUri;
-	if (req && req->getRequestLine().getUri().size())
+	if (req && req->getRequestLine().getUri().size() > 0)
 		reqUri = req->getRequestLine().getUri();
 	else if (!uri.empty())
 		reqUri = uri;
@@ -317,10 +354,13 @@ const Location* Connection::getLocation() const
 		std::cout << "NULL case!\n";
 		return NULL;
 	}
+	reqUri = _normalizeUri(reqUri);
 	cachedLocation = _findBestLocation(conServer->directives, reqUri);
 	if (cachedLocation == NULL)
 		std::cout << "_findBestLocation is NULL\n";
 	return cachedLocation;
+
+	
 }
 
 const Location* Connection::_findBestLocation(const std::vector<IDirective*>& directives, const std::string& reqUri) const
@@ -338,8 +378,6 @@ const Location* Connection::_findBestLocation(const std::vector<IDirective*>& di
 		}
 	}
 
-	// std::cout << "[DEBUG] reqUri: '" << reqUri << "' cgiExtension: '" << cgiExtension << "'" << std::endl;
-
 	for (std::vector<IDirective*>::const_iterator it = directives.begin(); it != directives.end(); ++it) {
 		if ((*it)->getType() != LOCATION)
 			continue;
@@ -347,61 +385,44 @@ const Location* Connection::_findBestLocation(const std::vector<IDirective*>& di
 		if (!loc) continue;
 
 		std::string locUri = loc->getUri();
-		bool exact = loc->isExactMatch();
-
-		// std::cout << "[DEBUG] Checking location: '" << locUri << "' exact: " << exact << std::endl;
-
-		if (exact) {
-			if (reqUri == locUri) {
-				// std::cout << "[DEBUG] Exact match found: " << locUri << std::endl;
-				return loc;
+		if (!locUri.empty() && locUri[0] == '.') {
+			if (!cgiExtension.empty() && locUri == cgiExtension) {
+				cgiMatch = loc;
 			}
 		} else {
-			if (!locUri.empty() && locUri[0] == '.') {
-				if (!cgiExtension.empty() && locUri == cgiExtension) {
-					// std::cout << "[DEBUG] CGI match found: " << locUri << std::endl;
-					cgiMatch = loc;
-				}
+			// For prefix matching, check if request URI starts with location URI
+			bool matches = false;
+			if (locUri == "/") {
+				// Special case: if location is "/", any URI starting with "/" should match
+				matches = (reqUri[0] == '/');
 			} else {
-				// For prefix matching, check if request URI starts with location URI
-				bool matches = false;
-				if (locUri == "/") {
-					// Special case: if location is "/", any URI starting with "/" should match
-					matches = (reqUri[0] == '/');
-				} else {
-					// Check if request URI starts with location URI
-					// For /about/somt to match /about/, we need to check if it starts with /about/
-					if (reqUri.compare(0, locUri.length(), locUri) == 0) {
-						matches = true;
-					}
+				// For /about/somt to match /about/, we need to check if it starts with /about/
+				if (reqUri.compare(0, locUri.length(), locUri) == 0) {
+					matches = true;
 				}
-				
-				if (matches) {
-					if (locUri.length() > bestMatchLen) {
-						bestMatchLen = locUri.length();
-						longestPrefixMatch = loc;
-						// std::cout << "[DEBUG] New longest prefix match: " << locUri << " (length: " << locUri.length() << ")" << std::endl;
-					}
+			}
+			
+			if (matches) {
+				if (locUri.length() > bestMatchLen) {
+					bestMatchLen = locUri.length();
+					longestPrefixMatch = loc;
 				}
 			}
 		}
+		
 	}
 
 	if (cgiMatch) {
-		// std::cout << "[DEBUG] Returning CGI match: " << cgiMatch->getUri() << std::endl;
 		return cgiMatch;
 	}
 
 	if (longestPrefixMatch) {
-		// std::cout << "[DEBUG] Returning longest prefix match: " << longestPrefixMatch->getUri() << std::endl;
 		const Location* nestedMatch = _findBestLocation(longestPrefixMatch->directives, reqUri);
 		if (nestedMatch) {
 			return nestedMatch;
 		}
 		return longestPrefixMatch;
 	}
-
-	// std::cout << "[DEBUG] No match found" << std::endl;
 	return NULL;
 }
 

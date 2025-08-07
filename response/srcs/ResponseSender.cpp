@@ -106,7 +106,7 @@ void	ResponseSender::handleConnectionError(Connection* conn, std::vector<Connect
 {	
 	std::cout << "Connection errot for fd " << conn->fd << ": " << errorMessage << std::endl;
     if (conn->req) {
-        std::string completeResponse = Response::createErrorResponse(500, errorMessage);
+        std::string completeResponse = Response::createErrorResponse(200, errorMessage);
         send(conn->fd, completeResponse.c_str(), completeResponse.size(), MSG_NOSIGNAL);
     }
 	
@@ -138,8 +138,6 @@ bool ResponseSender::sendFileBody(Connection* conn, Response* response, int epol
         handleConnectionError(conn, connections, epollFd, "File seek error");
         return false;
     }
-    
-    // i want set a flag here and send headers and some of body only first time then keep sending the body and remove the sendHeaders function
     ssize_t bytesRead = read(conn->fileFd, fileBuf, sizeof(fileBuf) - 1);
     if (bytesRead == 0) {
         close(conn->fileFd);

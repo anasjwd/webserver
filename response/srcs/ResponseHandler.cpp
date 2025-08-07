@@ -23,30 +23,7 @@
 #include <sstream>
 
 
-static std::string _normalizeUri(const std::string& uri) {
-    std::string result;
-    bool prevSlash = false;
-    
-    for (size_t i = 0; i < uri.size(); ++i) {
-        if (uri[i] == '/') {
-            if (!prevSlash) {
-                result += '/';
-            }
-            prevSlash = true;
-        } else {
-            result += uri[i];
-            prevSlash = false;
-        }
-    }
-    return result.empty() ? "/" : result;
-}
 
-std::string ResponseHandler::_getRootPath(Connection* conn) {
-    if (!conn) return "www";
-    Root* root = conn->getRoot();
-    if (root && root->getPath()) return std::string(root->getPath());
-    return "www";
-}
 std::vector<std::string> ResponseHandler::_getIndexFiles(Connection* conn) {
     std::vector<std::string> indexFiles;
     if (!conn) {
@@ -127,6 +104,43 @@ std::string ResponseHandler::_buildFilePath(const std::string& uri, const std::s
     if (!cleanUri.empty()) path += "/" + cleanUri;
     return path;
 }
+
+
+// std::string ResponseHandler::_buildFilePath(const std::string& uri, const std::string& root, const Location* location) {
+//     std::string path = root;
+    
+//     // Remove trailing slashes from root
+//     while (!path.empty() && path[path.length() - 1] == '/') {
+//         path.erase(path.length() - 1);
+//     }
+
+//     std::string cleanUri = uri;
+    
+//     if (location && location->getUri()) {
+//         std::string locUri = std::string(location->getUri());
+        
+//         if (!locUri.empty() && locUri[0] == '.') {
+//             // For CGI, just append the full URI (don't strip anything)
+//             while (!cleanUri.empty() && cleanUri[0] == '/') {
+//                 cleanUri = cleanUri.substr(1);
+//             }
+//             if (!cleanUri.empty()) {
+//                 path += "/" + cleanUri;
+//             }
+//             return path;
+//         }
+//     }
+    
+//     while (!cleanUri.empty() && cleanUri[0] == '/') {
+//         cleanUri = cleanUri.substr(1);
+//     }
+    
+//     if (!cleanUri.empty()) {
+//         path += "/" + cleanUri;
+//     }
+    
+//     return path;
+// }
 
 std::string ResponseHandler::_getMimeType(const std::string& path) {
     size_t dotPos = path.find_last_of('.');
@@ -263,8 +277,6 @@ std::string ResponseHandler::_getMimeType(const std::string& path) {
     return "application/octet-stream";
 }
 
-// TODO: LOCATION FILE SHOULD BE ENCODED. "FILE%201.TXT" => "FILE 1.TXT"
-
 std::string ResponseHandler::_generateDirectoryListing(const std::string& path, const std::string& uri) {
     DIR* dir = opendir(path.c_str());
     if (!dir) return "";
@@ -290,14 +302,26 @@ std::string ResponseHandler::_generateDirectoryListing(const std::string& path, 
 
 Response ResponseHandler::handleRequest(Connection* conn) 
 {
-    // std::cout << RED  << "in handle request "<< RESET << std::endl;
+    std::cout << RED  << "in handle request "<< RESET << std::endl;
     const Request& request = *conn->req;
     if (conn->req->getStatusCode() != OK)
     {
+        std::cout << conn->req->getStatusCode() << std::endl;
+        
         return ErrorResponse::createErrorResponseWithMapping(conn,conn->req->getStatusCode() );
     }
     std::string method = request.getRequestLine().getMethod();
+    std::cout << method << std::endl;
+
+    std::vector<std::string> allowed = conn->_getAllowedMethods();
+    for (std::vector<std::string>::const_iterator it = allowed.begin(); it != allowed.end(); it++)
+        std::cout <<BGREEN << (*it) << RESET << std::endl;
+
+    if (!conn->_isAllowedMethod(method, allowed))
+        return ErrorResponse::createMethodNotAllowedResponse(conn ,allowed);
     const Location* location = conn->getLocation();
+    if (location)
+        std::cout << BG_GREEN << "location uri " << location->getUri() << RESET << std::endl;
     Return* ret = conn->getReturnDirective();
     if (ret) return ReturnHandler::handle(conn);
     std::string root;
@@ -314,10 +338,10 @@ Response ResponseHandler::handleRequest(Connection* conn)
         root = std::string(locRoot->getPath());
     else
         root = _getRootPath(conn);
-    // std::cout << CYAN << "root " << root <<  RESET << std::endl;
-    std::string uri = _normalizeUri(request.getRequestLine().getUri());
+    std::cout << CYAN << "root " << root <<  RESET << std::endl;
+    std::string uri = conn->_normalizeUri(request.getRequestLine().getUri());
     std::string filePath = _buildFilePath(uri, root, location);
-    // std::cout << CYAN << "filepath " <<  filePath <<  RESET << std::endl;
+    std::cout << CYAN << "filepath " <<  filePath <<  RESET << std::endl;
     
     if (location && location->getUri() && location->getUri()[0] == '.') {        
         if (conn->cgiExecuted == false) {
@@ -334,6 +358,12 @@ Response ResponseHandler::handleRequest(Connection* conn)
         if (stat(filePath.c_str(), &fileStat) == 0 && S_ISDIR(fileStat.st_mode)) isDir = true;
         std::vector<std::string> indexFiles = _getIndexFiles(conn);
         if (isDir) {
+            std::cout << CYAN <<  "uri " << uri << " is dirictory " << RESET << std::endl; 
+            // if (isDir && uri[uri.size() - 1] != '/') {
+            //     Response res(301);
+            //     res.addHeader("Location", uri + '/');
+            //     return res;
+            // }
             for (size_t i = 0; i < indexFiles.size(); ++i) {
                 std::string indexPath = filePath;
                 if (!indexPath.empty() && indexPath[indexPath.size() - 1] != '/')
@@ -364,8 +394,11 @@ Response ResponseHandler::handleRequest(Connection* conn)
         }
         std::cout << RED << filePath << RESET << std::endl;
         if (stat(filePath.c_str(), &fileStat) == 0 && S_ISREG(fileStat.st_mode)) {
+            std::cout << CYAN <<  "uri " << uri << " is file" << RESET << std::endl; 
             return FileResponse::serve(filePath, _getMimeType(filePath), 200);
         }
+        std::cout << CYAN <<  "uri " << uri << " NOT A FILE RETURNS 404 " << RESET << std::endl; 
+        
         std::map<int, std::string> errorPages = _getErrorPages(conn);
         int errCode = 404;
         std::string errPage = errorPages[errCode];

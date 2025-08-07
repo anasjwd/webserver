@@ -17,7 +17,7 @@ class	FileHandler
 		bool			_isOpen;
 		bool			_isTemp;
 
-		bool			_createBodyFile(bool, char*);
+		bool			_createBodyFile(bool, std::string = "");
 		
 	public:
 		FileHandler();
@@ -29,7 +29,7 @@ class	FileHandler
 		bool				seek(size_t);
 		ssize_t				read(char*, size_t);
 		ssize_t				write(const char*, size_t );
-		bool				create(FileType, char* = NULL);
+		bool				create(FileType, std::string = "");
 		bool				open(const std::string& , int = O_RDWR | O_CREAT, mode_t = 0644);
 
 		int					fd() const;

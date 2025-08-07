@@ -25,8 +25,6 @@ bool	Request::_processBodyHeaders()
 	if (!contentType.empty())
 		_rb.setContentType(contentType);
 
-	_rb.extractBoundary(contentType);
-
 	std::string contentLengthStr = _rh.getHeaderValue("content-length");
 	std::string transferEncoding = _rh.getHeaderValue("transfer-encoding");
 
@@ -86,11 +84,32 @@ bool	Request::_processChunkedTransfer()
 	return true;
 }
 
+std::string stripQuotes(const char* str)
+{
+	if (!str) return "";
+
+	std::string s(str);
+
+	if (s.size() >= 2 && ((s[0] == '"' && s[s.size() - 1] == '"') || (s[0] == '\'' && s[s.size() - 1] == '\'')))
+		s = s.substr(1, s.size() - 2);
+
+	if (s[0] != '/')
+	{
+		s = "/" + s;
+	}
+	std::cout << "stripQuotes: " << s << std::endl;
+	
+	return s;
+}
+
 bool	Request::_connectionChecks(Http* http, Connection* conn)
 {
+	std::cout << "********************** CONNECTION CHECKS ************************" << std::endl;
 	if (!conn->conServer)
 	{
+		std::cout << GREEN << "********************** GETTING SERVER IN CONNECTIONCHECKS ************************" << RESET << std::endl;
 		conn->findServer(http);
+		std::cout << conn->conServer << std::endl;
 		std::string method = _rl.getMethod();
 		std::vector<std::string> allowed = conn->_getAllowedMethods();
 
@@ -101,7 +120,13 @@ bool	Request::_connectionChecks(Http* http, Connection* conn)
 		}
 		if (conn->getUpload())
 		{
-			char* uploadDir =  conn->getUploadLocation();
+			std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&& \n";
+			char* c = getcwd(NULL, 0);
+			std::string cwd(c);
+			free(c);
+			std::cout << "cwd >>>>>>>>>>>>>>> " << cwd << " ||||||||||||||||\n";
+			std::string uploadDir = cwd + stripQuotes(conn->getUploadLocation());
+			FileHandler::createDirectory(uploadDir);
 			_rb.create(POST_BODY, uploadDir);
 			_state = BODY;
 		}
@@ -118,19 +143,25 @@ bool	Request::_validateMethodBodyCompatibility(Http* http, Connection* conn)
 {
 	const std::string& method = _rl.getMethod();
 	bool hasBody = _rb.getContentLength() > 0 || _rb.isChunked();
+	bool hasContentLength = !_rh.getHeaderValue("content-length").empty();
 
+	if (!_connectionChecks(http, conn))
+		return false;
 	if (method == "GET" || method == "DELETE")
 		return setState(true, OK);
-	if (!hasBody && method == "POST")
+	if (!hasContentLength && method == "POST")
 		return setState(false, LENGTH_REQUIRED);
-
+	
 	if (hasBody)
 	{
 		std::cout << "Has body case::::::::::::::::::::" << std::endl;
-		if (!_connectionChecks(http, conn))
-			return false;
 		_rb.setExpected();
 		std::cout << "Connection checks passed!\n";
+	}
+	else if (method == "POST" && hasContentLength)
+	{
+		// POST with Content-Length: 0 is valid
+		return setState(true, OK);
 	}
 	std::cout << "BodyExpected: " << _rb.isExpected() << "\n";
 
@@ -273,8 +304,6 @@ bool	Request::bodySection()
 	{
 		if (!_rb.receiveData(_buffer.c_str(), _buffer.size()))
 			return setState(false, _rb.getStatusCode());
-		else
-			_rb.setCompleted();
 		_buffer.clear();
 	}
 

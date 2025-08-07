@@ -61,8 +61,8 @@ Response CgiHandler::executeCgi(Connection* conn, const std::string& scriptPath)
     }
     
     // Make the read pipe non-blocking
-    int flags = fcntl(conn->cgiPipeFromChild[0], F_GETFL, 0);
-    fcntl(conn->cgiPipeFromChild[0], F_SETFL, flags | O_NONBLOCK);
+    // int flags = fcntl(conn->cgiPipeFromChild[0], F_GETFL, 0);
+    // fcntl(conn->cgiPipeFromChild[0], F_SETFL, flags | O_NONBLOCK);
     
     bool isPost = conn->req->getRequestLine().getMethod() == "POST";
     if (isPost) {
@@ -169,7 +169,9 @@ void CgiHandler::writePostDataToCgi(Connection* conn) {
         write(conn->cgiPipeToChild[1], postData.c_str(), postData.length());
         std::cout << "write:cgihandler.cpp \n";
     }
-    
+            //     std::cout << BG_GREEN << "****************" <<  std::endl;
+            // std::cout << postData << std::endl;
+            // std::cout << "****************" << RESET  << std::endl;
     close(conn->cgiPipeToChild[1]);
     conn->cgiPipeToChild[1] = -1;
 }
@@ -235,6 +237,10 @@ void CgiHandler::readCgiOutput(Connection* conn) {
         
         if (bytesRead > 0) {
             buffer[bytesRead] = '\0';
+            std::cout << BG_MAGENTA << "****************" <<  std::endl;
+            std::cout << buffer << std::endl;
+            std::cout << "****************" << RESET  << std::endl;
+
             conn->cgiOutput += std::string(buffer, bytesRead);
             totalBytesRead += bytesRead;
             std::cout << "[CGI] Read " << bytesRead << " bytes from process " << conn->cgiPid << std::endl;
