@@ -23,15 +23,32 @@ FileHandler::~FileHandler()
 		remove();
 	}
 }
-bool	FileHandler::_createBodyFile(bool isTemp, char* uploadDir)
+
+bool	FileHandler::_createBodyFile(bool isTemp, std::string uploadDir)
 {
 	char pathTemplate[PATH_MAX];
 
-	if (uploadDir)
-		std::snprintf(pathTemplate, sizeof(pathTemplate), "%s/webserv_request_body_XXXXXX", uploadDir);
-	else
-		std::strcpy(pathTemplate, "/tmp/webserv_request_body_XXXXXX");
+	std::cout << "Body file to be created, isTmp: " << isTemp << ", uploadDir: " << (uploadDir == "" ? "NULL": uploadDir) << "\n";
 
+	if (uploadDir != "" && !exists(uploadDir) && !createDirectory(uploadDir))
+	{
+		std::cout << "Directory wasn't created!\n";
+		return false;
+	}
+	if (uploadDir == "")
+		std::cout << "upload dir is NULL\n";
+	else
+		std::cout << "Directory was created!\n";
+
+	std::snprintf(pathTemplate, sizeof(pathTemplate), "%s/webserv_request_body_XXXXXX", uploadDir != "" ? uploadDir.c_str() : "/tmp");
+
+	_fd = mkstemp(pathTemplate);
+	if (_fd == -1)
+	{
+		std::cout << "Fail: mkstemp\n";
+		return false;
+	}
+	
 	_size = 0;
 	_offset = 0;
 	_isOpen = true;
@@ -98,6 +115,11 @@ ssize_t	FileHandler::write(const char* data, size_t size)
 		std::cout << "Filehandler::write fail: file not open!\n";
 		return -1;
 	}
+	if (_fd == -1)
+	{
+		std::cout << "Filehandler::fd: -1!\n";
+		return _fd;
+	}
 
 	ssize_t written = ::write(_fd, data, size);
 	if (written > 0)
@@ -110,13 +132,13 @@ ssize_t	FileHandler::write(const char* data, size_t size)
 	return written;
 }
 
-bool	FileHandler::create(FileType type, char* uploadDir)
+bool	FileHandler::create(FileType type, std::string uploadDir)
 {
 	if (_isOpen)
 		close();
 
 	std::cout << "Creating file: " << type << ", expected 1;\n";
-	if (uploadDir)
+	if (uploadDir != "")
 		std::cout << "UploadDir is: " << uploadDir << "\n";
 	else
 		std::cout << "UploadDir is: NULL\n";

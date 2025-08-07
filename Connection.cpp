@@ -232,7 +232,10 @@ char*		Connection::getUploadLocation() const
 		{
 			UploadLocation* upload = static_cast<UploadLocation*>(*dit);
 			if (upload)
+			{
+				std::cout << "Upload location: " << upload->getLocation() << std::endl;
 				return upload->getLocation();
+			}
 		}
 	}
 	return NULL;

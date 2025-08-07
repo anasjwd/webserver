@@ -316,35 +316,35 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 							conn->resetCgiState();
 						}
 						conn->req->appendToBuffer(conn, http, buff, bytes);
-						std::cout << BG_BLACK  << "****************************************************\n";
-						conn->findServer(http);
-						std::cout << "findserver called\n";
-						const Location *locUri = conn->getLocation();
-						UploadLocation *upload = NULL;
-						Upload *upload_authorized = NULL;
-						if (locUri) {
-							for (std::vector<IDirective*>::const_iterator dit = locUri->directives.begin(); dit != locUri->directives.end(); ++dit) {
-								if ((*dit)->getType() == UPLOAD) {
-									upload_authorized = static_cast<Upload*>(*dit);
-								}
-								if ((*dit)->getType() == UPLOAD_LOCATION) {
-									upload = static_cast<UploadLocation*>(*dit);
-								}
-							}
-						}
-						if (upload_authorized)
-						{
-							if (upload_authorized->getState())
-								std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%% " << "ON"   << std::endl;
-							else	
-								std::cout  << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%% " << "OFF"   << std::endl;
+						// std::cout << BG_BLACK  << "****************************************************\n";
+						// conn->findServer(http);
+						// std::cout << "findserver called\n";
+						// const Location *locUri = conn->getLocation();
+						// UploadLocation *upload = NULL;
+						// Upload *upload_authorized = NULL;
+						// if (locUri) {
+						// 	for (std::vector<IDirective*>::const_iterator dit = locUri->directives.begin(); dit != locUri->directives.end(); ++dit) {
+						// 		if ((*dit)->getType() == UPLOAD) {
+						// 			upload_authorized = static_cast<Upload*>(*dit);
+						// 		}
+						// 		if ((*dit)->getType() == UPLOAD_LOCATION) {
+						// 			upload = static_cast<UploadLocation*>(*dit);
+						// 		}
+						// 	}
+						// }
+						// if (upload_authorized)
+						// {
+						// 	if (upload_authorized->getState())
+						// 		std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%% " << "ON"   << std::endl;
+						// 	else	
+						// 		std::cout  << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%% " << "OFF"   << std::endl;
 							
-						}
-						else 
-							std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%% " << "OFF"   << std::endl;
+						// }
+						// else 
+						// 	std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%% " << "OFF"   << std::endl;
 
-						if (upload && upload->getLocation())
-							std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&& " << upload->getLocation()  << std::endl;
+						// if (upload && upload->getLocation())
+						// 	std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&& " << upload->getLocation()  << std::endl;
 
 						// std::string method = conn->req->getRequestLine().getMethod();
 						// std::vector<std::string> allowed = conn->_getAllowedMethods();
@@ -406,6 +406,7 @@ int main(int ac, char** av)
 	}
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGINT, sigintHandler);
+	signal(SIGPIPE, SIG_IGN);
 	http = parseConfig(av[1]);
 	if (http == NULL)
 		return ( 1 );

@@ -28,7 +28,7 @@ class	RequestBody
 		~RequestBody();
 
 		void						clear();
-		bool						create(FileType, char*);
+		bool						create(FileType, std::string);
 
 		bool						isChunked() const;
 		bool						isExpected() const;
@@ -47,5 +47,4 @@ class	RequestBody
 		size_t						getBytesReceived() const;
 
 		bool						receiveData(const char*, size_t);
-		bool						extractBoundary(const std::string&);
 };
