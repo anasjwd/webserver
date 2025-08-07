@@ -93,11 +93,18 @@ std::string stripQuotes(const char* str)
 	if (s.size() >= 2 && ((s[0] == '"' && s[s.size() - 1] == '"') || (s[0] == '\'' && s[s.size() - 1] == '\'')))
 		s = s.substr(1, s.size() - 2);
 
+	if (s[0] != '/')
+	{
+		s = "/" + s;
+	}
+	std::cout << "stripQuotes: " << s << std::endl;
+	
 	return s;
 }
 
 bool	Request::_connectionChecks(Http* http, Connection* conn)
 {
+	std::cout << "********************** CONNECTION CHECKS ************************" << std::endl;
 	if (!conn->conServer)
 	{
 		std::cout << GREEN << "********************** GETTING SERVER IN CONNECTIONCHECKS ************************" << RESET << std::endl;
@@ -113,6 +120,7 @@ bool	Request::_connectionChecks(Http* http, Connection* conn)
 		}
 		if (conn->getUpload())
 		{
+			std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&& \n";
 			char* c = getcwd(NULL, 0);
 			std::string cwd(c);
 			free(c);
@@ -137,16 +145,16 @@ bool	Request::_validateMethodBodyCompatibility(Http* http, Connection* conn)
 	bool hasBody = _rb.getContentLength() > 0 || _rb.isChunked();
 	bool hasContentLength = !_rh.getHeaderValue("content-length").empty();
 
+	if (!_connectionChecks(http, conn))
+		return false;
 	if (method == "GET" || method == "DELETE")
 		return setState(true, OK);
 	if (!hasContentLength && method == "POST")
 		return setState(false, LENGTH_REQUIRED);
-
+	
 	if (hasBody)
 	{
 		std::cout << "Has body case::::::::::::::::::::" << std::endl;
-		if (!_connectionChecks(http, conn))
-			return false;
 		_rb.setExpected();
 		std::cout << "Connection checks passed!\n";
 	}

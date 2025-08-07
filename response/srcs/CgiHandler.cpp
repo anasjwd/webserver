@@ -169,9 +169,9 @@ void CgiHandler::writePostDataToCgi(Connection* conn) {
         write(conn->cgiPipeToChild[1], postData.c_str(), postData.length());
         std::cout << "write:cgihandler.cpp \n";
     }
-                std::cout << BG_GREEN << "****************" <<  std::endl;
-            std::cout << postData << std::endl;
-            std::cout << "****************" << RESET  << std::endl;
+            //     std::cout << BG_GREEN << "****************" <<  std::endl;
+            // std::cout << postData << std::endl;
+            // std::cout << "****************" << RESET  << std::endl;
     close(conn->cgiPipeToChild[1]);
     conn->cgiPipeToChild[1] = -1;
 }
