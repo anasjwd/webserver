@@ -138,8 +138,6 @@ bool ResponseSender::sendFileBody(Connection* conn, Response* response, int epol
         handleConnectionError(conn, connections, epollFd, "File seek error");
         return false;
     }
-    
-    // i want set a flag here and send headers and some of body only first time then keep sending the body and remove the sendHeaders function
     ssize_t bytesRead = read(conn->fileFd, fileBuf, sizeof(fileBuf) - 1);
     if (bytesRead == 0) {
         close(conn->fileFd);

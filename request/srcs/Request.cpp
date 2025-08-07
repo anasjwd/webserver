@@ -88,9 +88,13 @@ bool	Request::_processChunkedTransfer()
 
 bool	Request::_connectionChecks(Http* http, Connection* conn)
 {
+	(void)http;
+	(void)conn;
 	if (!conn->conServer)
 	{
+		std::cout << GREEN << "********************** GETTING SERVER IN CONNECTIONCHECKS ************************" << RESET << std::endl;
 		conn->findServer(http);
+		std::cout << conn->conServer << std::endl;
 		std::string method = _rl.getMethod();
 		std::vector<std::string> allowed = conn->_getAllowedMethods();
 
