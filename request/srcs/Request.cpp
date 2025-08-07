@@ -25,8 +25,6 @@ bool	Request::_processBodyHeaders()
 	if (!contentType.empty())
 		_rb.setContentType(contentType);
 
-	_rb.extractBoundary(contentType);
-
 	std::string contentLengthStr = _rh.getHeaderValue("content-length");
 	std::string transferEncoding = _rh.getHeaderValue("transfer-encoding");
 
@@ -86,10 +84,20 @@ bool	Request::_processChunkedTransfer()
 	return true;
 }
 
+std::string stripQuotes(const char* str)
+{
+	if (!str) return "";
+
+	std::string s(str);
+
+	if (s.size() >= 2 && ((s[0] == '"' && s[s.size() - 1] == '"') || (s[0] == '\'' && s[s.size() - 1] == '\'')))
+		s = s.substr(1, s.size() - 2);
+
+	return s;
+}
+
 bool	Request::_connectionChecks(Http* http, Connection* conn)
 {
-	(void)http;
-	(void)conn;
 	if (!conn->conServer)
 	{
 		std::cout << GREEN << "********************** GETTING SERVER IN CONNECTIONCHECKS ************************" << RESET << std::endl;
@@ -105,7 +113,12 @@ bool	Request::_connectionChecks(Http* http, Connection* conn)
 		}
 		if (conn->getUpload())
 		{
-			char* uploadDir =  conn->getUploadLocation();
+			char* c = getcwd(NULL, 0);
+			std::string cwd(c);
+			free(c);
+			std::cout << "cwd >>>>>>>>>>>>>>> " << cwd << " ||||||||||||||||\n";
+			std::string uploadDir = cwd + stripQuotes(conn->getUploadLocation());
+			FileHandler::createDirectory(uploadDir);
 			_rb.create(POST_BODY, uploadDir);
 			_state = BODY;
 		}
@@ -283,8 +296,6 @@ bool	Request::bodySection()
 	{
 		if (!_rb.receiveData(_buffer.c_str(), _buffer.size()))
 			return setState(false, _rb.getStatusCode());
-		else
-			_rb.setCompleted();
 		_buffer.clear();
 	}
 
