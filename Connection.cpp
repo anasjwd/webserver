@@ -121,16 +121,24 @@ static std::vector<Server*> getServersFromHttp(Http* http)
 
 bool	Connection::findServer(Http *http)
 {
+	std::cout << "!!!!!!!!!!!!!!!!!!!!!!Trying to find the server!!!!!!!!!!!!!\n";
+
 	std::cout << "1\n";
 	std::cout << req->getState() << " " << HEADERS << std::endl;
 	std::cout << req->getRequestHeaders().hasHeader("host") << std::endl;
 
 	if (!req || req->getState() < HEADERS || !req->getRequestHeaders().hasHeader("host"))
+	{
+		std::cout << "Passed first condition\n";
 		return false;
+	}
 	std::cout << "2\n";
 
 	if (req->getState() >= HEADERS && !req->getRequestHeaders().hasHeader("host"))
+	{
+		std::cout << "Passed second condition\n";
 		return false;
+	}
 	std::cout << "3\n";
 
 	unsigned int port = req->getRequestHeaders().getHostPort();
@@ -139,7 +147,10 @@ bool	Connection::findServer(Http *http)
 	std::cout << "4\n";
 	
 	if (servers.empty())
+	{
+		std::cout << "Passed third condition\n";
 		return false;
+	}
 	std::cout << "5\n";
 		
 	for (std::vector<Server*>::const_iterator it = servers.begin(); it != servers.end(); ++it) {
@@ -162,6 +173,7 @@ bool	Connection::findServer(Http *http)
 							{
 								conServer = server;
 								cachedLocation = NULL;
+								std::cout << "Con server found1!\n";
 								return true;
 							}
 					}
@@ -174,6 +186,7 @@ bool	Connection::findServer(Http *http)
 				{
 					conServer = server;
 					cachedLocation = NULL; 
+					std::cout << "Con server found2!\n";
 					return true;
 				}
 			}
@@ -181,6 +194,9 @@ bool	Connection::findServer(Http *http)
 	}
 	if (conServer == NULL)
 		conServer = servers[0];
+	if (conServer == NULL)
+		std::cout << "Con server still NULL.\n";
+
 	return false;
 }
 
@@ -354,6 +370,7 @@ const Location* Connection::getLocation() const
 		std::cout << "NULL case!\n";
 		return NULL;
 	}
+	std::cout << "Uri: " << reqUri << "\n";
 	reqUri = _normalizeUri(reqUri);
 	cachedLocation = _findBestLocation(conServer->directives, reqUri);
 	if (cachedLocation == NULL)
@@ -662,30 +679,35 @@ bool	Connection::isTimedOut() const
 
 void	Connection::epollinProcess(Http* http, Connection* conn, std::vector<Connection*>& connections, struct epoll_event& ev, int epollFd)
 {
-	ssize_t	bytes;
-	char	buff[1048576];
+	(void)ev;
+	(void)http;
+	(void)conn;
+	(void)epollFd;
+	(void)connections;
+	// ssize_t	bytes;
+	// char	buff[1048576];
 
-	std::cout << RED << "EPOLLIN\n" << RESET;
-	bytes = read(fd, buff, 1048576);
-	if (bytes <= 0)
-		conn->closeConnection(conn, connections, epollFd);
-	else
-	{
-		if (!req)
-		{
-			req = new Request(fd);
-			cachedLocation = NULL;
-			resetCgiState();
-		}
-		req->appendToBuffer(this, http, buff, bytes);
-		if (!checkMaxBodySize())
-			req->setState(false, PAYLOAD_TOO_LARGE);
-		if (req->isRequestDone())
-		{
-			std::cout << RED << "Request done with state:" << req->getStatusCode() << RESET << "\n";
-			ev.events = EPOLLOUT;
-			ev.data.fd = fd;
-			epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &ev);
-		}
-	}
+	// std::cout << RED << "EPOLLIN\n" << RESET;
+	// bytes = read(fd, buff, 1048576);
+	// if (bytes <= 0)
+	// 	conn->closeConnection(conn, connections, epollFd);
+	// else
+	// {
+	// 	if (!req)
+	// 	{
+	// 		req = new Request(fd);
+	// 		cachedLocation = NULL;
+	// 		resetCgiState();
+	// 	}
+	// 	req->appendToBuffer(conn, http, buff, bytes);
+	// 	if (!checkMaxBodySize())
+	// 		req->setState(false, PAYLOAD_TOO_LARGE);
+	// 	if (req->isRequestDone())
+	// 	{
+	// 		std::cout << RED << "Request done with state:" << req->getStatusCode() << RESET << "\n";
+	// 		ev.events = EPOLLOUT;
+	// 		ev.data.fd = fd;
+	// 		epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &ev);
+	// 	}
+	// }
 }

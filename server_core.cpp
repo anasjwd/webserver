@@ -303,15 +303,14 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 						conn->closeConnection(conn, connections, epollFd);
 					else
 					{
-						if (!conn)
-						{
-							std::cout << "Client is killed!\n";
-							exit(1);
-						}
 						if (!conn->req)
 						{
 							conn->req = new Request(conn->fd);
 							conn->cachedLocation = NULL;
+							conn->resetCgiState();
+						}
+						conn->req->appendToBuffer(conn, http, buff, bytes);
+
 							// AHANAF Reset CGI state for new requests 
 							conn->resetCgiState();
 						}
@@ -360,6 +359,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 							conn->req->setState(false, PAYLOAD_TOO_LARGE);
 						if (conn->req->isRequestDone())
 						{
+							std::cout << RED << "Request done with state:" << conn->req->getStatusCode() << RESET << "\n";
 							ev.events = EPOLLOUT;
 							ev.data.fd = conn->fd;
 							epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);

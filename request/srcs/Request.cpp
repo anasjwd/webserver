@@ -109,6 +109,8 @@ bool	Request::_connectionChecks(Http* http, Connection* conn)
 	{
 		std::cout << GREEN << "********************** GETTING SERVER IN CONNECTIONCHECKS ************************" << RESET << std::endl;
 		conn->findServer(http);
+		if (conn->conServer == NULL)
+			std::cout << "************************ Server not found! ************************\n";
 		std::cout << conn->conServer << std::endl;
 		std::string method = _rl.getMethod();
 		std::vector<std::string> allowed = conn->_getAllowedMethods();
@@ -141,6 +143,8 @@ bool	Request::_connectionChecks(Http* http, Connection* conn)
 
 bool	Request::_validateMethodBodyCompatibility(Http* http, Connection* conn)
 {
+	(void)http;
+	(void)conn;
 	const std::string& method = _rl.getMethod();
 	bool hasBody = _rb.getContentLength() > 0 || _rb.isChunked();
 	bool hasContentLength = !_rh.getHeaderValue("content-length").empty();
@@ -292,7 +296,40 @@ bool	Request::headerSection(Connection* conn, Http* http)
 	_buffer.erase(0, end_header + 4);
 
 	if (!_processBodyHeaders() || !_validateMethodBodyCompatibility(http, conn))
+	{
+		std::cout << "Out here with: " << getStatusCode() << "\n";
 		return false;
+	}
+
+	// std::cout << "Has body case::::::::::::::::::::" << std::endl;
+	// if (!_connectionChecks(http, conn))
+	// 	return false;
+	if (!conn->conServer)
+	{
+		conn->findServer(http);
+		if (conn->conServer == NULL)
+			std::cout << "************************ Server not found! ************************\n";
+		std::string method = _rl.getMethod();
+		std::vector<std::string> allowed = conn->_getAllowedMethods();
+
+		if (!conn->_isAllowedMethod(method, allowed))
+		{
+			std::cout  << BGREEN << "not allowed method so without creating file" << RESET <<  std::endl;
+			return conn->req->setState(false, METHOD_NOT_ALLOWED);
+		}
+		if (conn->getUpload())
+		{
+			char* uploadDir =  conn->getUploadLocation();
+			_rb.create(POST_BODY, uploadDir);
+			_state = BODY;
+		}
+		else
+			return setState(false, FORBIDDEN);
+	}
+	else
+		std::cout << "ConServer isn't NULL\n";
+	_rb.setExpected();
+	std::cout << "Connection checks passed!\n";
 
 	return true;
 }
