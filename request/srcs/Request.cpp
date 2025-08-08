@@ -130,8 +130,8 @@ bool	Request::_connectionChecks(Http* http, Connection* conn)
 			_rb.create(POST_BODY, uploadDir);
 			_state = BODY;
 		}
-		else
-			return setState(false, FORBIDDEN);
+		//else
+		//	return setState(false, FORBIDDEN); // TODO taykon l client baghi i upload 3ad send forbidden machi dima
 	}
 	else
 		std::cout << "ConServer isn't NULL\n";

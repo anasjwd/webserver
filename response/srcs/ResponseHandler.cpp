@@ -78,9 +78,17 @@ std::map<int, std::string> ResponseHandler::_getErrorPages(Connection* conn) {
 }
 
 
-std::string ResponseHandler::_buildFilePath(const std::string& uri, const std::string& root, const Location* location) {
+/* std::string ResponseHandler::_buildFilePath(const std::string& uri, const std::string& root, const Location* location) {
     std::string path = root;
-    while (!path.empty() && path[path.length() - 1] == '/') path.erase(path.length() - 1);
+    std::cout << BGREEN << std::endl;
+    std::cout << "root start -> " << path << std::endl;
+    //example www/////// ---> www
+    while (!path.empty() && path[path.length() - 1] == '/')
+    {
+        std::cout << "root loop ->" << path << std::endl;
+        path.erase(path.length() - 1);
+    }
+    std::cout << "root ends ->" << path << std::endl;
 
     std::string cleanUri = uri;
     if (location && location->getUri()) {
@@ -94,17 +102,55 @@ std::string ResponseHandler::_buildFilePath(const std::string& uri, const std::s
         }
         
         if (!locUri.empty() && locUri[0] == '/') locUri = locUri.substr(1);
-        std::string prefix = "/" + locUri;
-        if (cleanUri.find(prefix) == 0) {
-            cleanUri = cleanUri.substr(prefix.length());
-            if (!cleanUri.empty() && cleanUri[0] == '/') cleanUri = cleanUri.substr(1);
+        
+        std::string locationPrefix = "/" + locUri;
+
+    //     std::string prefix = "/" + locUri;
+    //     std::cout << "clean Uri --> " <<  cleanUri << std::endl;
+    //     std::cout << "prefix --> " <<  prefix << std::endl;
+    //     if (cleanUri.find(prefix) == 0) {
+    //         cleanUri = cleanUri.substr(prefix.length());
+    //         if (!cleanUri.empty() && cleanUri[0] == '/') cleanUri = cleanUri.substr(1);
+    //     }
+    // }
+    // while (!cleanUri.empty() && cleanUri[0] == '/') cleanUri = cleanUri.substr(1);
+    // if (!cleanUri.empty()) path += "/" + cleanUri;
+
+        if (cleanUri.length() > locationPrefix.length() && 
+                   cleanUri.substr(0, locationPrefix.length()) == locationPrefix) {
+            
+            char nextChar = cleanUri[locationPrefix.length()];
+            if (nextChar == '/') {
+
+                std::string remainder = cleanUri.substr(locationPrefix.length());
+                
+                while (!remainder.empty() && remainder[0] == '/') {
+                    remainder = remainder.substr(1);
+                }
+                
+                if (!remainder.empty()) {
+                    path += "/" + remainder;
+                }
+                return path;
+            }
+            // If nextChar is not '/', it's a different file (like /kapouet.html)
+            // Fall through to default handling
         }
     }
-    while (!cleanUri.empty() && cleanUri[0] == '/') cleanUri = cleanUri.substr(1);
-    if (!cleanUri.empty()) path += "/" + cleanUri;
+    //default handle
+    while (!cleanUri.empty() && cleanUri[0] == '/') {
+        cleanUri = cleanUri.substr(1);
+    }
+    
+    if (!cleanUri.empty()) {
+        path += "/" + cleanUri;
+    }
+    
+    std::cout << RESET << std::endl;
+
     return path;
 }
-
+ */
 
 // std::string ResponseHandler::_buildFilePath(const std::string& uri, const std::string& root, const Location* location) {
 //     std::string path = root;
@@ -142,6 +188,104 @@ std::string ResponseHandler::_buildFilePath(const std::string& uri, const std::s
 //     return path;
 // }
 
+
+std::string ResponseHandler::_buildFilePath(const std::string& uri, const std::string& root, const Location* location) {
+std::string path = root;
+    
+    // Remove trailing slashes from root (e.g., "www/////" -> "www")
+    while (!path.empty() && path[path.length() - 1] == '/') {
+        path.erase(path.length() - 1);
+    }
+    
+    std::string cleanUri = uri;
+    
+    // Handle location-specific path mapping
+    if (location && location->getUri()) {
+        std::string locUri = std::string(location->getUri());
+        
+        // Special case for CGI locations (starting with '.')
+        if (!locUri.empty() && locUri[0] == '.') {
+            // For CGI, don't strip location prefix, just clean leading slashes
+            while (!cleanUri.empty() && cleanUri[0] == '/') {
+                cleanUri = cleanUri.substr(1);
+            }
+            if (!cleanUri.empty()) {
+                path += "/" + cleanUri;
+            }
+            return path;
+        }
+        
+        // Normal location handling - strip location prefix from URI
+        // Example: location /kapouet with root /tmp/www
+        // URI: /kapouet/pouic/toto/pouet -> /tmp/www/pouic/toto/pouet
+        
+        std::string locationPrefix = locUri;
+        
+        // Normalize location prefix (ensure it starts with /)
+        if (!locationPrefix.empty() && locationPrefix[0] != '/') {
+            locationPrefix = "/" + locationPrefix;
+        }
+        
+        // Remove trailing slash from location prefix for comparison
+        while (!locationPrefix.empty() && locationPrefix[locationPrefix.length() - 1] == '/') {
+            locationPrefix.erase(locationPrefix.length() - 1);
+        }
+        
+        std::cout << BBLUE << "Location prefix: '" << locationPrefix << "'" << RESET << std::endl;
+        std::cout << BBLUE << "Original URI: '" << cleanUri << "'" << RESET << std::endl;
+        
+        // Check if URI starts with location prefix
+        if (cleanUri.length() >= locationPrefix.length() && 
+            cleanUri.substr(0, locationPrefix.length()) == locationPrefix) {
+            
+            // Check what comes after the prefix
+            if (cleanUri.length() == locationPrefix.length()) {
+                // Exact match (e.g., URI="/kapouet", location="/kapouet")
+                // Result should be just the root path
+                std::cout << BBLUE << "Exact location match, using root: '" << path << "'" << RESET << std::endl;
+                return path;
+            }
+            
+            char nextChar = cleanUri[locationPrefix.length()];
+            if (nextChar == '/') {
+                // Valid prefix match followed by '/'
+                // Strip the location prefix and the following '/'
+                std::string remainder = cleanUri.substr(locationPrefix.length() + 1);
+                
+                std::cout << BBLUE << "Stripped remainder: '" << remainder << "'" << RESET << std::endl;
+                
+                // Clean any additional leading slashes
+                while (!remainder.empty() && remainder[0] == '/') {
+                    remainder = remainder.substr(1);
+                }
+                
+                // Append remainder to root path
+                if (!remainder.empty()) {
+                    path += "/" + remainder;
+                }
+                
+                std::cout << BBLUE << "Final path after location processing: '" << path << "'" << RESET << std::endl;
+                return path;
+            }
+            // If nextChar is not '/', it might be a different resource
+            // (like /kapouet.html when location is /kapouet)
+            // Fall through to default handling
+        }
+    }
+    
+    // Default handling - no location stripping, just append URI to root
+    // Remove leading slashes from URI
+    while (!cleanUri.empty() && cleanUri[0] == '/') {
+        cleanUri = cleanUri.substr(1);
+    }
+    
+    if (!cleanUri.empty()) {
+        path += "/" + cleanUri;
+    }
+    
+    std::cout << BBLUE << "Default path handling result: '" << path << "'" << RESET << std::endl;
+    return path;
+}
 std::string ResponseHandler::_getMimeType(const std::string& path) {
     size_t dotPos = path.find_last_of('.');
     if (dotPos != std::string::npos) {
@@ -347,6 +491,7 @@ Response ResponseHandler::handleRequest(Connection* conn)
         root = _getRootPath(conn);
     std::cout << CYAN << "root " << root <<  RESET << std::endl;
     std::string uri = conn->_normalizeUri(request.getRequestLine().getUri());
+    std::cout << CYAN << "After nomalize uri " << uri << RESET << std::endl;
     std::string filePath = _buildFilePath(uri, root, location);
     std::cout << CYAN << "filepath " <<  filePath <<  RESET << std::endl;
     
@@ -360,60 +505,93 @@ Response ResponseHandler::handleRequest(Connection* conn)
     }
     
     if (method == "GET") {
+        std::cout << CYAN << "GET request for filepath: " << filePath << RESET << std::endl;
+        
         struct stat fileStat;
-        bool isDir = false;
-        if (stat(filePath.c_str(), &fileStat) == 0 && S_ISDIR(fileStat.st_mode)) isDir = true;
-        std::vector<std::string> indexFiles = _getIndexFiles(conn);
-        if (isDir) {
-            std::cout << CYAN <<  "uri " << uri << " is dirictory " << RESET << std::endl; 
-            // if (isDir && uri[uri.size() - 1] != '/') {
-            //     Response res(301);
-            //     res.addHeader("Location", uri + '/');
-            //     return res;
-            // }
-            for (size_t i = 0; i < indexFiles.size(); ++i) {
-                std::string indexPath = filePath;
-                if (!indexPath.empty() && indexPath[indexPath.size() - 1] != '/')
-                    indexPath += "/";
-                indexPath += indexFiles[i];
-                std::cout << CYAN << "indexPaht " <<  indexPath <<  RESET << std::endl;
-                if (stat(indexPath.c_str(), &fileStat) == 0 && S_ISREG(fileStat.st_mode)) {
-                    return FileResponse::serve(indexPath, _getMimeType(indexPath), 200);
-                }
-            }
-        }
-        if (isDir) {
-            if (_getAutoIndex(conn)) {
-                std::string listing = _generateDirectoryListing(filePath, uri);
-                Response response(200);
-                response.addHeader("Content-Type", "text/html");
-                std::ostringstream oss;
-                oss << listing.length();
-                response.addHeader("Content-Length", oss.str());
-                response.addHeader("Connection", "close");
-                std::string responseStr = response.build();
-                responseStr += listing;
-                send(conn->fd, responseStr.c_str(), responseStr.size(), MSG_NOSIGNAL);//TODO
-                conn->fileSendState = 3;
-                return response;
-            }
-            return ErrorResponse::createForbiddenResponse(conn);
-        }
-        std::cout << RED << filePath << RESET << std::endl;
-        if (stat(filePath.c_str(), &fileStat) == 0 && S_ISREG(fileStat.st_mode)) {
-            std::cout << CYAN <<  "uri " << uri << " is file" << RESET << std::endl; 
+        bool pathExists = (stat(filePath.c_str(), &fileStat) == 0);
+        bool isDir = pathExists && S_ISDIR(fileStat.st_mode);
+        bool isFile = pathExists && S_ISREG(fileStat.st_mode);
+        
+        std::cout << CYAN << "Path exists: " << (pathExists ? "YES" : "NO") 
+                << ", Is dir: " << (isDir ? "YES" : "NO") 
+                << ", Is file: " << (isFile ? "YES" : "NO") << RESET << std::endl;
+        
+        // Case 1: Direct file request
+        if (isFile) {
+            std::cout << BGREEN << "Serving file directly: " << filePath << RESET << std::endl;
             return FileResponse::serve(filePath, _getMimeType(filePath), 200);
         }
-        std::cout << CYAN <<  "uri " << uri << " NOT A FILE RETURNS 404 " << RESET << std::endl; 
         
-        std::map<int, std::string> errorPages = _getErrorPages(conn);
-        int errCode = 404;
-        std::string errPage = errorPages[errCode];
-        if (!errPage.empty()) {
-            if (stat(errPage.c_str(), &fileStat) == 0 && S_ISREG(fileStat.st_mode)) {
-                return FileResponse::serve(errPage, _getMimeType(errPage), errCode);
+        // Case 2: Directory or location root - look for index files
+        if (isDir) {
+            std::vector<std::string> indexFiles = _getIndexFiles(conn);
+            std::cout << BYELLOW << "Looking for index files..." << RESET << std::endl;
+            
+            std::string searchDir = filePath;
+            
+            // If filePath doesn't exist but we have a location, 
+            // it might be an exact location match like "/form"
+            if (!pathExists && location) {
+                // Try looking in a subdirectory with location name
+                std::string locationName = location->getUri();
+                if (!locationName.empty() && locationName[0] == '/') {
+                    locationName = locationName.substr(1);
+                }
+                
+                // Try: root + location_name (e.g., "www" + "form" = "www/form")
+                std::string altPath = root;
+                if (!altPath.empty() && altPath[altPath.length() - 1] != '/') {
+                    altPath += "/";
+                }
+                altPath += locationName;
+                
+                std::cout << BYELLOW << "Trying alternative path: " << altPath << RESET << std::endl;
+                
+                if (stat(altPath.c_str(), &fileStat) == 0 && S_ISDIR(fileStat.st_mode)) {
+                    searchDir = altPath;
+                    isDir = true;
+                }
+            }
+            
+            if (isDir || stat(searchDir.c_str(), &fileStat) == 0) {
+                for (size_t i = 0; i < indexFiles.size(); ++i) {
+                    std::string indexPath = searchDir;
+                    if (!indexPath.empty() && indexPath[indexPath.size() - 1] != '/') {
+                        indexPath += "/";
+                    }
+                    indexPath += indexFiles[i];
+                    
+                    std::cout << BYELLOW << "Trying index file: " << indexPath << RESET << std::endl;
+                    
+                    if (stat(indexPath.c_str(), &fileStat) == 0 && S_ISREG(fileStat.st_mode)) {
+                        std::cout << BGREEN << "Found index file: " << indexPath << RESET << std::endl;
+                        return FileResponse::serve(indexPath, _getMimeType(indexPath), 200);
+                    }
+                }
+                
+                // No index file found, check if directory listing is enabled
+                if (_getAutoIndex(conn)) {
+                    std::string listing = _generateDirectoryListing(searchDir, uri);
+                    Response response(200);
+                    response.addHeader("Content-Type", "text/html");
+                    std::ostringstream oss;
+                    oss << listing.length();
+                    response.addHeader("Content-Length", oss.str());
+                    response.addHeader("Connection", "close");
+                    std::string responseStr = response.build();
+                    responseStr += listing;
+                    send(conn->fd, responseStr.c_str(), responseStr.size(), MSG_NOSIGNAL);
+                    conn->fileSendState = 3;
+                    return response;
+                }
+                
+                // Directory exists but no index file and no autoindex
+                return ErrorResponse::createForbiddenResponse(conn);
             }
         }
+        
+        // Case 3: File/directory not found
+        std::cout << BRED << "Path not found: " << filePath << RESET << std::endl;
         return ErrorResponse::createNotFoundResponse(conn);
     }
     else if (method == "POST")

@@ -297,7 +297,6 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				if (events[i].events & EPOLLIN)
 				{
 					std::cout << RED << "EPOLLIN\n" << RESET;
-					std::cout << YELLOW << "************************************************************************************************" << RESET <<std::endl;
 					bytes = read(conn->fd, buff, EIGHT_KB);
 					if (bytes <= 0)
 						conn->closeConnection(conn, connections, epollFd);
@@ -354,8 +353,6 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 						// 	std::cout   << "not allowed method so without creating file" <<  std::endl;
 						// 	conn->req->setState(false, METHOD_NOT_ALLOWED);
 						// }
-						std::cout << "****************************************************" << RESET << std::endl;
-
 						if (!conn->checkMaxBodySize())
 							conn->req->setState(false, PAYLOAD_TOO_LARGE);
 						if (conn->req->isRequestDone())
@@ -371,7 +368,8 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					std::cout << "EPOLLOUT event triggered for fd " << conn->fd << std::endl;
 					if (!ResponseSender::handleEpollOut(conn, epollFd, connections)) {
 						conn = NULL;
-					}					std::cout << YELLOW << "************************************************************************************************" << RESET <<std::endl;
+					}					
+					std::cout << YELLOW << "************************************************************************************************" << RESET <<std::endl;
 
 				}
 				else if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP)
@@ -406,7 +404,7 @@ int main(int ac, char** av)
 	}
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGINT, sigintHandler);
-	signal(SIGPIPE, SIG_IGN);
+	// signal(SIGPIPE, SIG_IGN);
 	http = parseConfig(av[1]);
 	if (http == NULL)
 		return ( 1 );
