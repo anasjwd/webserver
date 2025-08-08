@@ -100,7 +100,7 @@ void	RequestBody::clear()
 	_bytesReceivedInChunk = 0;
 }
 
-bool	RequestBody::create(FileType type, char *uploadDir)
+bool	RequestBody::create(FileType type, std::string uploadDir)
 {
 	if (_fileHandler.fd() != -1)
 	{
@@ -185,29 +185,27 @@ size_t	RequestBody::getBytesReceived() const
 	return _bytesReceived;
 }
 
-bool	RequestBody::extractBoundary(const std::string& contentType)
-{
-	size_t pos = contentType.find("boundary=");
-	if (pos == std::string::npos)
-		return setState(false, BAD_REQUEST);
-	_boundary = contentType.substr(pos + 9);
-	return true;
-}
-
 bool	RequestBody::receiveData(const char* data, size_t len)
 {
+	std::cout << "RECEIVEDATA CALLED!!!!!1\n";
 	if (!_expected || _isCompleted || !data || len == 0)
 		return false;
 
 	if (_isChunked)
 		return _processChunkData(data, len);
 
+	if (_contentLength != 0 && _bytesReceived + len >= _contentLength)
+	{
+		len = _contentLength - _bytesReceived;
+		_isCompleted = true;
+	}
 	if (_fileHandler.write(data, len) == -1)
+	{
+		std::cout << "Failing of write here!\n";
 		return setState(false, INTERNAL_SERVER_ERROR);
+	}
 
 	_bytesReceived += len;
-	if (_bytesReceived >= _contentLength)
-		_isCompleted = true;
-
+	std::cout << "BACK FROM RECEIVED DATA.\n";
 	return true;
 }

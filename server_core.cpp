@@ -1,9 +1,9 @@
+#include <csignal>
 # include <map>
 # include <ctime>
 # include <string>
 # include <vector>
 # include <fcntl.h>
-# include <csignal>
 # include <sstream>
 # include <cstddef>
 # include <ostream>
@@ -22,25 +22,28 @@
 # include <netinet/tcp.h>
 # include <sys/sendfile.h>
 # include "Connection.hpp"
+#include "conf/Location.hpp"
 # include "conf/Server.hpp"
 # include "conf/IDirective.hpp"
+#include "conf/Upload.hpp"
+#include "conf/UploadLocation.hpp"
 # include "conf/cfg_parser.hpp"
+# include "request/incs/Defines.hpp"
 # include "request/incs/Request.hpp"
 # include "response/include/Response.hpp"
-# include "response/include/FileResponse.hpp"
 # include "response/include/ErrorResponse.hpp"
-# include "response/include/ResponseSender.hpp"
 # include "response/include/ResponseHandler.hpp"
+# include "response/include/ResponseSender.hpp"
 
 # define	NONESSENTIAL	101
-# define	BACKLOG			511
 # define	MAX_EVENTS		512
-# define	EIGHT_KB		1048576
+# define	BACKLOG			511
+# define	EIGHT_KB		65536
 
 /*
 	TODO:
 	It takes too long for uploading files, thinking of incrementing it from 8KB to 500KB or 1MB.
-	To see with jawad later: 524288, 1048576.
+	To see with jawad later: 1048576.
 */ 
 
 bool got_singint = false;
@@ -245,7 +248,9 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 {
 	Connection*					conn;
+	ssize_t						bytes;
 	std::vector<Connection*>	connections;
+	char						buff[EIGHT_KB];
 	int							numberOfEvents;
 	struct epoll_event			ev, events[MAX_EVENTS];
 	time_t						lastTimeoutCheck = time(NULL);
@@ -275,7 +280,8 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				int optval = 1;
 				setsockopt(clientFd, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval));
 
-				connections.push_back(new Connection(clientFd));
+				Connection* conn = new Connection(clientFd);
+				connections.push_back(conn);
 				std::cout << RED << "Connection created!\n" << RESET;
 
 				ev.events = EPOLLIN;
@@ -290,11 +296,9 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 
 				if (events[i].events & EPOLLIN)
 				{
-					ssize_t bytes;
-					char	buff[1048576];
-
 					std::cout << RED << "EPOLLIN\n" << RESET;
-					bytes = read(conn->fd, buff, 1048576);
+					std::cout << YELLOW << "************************************************************************************************" << RESET <<std::endl;
+					bytes = read(conn->fd, buff, EIGHT_KB);
 					if (bytes <= 0)
 						conn->closeConnection(conn, connections, epollFd);
 					else
@@ -306,6 +310,51 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 							conn->resetCgiState();
 						}
 						conn->req->appendToBuffer(conn, http, buff, bytes);
+
+							// AHANAF Reset CGI state for new requests 
+							conn->resetCgiState();
+						}
+						conn->req->appendToBuffer(conn, http, buff, bytes);
+						// std::cout << BG_BLACK  << "****************************************************\n";
+						// conn->findServer(http);
+						// std::cout << "findserver called\n";
+						// const Location *locUri = conn->getLocation();
+						// UploadLocation *upload = NULL;
+						// Upload *upload_authorized = NULL;
+						// if (locUri) {
+						// 	for (std::vector<IDirective*>::const_iterator dit = locUri->directives.begin(); dit != locUri->directives.end(); ++dit) {
+						// 		if ((*dit)->getType() == UPLOAD) {
+						// 			upload_authorized = static_cast<Upload*>(*dit);
+						// 		}
+						// 		if ((*dit)->getType() == UPLOAD_LOCATION) {
+						// 			upload = static_cast<UploadLocation*>(*dit);
+						// 		}
+						// 	}
+						// }
+						// if (upload_authorized)
+						// {
+						// 	if (upload_authorized->getState())
+						// 		std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%% " << "ON"   << std::endl;
+						// 	else	
+						// 		std::cout  << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%% " << "OFF"   << std::endl;
+							
+						// }
+						// else 
+						// 	std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%% " << "OFF"   << std::endl;
+
+						// if (upload && upload->getLocation())
+						// 	std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&& " << upload->getLocation()  << std::endl;
+
+						// std::string method = conn->req->getRequestLine().getMethod();
+						// std::vector<std::string> allowed = conn->_getAllowedMethods();
+						// std::cout << method << std::endl;
+						// if (!conn->_isAllowedMethod(method, allowed))
+						// {
+						// 	std::cout   << "not allowed method so without creating file" <<  std::endl;
+						// 	conn->req->setState(false, METHOD_NOT_ALLOWED);
+						// }
+						std::cout << "****************************************************" << RESET << std::endl;
+
 						if (!conn->checkMaxBodySize())
 							conn->req->setState(false, PAYLOAD_TOO_LARGE);
 						if (conn->req->isRequestDone())
@@ -322,7 +371,8 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					std::cout << "EPOLLOUT event triggered for fd " << conn->fd << std::endl;
 					if (!ResponseSender::handleEpollOut(conn, epollFd, connections)) {
 						conn = NULL;
-					}
+					}					std::cout << YELLOW << "************************************************************************************************" << RESET <<std::endl;
+
 				}
 				else if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP)
 				{
@@ -356,6 +406,7 @@ int main(int ac, char** av)
 	}
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGINT, sigintHandler);
+	signal(SIGPIPE, SIG_IGN);
 	http = parseConfig(av[1]);
 	if (http == NULL)
 		return ( 1 );

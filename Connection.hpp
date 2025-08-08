@@ -13,6 +13,7 @@
 # include "request/incs/Request.hpp"
 # include "conf/ClientMaxBodySize.hpp"
 # include "response/include/Response.hpp"
+#include <fcntl.h>
 
 class	Connection
 {
@@ -31,6 +32,7 @@ class	Connection
 		int				fileFd;
 		int				fileSendState; // 0: not started, 1: headers sent, 2: sending body, 3: done
 		ssize_t			fileSendOffset;
+		bool 			headersSent;
 
 		bool			isCgi;
 		bool			cgiExecuted;
@@ -85,5 +87,5 @@ class	Connection
 
 		void resetCgiState();
 		void epollinProcess(Http*, Connection*, std::vector<Connection*>&, struct epoll_event&, int);
-
+		static std::string _normalizeUri(const std::string& uri);
 };
