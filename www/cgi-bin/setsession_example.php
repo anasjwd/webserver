@@ -23,12 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <script>
         document.getElementById("clicker").onclick = function() {
-            const data = 'click=true';
             fetch(window.location.href, 
-            {method: 'POST',
-                body : data
-
-            })
+            {method: 'POST'})
                 .then(response => response.text())
                 .then(count => {
                     document.getElementById("counter").textContent = "Session Clicks: " + count;

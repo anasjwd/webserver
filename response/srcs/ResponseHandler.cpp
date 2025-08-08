@@ -489,6 +489,7 @@ Response ResponseHandler::handleRequest(Connection* conn)
         root = std::string(locRoot->getPath());
     else
         root = _getRootPath(conn);
+    std::cout << CYAN << "methods " << method <<  RESET << std::endl;
     std::cout << CYAN << "root " << root <<  RESET << std::endl;
     std::string uri = conn->_normalizeUri(request.getRequestLine().getUri());
     std::cout << CYAN << "After nomalize uri " << uri << RESET << std::endl;

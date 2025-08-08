@@ -1,34 +1,38 @@
-#include <csignal>
 # include <ctime>
+# include <csignal>
 # include <cstddef>
 # include <cstdlib>
-#include <sys/wait.h>
 # include <unistd.h>
 # include <algorithm>
+# include <sys/wait.h>
 # include <sys/epoll.h>
 # include "conf/Http.hpp"
 # include "conf/Root.hpp"
 # include "Connection.hpp"
 # include "conf/Listen.hpp"
 # include "conf/Server.hpp"
+# include "conf/Upload.hpp"
 # include "conf/Location.hpp"
 # include "conf/AutoIndex.hpp"
 # include "conf/IDirective.hpp"
 # include "conf/ServerName.hpp"
 # include "conf/LimitExcept.hpp"
+# include "conf/UploadLocation.hpp"
 # include "request/incs/Defines.hpp"
 # include "conf/ClientMaxBodySize.hpp"
+#include "response/include/Response.hpp"
 # include "response/include/ResponseHandler.hpp"
-# include "conf/Upload.hpp"
-# include "conf/UploadLocation.hpp"
 
 Connection::Connection()
     :   fd(-1), req(NULL), connect(false), conServer(NULL),
         lastActivityTime(time(NULL)), lastTimeoutCheck(time(NULL)),
-        closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0), headersSent(false),
+        uploadAuthorized(false),
+		closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0), 
+		headersSent(false),
         isCgi(false), cgiExecuted(false), cgiCompleted(false), cgiPid(-1), cgiReadState(0),
         cgiStartTime(0), cachedLocation(NULL)
 {
+	std::cout << BG_BLUE << "Connection default constructor called "<< RESET << std::endl;
     cgiPipeFromChild[0] = -1;
     cgiPipeFromChild[1] = -1;
     cgiPipeToChild[0] = -1;
@@ -42,12 +46,17 @@ Connection::Connection(int clientFd)
         isCgi(false), cgiExecuted(false), cgiCompleted(false), cgiPid(-1), cgiReadState(0),
         cgiStartTime(0), cachedLocation(NULL)
 {
+	std::cout << BG_BLUE << "Connection param constructor called for fd " << fd << RESET << std::endl;
     cgiPipeFromChild[0] = -1;
     cgiPipeFromChild[1] = -1;
     cgiPipeToChild[0] = -1;
     cgiPipeToChild[1] = -1;
 }
 
+Connection::~Connection()
+{
+	std::cout << BG_BLUE << "Connection destructor called for fd " << fd << RESET << std::endl;
+}
 
 void Connection::resetCgiState() {
     std::cout << "[DEBUG] Resetting CGI state for fd " << fd << std::endl;
@@ -198,47 +207,22 @@ IDirective*	Connection::getDirective(DIRTYPE type)
 	return NULL;
 }
 
-bool		Connection::getUpload() const
+void	Connection::getUpload()
 {
 	std::cout << "About to get Location\n";
 	const Location*	location = getLocation();
 	if (location == NULL)
-		return false;
+		return ;
 
 	std::cout << "Location:" << location->getUri() << "\n";
 	for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); 
 	dit != location->directives.end(); ++dit) 
 	{
 		if ((*dit)->getType() == UPLOAD)
-		{
-			Upload* upload = static_cast<Upload*>(*dit);
-			if (upload)
-				return upload->getState();
-		}
+			uploadAuthorized = static_cast<Upload*>(*dit)->getState();
+		else if ((*dit)->getType() == UPLOAD_LOCATION)
+			uploadLocation = static_cast<UploadLocation*>(*dit)->getLocation();
 	}
-	return false;
-}
-
-char*		Connection::getUploadLocation() const
-{
-	const Location*	location = getLocation();
-	if (location == NULL)
-		return NULL;
-	
-	for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); 
-	dit != location->directives.end(); ++dit) 
-	{
-		if ((*dit)->getType() == UPLOAD_LOCATION)
-		{
-			UploadLocation* upload = static_cast<UploadLocation*>(*dit);
-			if (upload)
-			{
-				std::cout << "Upload location: " << upload->getLocation() << std::endl;
-				return upload->getLocation();
-			}
-		}
-	}
-	return NULL;
 }
 
 LimitExcept*	Connection::getLimitExcept() const
@@ -647,12 +631,14 @@ bool Connection::_isAllowedMethod(const std::string& method, const std::vector<s
 
 bool	Connection::isCgiTimedOut() const
 {
-	return time(NULL) - cgiStartTime > CGI_TIMEOUT;
+	std::cout << BG_CYAN << "Checking CGI timeout for fd " << fd << std::endl;
+	std::cout << "CGI time value: " << time(NULL) - cgiStartTime << RESET << std::endl;
+	return time(NULL) - cgiStartTime >= CGI_TIMEOUT;
 }
 
 bool	Connection::isTimedOut() const
 {
-	return time(NULL) - lastActivityTime > TIMEOUT_SECONDS;
+	return time(NULL) - lastActivityTime >= TIMEOUT_SECONDS;
 }
 
 void	Connection::epollinProcess(Http* http, Connection* conn, std::vector<Connection*>& connections, struct epoll_event& ev, int epollFd)

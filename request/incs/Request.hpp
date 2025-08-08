@@ -6,6 +6,9 @@
 # include "RequestLine.hpp"
 # include "RequestHeaders.hpp"
 
+#define RESET   "\033[0m"
+#define BG_YELLOW   "\033[43m"
+
 class	Http;
 class	Connection;
 
@@ -25,9 +28,9 @@ class	Request
 		bool			_processBodyHeaders();
 		bool			_processContentLength();
 		bool			_processChunkedTransfer();
-		bool			_connectionChecks(Http*, Connection*);
+		bool			_connectionChecks(Connection*);
 		bool			_isChunkedTransferEncoding(const std::string&);
-		bool			_validateMethodBodyCompatibility(Http*, Connection *);
+		bool			_validateMethodBodyCompatibility(Connection *);
 
 
 	public:
@@ -48,7 +51,7 @@ class	Request
 		const RequestBody&		getRequestBody() const;
 		const RequestHeaders&	getRequestHeaders() const;
 
-		bool					isMultipart(const std::string&);
+		void					treatUploadLocation(Connection*);
 		bool					contentLength(const std::string&);
 
 		bool					bodySection();

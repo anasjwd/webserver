@@ -29,6 +29,10 @@ static void initCgiInterpreters() {
 }
 
 Response CgiHandler::executeCgi(Connection* conn, const std::string& scriptPath) {
+    std::cout << "Executing CGI script: " << scriptPath << std::endl;
+    std::cout << "executeCgi: scriptPath = " << scriptPath << std::endl;
+    std::cout << conn->cgiPipeFromChild << " " << conn->cgiPipeToChild[0] << " " << conn->cgiPipeToChild[1] << std::endl;
+    std::cout << conn->cgiPid << " " << conn->cgiExecuted << " " << conn->cgiCompleted << std::endl;
     initCgiInterpreters();
     
     struct stat fileStat;
@@ -132,6 +136,7 @@ Response CgiHandler::executeCgi(Connection* conn, const std::string& scriptPath)
         }
         exit(1);
     } else {
+        std::cout << "executeCgi: child process created with PID " << conn->cgiPid << std::endl;
         close(conn->cgiPipeFromChild[1]);
         if (isPost) {
             close(conn->cgiPipeToChild[0]);
@@ -152,20 +157,27 @@ Response CgiHandler::executeCgi(Connection* conn, const std::string& scriptPath)
 }
 
 void CgiHandler::writePostDataToCgi(Connection* conn) {
+    std::cout << "[CGI] Writing POST data to CGI process " << conn->cgiPid << " on fd " << conn->fd << std::endl;
+    std::cout << conn->cgiPipeFromChild << " " << conn->cgiPipeToChild[0] << " " << conn->cgiPipeToChild[1] << std::endl;
+    std::cout << conn->cgiPid << " " << conn->cgiExecuted << " " << conn->cgiCompleted << std::endl;
     if (!conn->req || conn->req->getRequestLine().getMethod() != "POST")
         return;
     
     std::string postData;
     std::ifstream file(conn->req->getRequestBody().getTempFile().path().c_str());
-    if (file.is_open()) {
-        postData.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-        file.close();
-    }
+    postData = "hello world";
+    write(conn->cgiPipeToChild[1], postData.c_str(), postData.length());
+    // if (file.is_open()) {
+    //     std::cout << "[CGI] Reading POST data from file: " << conn->req->getRequestBody().getTempFile().path() << std::endl;
+
+    //     postData.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    //     file.close();
+    // }
     
-    if (!postData.empty()) {
-        write(conn->cgiPipeToChild[1], postData.c_str(), postData.length());
-        std::cout << "write:cgihandler.cpp \n";
-    }
+    // if (!postData.empty()) {
+    //     std::cout << "write:cgihandler.cpp \n";
+    //     write(conn->cgiPipeToChild[1], postData.c_str(), postData.length());
+    // }
     
     close(conn->cgiPipeToChild[1]);
     conn->cgiPipeToChild[1] = -1;
@@ -219,58 +231,106 @@ void CgiHandler::waitCgi(Connection* conn) {
     // If result == 0, the process is still running
 }
 
-void CgiHandler::readCgiOutput(Connection* conn) {
-    if (!conn->cgiExecuted || conn->cgiCompleted || conn->cgiPipeFromChild[0] == -1) {
-        return;
-    }
+// void CgiHandler::readCgiOutput(Connection* conn) {
+//     if (!conn->cgiExecuted || conn->cgiCompleted || conn->cgiPipeFromChild[0] == -1) {
+//         return;
+//     }
     
-    char buffer[8192];
-    ssize_t totalBytesRead = 0;
+//     char buffer[8192];
+//     ssize_t totalBytesRead = 0;
     
-    while (true) {
-        ssize_t bytesRead = read(conn->cgiPipeFromChild[0], buffer, sizeof(buffer) - 1);
+//     while (true) {
+//         ssize_t bytesRead = read(conn->cgiPipeFromChild[0], buffer, sizeof(buffer) - 1);
         
-        if (bytesRead > 0) {
-            buffer[bytesRead] = '\0';
-            conn->cgiOutput += std::string(buffer, bytesRead);
-            totalBytesRead += bytesRead;
-            std::cout << "[CGI] Read " << bytesRead << " bytes from process " << conn->cgiPid << std::endl;
-        } else if (bytesRead == 0) {
-            // EOF - CGI process closed stdout
-            std::cout << "[CGI] EOF from process " << conn->cgiPid << " (total read: " << totalBytesRead << ")" << std::endl;
-            break;
-        } else {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                // No more data available right now
-                if (totalBytesRead > 0) {
-                    std::cout << "[CGI] Read " << totalBytesRead << " total bytes from process " << conn->cgiPid << std::endl;
-                }
-                break;
-            } else {
-                // Real error
-                std::cout << "[CGI] Read error from process " << conn->cgiPid << ": " << strerror(errno) << std::endl;
-                break;
+//         if (bytesRead > 0) {
+//             buffer[bytesRead] = '\0';
+//             conn->cgiOutput += std::string(buffer, bytesRead);
+//             totalBytesRead += bytesRead;
+//             std::cout << "[CGI] Read " << bytesRead << " bytes from process " << conn->cgiPid << std::endl;
+//         } else if (bytesRead == 0) {
+//             // EOF - CGI process closed stdout
+//             std::cout << "[CGI] EOF from process " << conn->cgiPid << " (total read: " << totalBytesRead << ")" << std::endl;
+//             break;
+//         } else {
+//             if (errno == EAGAIN || errno == EWOULDBLOCK) {
+//                 // No more data available right now
+//                 if (totalBytesRead > 0) {
+//                     std::cout << "[CGI] Read " << totalBytesRead << " total bytes from process " << conn->cgiPid << std::endl;
+//                 }
+//                 break;
+//             } else {
+//                 // Real error
+//                 std::cout << "[CGI] Read error from process " << conn->cgiPid << ": " << strerror(errno) << std::endl;
+//                 break;
+//             }
+//         }
+//     }
+    
+//     if (!conn->cgiOutput.empty() && conn->cgiReadState == 0) {
+//         size_t headerEnd = conn->cgiOutput.find("\r\n\r\n");
+//         bool isCRLF = true;
+//         if (headerEnd == std::string::npos) {
+//             headerEnd = conn->cgiOutput.find("\n\n");
+//             isCRLF = false;
+//         }
+        
+//         if (headerEnd != std::string::npos) {
+//             conn->cgiHeaders = conn->cgiOutput.substr(0, headerEnd);
+//             conn->cgiBody = conn->cgiOutput.substr(headerEnd + (isCRLF ? 4 : 2));
+//             conn->cgiReadState = 1;
+//             std::cout << "[CGI] Parsed headers (" << conn->cgiHeaders.length() << " chars) and body (" << conn->cgiBody.length() << " chars)" << std::endl;
+//         } else {
+//             conn->cgiBody = conn->cgiOutput;
+//             conn->cgiReadState = 1;
+//             std::cout << "[CGI] No headers found, treating entire output as body (" << conn->cgiBody.length() << " chars)" << std::endl;
+//         }
+//     }
+// }
+
+void CgiHandler::readCgiOutput(Connection* conn) {
+    if (!conn->cgiExecuted || conn->cgiCompleted || conn->cgiPipeFromChild[0] == -1)
+        return;
+
+    char buffer[8192];
+    ssize_t bytesRead = read(conn->cgiPipeFromChild[0], buffer, sizeof(buffer));
+
+    if (bytesRead > 0) {
+        conn->cgiOutput.append(buffer, bytesRead);
+        std::cout << "[CGI] Read " << bytesRead << " bytes (total: "
+                  << conn->cgiOutput.size() << ")\n";
+
+        if (conn->cgiReadState == 0) {
+            size_t headerEnd = conn->cgiOutput.find("\r\n\r\n");
+            bool isCRLF = true;
+            if (headerEnd == std::string::npos) {
+                headerEnd = conn->cgiOutput.find("\n\n");
+                isCRLF = false;
+            }
+            if (headerEnd != std::string::npos) {
+                conn->cgiHeaders = conn->cgiOutput.substr(0, headerEnd);
+                conn->cgiBody = conn->cgiOutput.substr(headerEnd + (isCRLF ? 4 : 2));
+                conn->cgiReadState = 1;
+                std::cout << "[CGI] Parsed headers (" << conn->cgiHeaders.length()
+                          << ") and body (" << conn->cgiBody.length() << ")\n";
             }
         }
     }
-    
-    if (!conn->cgiOutput.empty() && conn->cgiReadState == 0) {
-        size_t headerEnd = conn->cgiOutput.find("\r\n\r\n");
-        bool isCRLF = true;
-        if (headerEnd == std::string::npos) {
-            headerEnd = conn->cgiOutput.find("\n\n");
-            isCRLF = false;
-        }
-        
-        if (headerEnd != std::string::npos) {
-            conn->cgiHeaders = conn->cgiOutput.substr(0, headerEnd);
-            conn->cgiBody = conn->cgiOutput.substr(headerEnd + (isCRLF ? 4 : 2));
-            conn->cgiReadState = 1;
-            std::cout << "[CGI] Parsed headers (" << conn->cgiHeaders.length() << " chars) and body (" << conn->cgiBody.length() << " chars)" << std::endl;
+    else if (bytesRead == 0) {
+        // EOF
+        std::cout << "[CGI] EOF from process " << conn->cgiPid << "\n";
+        close(conn->cgiPipeFromChild[0]);
+        conn->cgiPipeFromChild[0] = -1;
+        conn->cgiCompleted = true;
+    }
+    else {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            // No data yet — return and wait for next epoll event
+            return;
         } else {
-            conn->cgiBody = conn->cgiOutput;
-            conn->cgiReadState = 1;
-            std::cout << "[CGI] No headers found, treating entire output as body (" << conn->cgiBody.length() << " chars)" << std::endl;
+            std::cerr << "[CGI] Read error: " << strerror(errno) << "\n";
+            close(conn->cgiPipeFromChild[0]);
+            conn->cgiPipeFromChild[0] = -1;
+            conn->cgiCompleted = true;
         }
     }
 }

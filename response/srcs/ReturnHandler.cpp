@@ -2,6 +2,7 @@
 #include "../include/ErrorResponse.hpp"
 #include "../include/FileResponse.hpp"
 #include "../../Connection.hpp"
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <string>
 
@@ -50,7 +51,10 @@ Response ReturnHandler::handle(Connection* conn) {
             }
             return ErrorResponse::createErrorResponseWithMapping(conn, code, url && url[0] ? std::string(url) : "");
         } else {
-            return ErrorResponse::createErrorResponseWithMapping(conn, code, url && url[0] ? std::string(url) : "");
+            std::cout << url << " " << url[0] << std::endl;
+            std::string res =  Response::createErrorResponse(code,  url);
+            send(conn->fd, res.c_str(), res.size(), MSG_NOSIGNAL);
+            conn->fileSendState = 3;
         }
     }
     return Response();
