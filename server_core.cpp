@@ -312,7 +312,6 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 						{
 							std::cout << "Creating new request for fd " << conn->fd << std::endl;
 							conn->req = new Request(conn->fd);
-							conn->cachedLocation = NULL;
 							conn->resetCgiState();
 						}
 						conn->req->appendToBuffer(conn, http, buff, bytes);
@@ -331,8 +330,6 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					if (!ResponseSender::handleEpollOut(conn, epollFd, connections)) {
 						conn = NULL;
 					}					
-					std::cout << YELLOW << "************************************************************************************************" << RESET <<std::endl;
-
 				}
 				else if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP)
 				{

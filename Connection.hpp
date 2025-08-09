@@ -43,14 +43,13 @@ class	Connection
 		std::string		cgiOutput;
 		Response		cgiResponse;
 		int				cgiPid;
-		int				cgiPipeToChild[2];
-		int				cgiPipeFromChild[2];
+		// int				cgiPipeToChild[2];
+		// int				cgiPipeFromChild[2];
+		int				pipefd[2];
 		int				cgiReadState;
 		std::string		cgiHeaders;
 		std::string		cgiBody;
 		time_t			cgiStartTime;
-
-		mutable const Location*	cachedLocation;
 
 		Connection();
 		Connection(int);

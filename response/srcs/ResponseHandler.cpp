@@ -496,7 +496,14 @@ Response ResponseHandler::handleRequest(Connection* conn)
     std::string filePath = _buildFilePath(uri, root, location);
     std::cout << CYAN << "filepath " <<  filePath <<  RESET << std::endl;
     
-    if (location && location->getUri() && location->getUri()[0] == '.') {        
+    struct stat fileStat;
+    bool pathExists = (stat(filePath.c_str(), &fileStat) == 0);
+    bool isDir = pathExists && S_ISDIR(fileStat.st_mode);
+    bool isFile = pathExists && S_ISREG(fileStat.st_mode);
+    
+    // should the uri bien a file
+    if (location && location->getUri() && location->getUri()[0] == '.' && !isDir) {   
+          
         if (conn->cgiExecuted == false) {
             std::cout << YELLOW << "Executing CGI..." << RESET << std::endl;
             conn->isCgi = true;
@@ -508,10 +515,6 @@ Response ResponseHandler::handleRequest(Connection* conn)
     if (method == "GET") {
         std::cout << CYAN << "GET request for filepath: " << filePath << RESET << std::endl;
         
-        struct stat fileStat;
-        bool pathExists = (stat(filePath.c_str(), &fileStat) == 0);
-        bool isDir = pathExists && S_ISDIR(fileStat.st_mode);
-        bool isFile = pathExists && S_ISREG(fileStat.st_mode);
         
         std::cout << CYAN << "Path exists: " << (pathExists ? "YES" : "NO") 
                 << ", Is dir: " << (isDir ? "YES" : "NO") 

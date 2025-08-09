@@ -30,13 +30,15 @@ Connection::Connection()
 		closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0), 
 		headersSent(false),
         isCgi(false), cgiExecuted(false), cgiCompleted(false), cgiPid(-1), cgiReadState(0),
-        cgiStartTime(0), cachedLocation(NULL)
+        cgiStartTime(0)
 {
 	std::cout << BG_BLUE << "Connection default constructor called "<< RESET << std::endl;
-    cgiPipeFromChild[0] = -1;
-    cgiPipeFromChild[1] = -1;
-    cgiPipeToChild[0] = -1;
-    cgiPipeToChild[1] = -1;
+    // cgiPipeFromChild[0] = -1;
+    // cgiPipeFromChild[1] = -1;
+    // cgiPipeToChild[0] = -1;
+    // cgiPipeToChild[1] = -1;
+	pipefd[0] = -1;
+	pipefd[1] = -1;
 }
 
 Connection::Connection(int clientFd)
@@ -44,13 +46,15 @@ Connection::Connection(int clientFd)
         lastActivityTime(time(NULL)), lastTimeoutCheck(time(NULL)),
         closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0), headersSent(false),
         isCgi(false), cgiExecuted(false), cgiCompleted(false), cgiPid(-1), cgiReadState(0),
-        cgiStartTime(0), cachedLocation(NULL)
+        cgiStartTime(0)
 {
 	std::cout << BG_BLUE << "Connection param constructor called for fd " << fd << RESET << std::endl;
-    cgiPipeFromChild[0] = -1;
-    cgiPipeFromChild[1] = -1;
-    cgiPipeToChild[0] = -1;
-    cgiPipeToChild[1] = -1;
+    // cgiPipeFromChild[0] = -1;
+    // cgiPipeFromChild[1] = -1;
+    // cgiPipeToChild[0] = -1;
+    // cgiPipeToChild[1] = -1;
+	pipefd[0] = -1;
+	pipefd[1] = -1;
 }
 
 Connection::~Connection()
@@ -75,23 +79,29 @@ void Connection::resetCgiState() {
     cgiPid = -1;
     cgiReadState = 0;
     cgiStartTime = 0;
-    
-    if (cgiPipeFromChild[0] != -1) {
-        close(cgiPipeFromChild[0]);
-        cgiPipeFromChild[0] = -1;
-    }
-    if (cgiPipeFromChild[1] != -1) {
-        close(cgiPipeFromChild[1]);
-        cgiPipeFromChild[1] = -1;
-    }
-    if (cgiPipeToChild[0] != -1) {
-        close(cgiPipeToChild[0]);
-        cgiPipeToChild[0] = -1;
-    }
-    if (cgiPipeToChild[1] != -1) {
-        close(cgiPipeToChild[1]);
-        cgiPipeToChild[1] = -1;
-    }
+
+	if (pipefd[0] != -1)
+		close(pipefd[0]);
+
+	if (pipefd[1] != -1)
+		close(pipefd[1]);
+
+    // if (cgiPipeFromChild[0] != -1) {
+    //     close(cgiPipeFromChild[0]);
+    //     cgiPipeFromChild[0] = -1;
+    // }
+    // if (cgiPipeFromChild[1] != -1) {
+    //     close(cgiPipeFromChild[1]);
+    //     cgiPipeFromChild[1] = -1;
+    // }
+    // if (cgiPipeToChild[0] != -1) {
+    //     close(cgiPipeToChild[0]);
+    //     cgiPipeToChild[0] = -1;
+    // }
+    // if (cgiPipeToChild[1] != -1) {
+    //     close(cgiPipeToChild[1]);
+    //     cgiPipeToChild[1] = -1;
+    // }
     
     cgiHeaders.clear();
     cgiBody.clear();
@@ -170,7 +180,6 @@ bool	Connection::findServer(Http *http)
 							if (names[i] == hostname)
 							{
 								conServer = server;
-								cachedLocation = NULL;
 								return true;
 							}
 					}
@@ -182,7 +191,6 @@ bool	Connection::findServer(Http *http)
 				if (listen && listen->getPort() == port)
 				{
 					conServer = server;
-					cachedLocation = NULL; 
 					return true;
 				}
 			}
@@ -311,12 +319,8 @@ std::string  Connection::_normalizeUri(const std::string& uri) {
 const Location* Connection::getLocation() const
 {
 	std::cout << "In location\n";
-	if (cachedLocation)
-	{
-		std::cout << "[CACHE HIT] Using cached location for URI: " << (req ? req->getRequestLine().getUri() : uri) << std::endl;
-		return cachedLocation;
-	}
 
+	const Location *location = NULL;
 	if (!conServer)
 	{
 		std::cout << "ConServer NULL\n";
@@ -334,12 +338,10 @@ const Location* Connection::getLocation() const
 		return NULL;
 	}
 	reqUri = _normalizeUri(reqUri);
-	cachedLocation = _findBestLocation(conServer->directives, reqUri);
-	if (cachedLocation == NULL)
+	location = _findBestLocation(conServer->directives, reqUri);
+	if (location == NULL)
 		std::cout << "_findBestLocation is NULL\n";
-	return cachedLocation;
-
-	
+	return location;
 }
 
 const Location* Connection::_findBestLocation(const std::vector<IDirective*>& directives, const std::string& reqUri) const
@@ -510,6 +512,7 @@ ErrorPage* Connection::getErrorPage() {
 ErrorPage* Connection::getErrorPageForCode(int code) {
 	const Location* location = getLocation();
 	if (location) {
+		std::cout << location->getUri() << std::endl;
 		for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); dit != location->directives.end(); ++dit) {
 			if ((*dit)->getType() == ERROR_PAGE) {
 				ErrorPage* ep = static_cast<ErrorPage*>(*dit);
@@ -655,7 +658,6 @@ void	Connection::epollinProcess(Http* http, Connection* conn, std::vector<Connec
 		if (!req)
 		{
 			req = new Request(fd);
-			cachedLocation = NULL;
 			resetCgiState();
 		}
 		req->appendToBuffer(this, http, buff, bytes);

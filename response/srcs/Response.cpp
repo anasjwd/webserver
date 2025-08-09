@@ -92,11 +92,11 @@ std::string Response::build() {
     if (_headers.find("Server") == _headers.end()) {
         _headers["Server"] = "WebServ/1.1";
     }
-    if (_headers.find("Content-Length") == _headers.end()) {
-            std::ostringstream oss;
-            oss << _fileSize;
-            _headers["Content-Length"] = oss.str();    
-    }
+    // if (_headers.find("Content-Length") == _headers.end()) {
+    //         std::ostringstream oss;
+    //         oss << _fileSize;
+    //         _headers["Content-Length"] = oss.str();    
+    // }
     if (!_filePath.empty()) {
         if (_headers.find("Content-Type") == _headers.end()) {
             _headers["Content-Type"] = "text/plain";

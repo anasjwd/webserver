@@ -76,76 +76,70 @@ std::string stripQuotes(const char* str)
 	return s;
 }
 
-void	Request::treatUploadLocation(Connection* conn)
+void    Request::treatUploadLocation(Connection* conn)
 {
-	std::string rawPath = stripQuotes(conn->uploadLocation.c_str());
+    std::string rawPath = stripQuotes(conn->uploadLocation.c_str());
 
-	std::string tmp;
-	bool slash = false;
-	for (size_t i = 0; i < rawPath.size(); ++i)
-	{
-		if (rawPath[i] == '/')
-		{
-			if (!slash)
-			{
-				tmp += '/';
-				slash = true;
-			}
-		}
-		else
-		{
-			slash = false;
-			tmp += rawPath[i];
-		}
-	}
-	rawPath = tmp;
+    std::string tmp;
+    bool slash = false;
+    for (size_t i = 0; i < rawPath.size(); ++i)
+    {
+        if (rawPath[i] == '/')
+        {
+            if (!slash)
+            {
+                tmp += '/';
+                slash = true;
+            }
+        }
+        else
+        {
+            slash = false;
+            tmp += rawPath[i];
+        }
+    }
+    rawPath = tmp;
 
-	std::string segment;
-	bool skipping = true;
-	std::vector<std::string> parts;
-	std::istringstream iss(rawPath);
+    std::string segment;
+    bool skipping = true;
+    std::vector<std::string> parts;
+    std::istringstream iss(rawPath);
 
-	while (std::getline(iss, segment, '/'))
-	{
-		if (segment.empty()) continue;
-		if (skipping && segment[0] == '.')
-			continue;
-		skipping = false;
-		parts.push_back(segment);
-	}
+    while (std::getline(iss, segment, '/'))
+    {
+        if (segment.empty()) continue;
+        if (skipping && segment[0] == '.')
+            continue;
+        skipping = false;
+        parts.push_back(segment);
+    }
 
-	std::string cleaned;
-	for (size_t i = 0; i < parts.size(); ++i)
-		cleaned += "/" + parts[i];
+    std::string cleaned;
+    for (size_t i = 0; i < parts.size(); ++i)
+        cleaned += "/" + parts[i];
 
-	if (cleaned.empty())
-		cleaned = "/";
+    if (cleaned.empty())
+        cleaned = "/";
 
-	const char* home = std::getenv("HOME");
-	if (!home)
-	{
-		std::cerr << "HOME environment variable not set!" << std::endl;
-		conn->req->setState(false, INTERNAL_SERVER_ERROR);
-		return;
-	}
-	std::string fullPath = std::string(home) + cleaned;
-	conn->uploadLocation = fullPath;
+    std::string fullPath = "/tmp" + cleaned;
+    conn->uploadLocation = fullPath;
 
-	std::string path;
-	for (size_t i = 0; i < parts.size(); ++i)
-	{
-		path += "/" + parts[i];
-		std::string current = std::string(home) + path;
-		if (access(current.c_str(), F_OK) == -1)
-		{
-			if (mkdir(current.c_str(), 0755) == -1)
-			{
-				perror("mkdir");
-				conn->req->setState(false, INTERNAL_SERVER_ERROR);
-				return;
-			}
-		}
-	}
+    std::string path;
+    for (size_t i = 0; i < parts.size(); ++i)
+    {
+        path += "/" + parts[i];
+        std::string current = "/tmp" + path;
+        std::cout << "Checking directory: " << current << std::endl;
+        if (access(current.c_str(), F_OK) == -1)
+        {
+            if (mkdir(current.c_str(), 0755) == -1)
+            {
+                perror("mkdir");
+                conn->req->setState(false, INTERNAL_SERVER_ERROR);
+                return;
+            }
+        }
+    }
 }
 
 
