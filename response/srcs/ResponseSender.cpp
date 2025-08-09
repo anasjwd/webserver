@@ -131,7 +131,7 @@ bool ResponseSender::sendHeaders(Connection* conn, Response* response, int epoll
 
 bool ResponseSender::sendFileBody(Connection* conn, Response* response, int epollFd, std::vector<Connection*>& connections) {
     char fileBuf[EIGHT_KB];
-    
+    std::cout << " *************************body sent\n";
     if (lseek(conn->fileFd, conn->fileSendOffset, SEEK_SET) == -1) {
         close(conn->fileFd);
         conn->fileFd = -1;

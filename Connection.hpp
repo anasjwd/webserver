@@ -1,5 +1,6 @@
 # pragma once
 
+# include <fcntl.h>
 # include "conf/Http.hpp"
 # include "conf/Root.hpp"
 # include "conf/Index.hpp"
@@ -13,7 +14,6 @@
 # include "request/incs/Request.hpp"
 # include "conf/ClientMaxBodySize.hpp"
 # include "response/include/Response.hpp"
-#include <fcntl.h>
 
 class	Connection
 {
@@ -28,6 +28,9 @@ class	Connection
 		time_t			lastActivityTime;
 		time_t			lastTimeoutCheck;
 
+		std::string		uploadLocation;
+		bool			uploadAuthorized;
+
 		bool			closed;
 		int				fileFd;
 		int				fileSendState; // 0: not started, 1: headers sent, 2: sending body, 3: done
@@ -40,17 +43,17 @@ class	Connection
 		std::string		cgiOutput;
 		Response		cgiResponse;
 		int				cgiPid;
-		int				cgiPipeToChild[2];
-		int				cgiPipeFromChild[2];
+		// int				cgiPipeToChild[2];
+		// int				cgiPipeFromChild[2];
+		int				pipefd[2];
 		int				cgiReadState;
 		std::string		cgiHeaders;
 		std::string		cgiBody;
 		time_t			cgiStartTime;
 
-		mutable const Location*	cachedLocation;
-
 		Connection();
 		Connection(int);
+		~Connection();
 
 		bool				isTimedOut() const;
 		bool				isCgiTimedOut() const;
@@ -59,11 +62,10 @@ class	Connection
 		IDirective*			getDirective(DIRTYPE type);
 
 		// Alassiqu:
-		bool				getUpload() const;
+		void				getUpload();
 		bool				checkMaxBodySize();
 		ClientMaxBodySize*	getClientMaxBodySize();
 		LimitExcept*		getLimitExcept() const;
-		char*				getUploadLocation() const;
 
 		// ahanaf
 		Root*				getRoot();

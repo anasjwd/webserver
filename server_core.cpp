@@ -220,7 +220,7 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 	while (it != connections.end())
 	{
 		Connection* conn = *it;
-		if (conn && conn->isTimedOut() && !conn->isCgi)
+		if (conn && !conn->isCgi && conn->isTimedOut())
 		{
 			std::cout << "Connection timeout for fd " << conn->fd << std::endl;
 			if (conn->req)
@@ -262,10 +262,11 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 		if (time(NULL) - lastTimeoutCheck >= 1)
 			checkForTimeouts(connections, ev, epollFd, lastTimeoutCheck);
 
-		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000);
+		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 0);
 		int i = 0;
 		for (; i < numberOfEvents; i++)
 		{
+			std::cout << "((((((((!!!!! Entered the while loop ((((((((!!!!!" << std::endl;
 			if (std::find(sockets.begin(), sockets.end(), events[i].data.fd) != sockets.end())
 			{
 				int clientFd = accept(events[i].data.fd, NULL, NULL);
@@ -296,8 +297,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 
 				if (events[i].events & EPOLLIN)
 				{
-					std::cout << RED << "EPOLLIN\n" << RESET;
-					std::cout << YELLOW << "************************************************************************************************" << RESET <<std::endl;
+					std::cout << RED << "EPOLLIN " << events[i].data.fd << "\n" << RESET;
 					bytes = read(conn->fd, buff, EIGHT_KB);
 					if (bytes <= 0)
 						conn->closeConnection(conn, connections, epollFd);
@@ -305,61 +305,13 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					{
 						if (!conn->req)
 						{
+							std::cout << "Creating new request for fd " << conn->fd << std::endl;
 							conn->req = new Request(conn->fd);
-							conn->cachedLocation = NULL;
 							conn->resetCgiState();
 						}
 						conn->req->appendToBuffer(conn, http, buff, bytes);
-
-							// AHANAF Reset CGI state for new requests 
-							conn->resetCgiState();
-						}
-						conn->req->appendToBuffer(conn, http, buff, bytes);
-						// std::cout << BG_BLACK  << "****************************************************\n";
-						// conn->findServer(http);
-						// std::cout << "findserver called\n";
-						// const Location *locUri = conn->getLocation();
-						// UploadLocation *upload = NULL;
-						// Upload *upload_authorized = NULL;
-						// if (locUri) {
-						// 	for (std::vector<IDirective*>::const_iterator dit = locUri->directives.begin(); dit != locUri->directives.end(); ++dit) {
-						// 		if ((*dit)->getType() == UPLOAD) {
-						// 			upload_authorized = static_cast<Upload*>(*dit);
-						// 		}
-						// 		if ((*dit)->getType() == UPLOAD_LOCATION) {
-						// 			upload = static_cast<UploadLocation*>(*dit);
-						// 		}
-						// 	}
-						// }
-						// if (upload_authorized)
-						// {
-						// 	if (upload_authorized->getState())
-						// 		std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%% " << "ON"   << std::endl;
-						// 	else	
-						// 		std::cout  << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%% " << "OFF"   << std::endl;
-							
-						// }
-						// else 
-						// 	std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%% " << "OFF"   << std::endl;
-
-						// if (upload && upload->getLocation())
-						// 	std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&& " << upload->getLocation()  << std::endl;
-
-						// std::string method = conn->req->getRequestLine().getMethod();
-						// std::vector<std::string> allowed = conn->_getAllowedMethods();
-						// std::cout << method << std::endl;
-						// if (!conn->_isAllowedMethod(method, allowed))
-						// {
-						// 	std::cout   << "not allowed method so without creating file" <<  std::endl;
-						// 	conn->req->setState(false, METHOD_NOT_ALLOWED);
-						// }
-						std::cout << "****************************************************" << RESET << std::endl;
-
-						if (!conn->checkMaxBodySize())
-							conn->req->setState(false, PAYLOAD_TOO_LARGE);
 						if (conn->req->isRequestDone())
 						{
-							std::cout << RED << "Request done with state:" << conn->req->getStatusCode() << RESET << "\n";
 							ev.events = EPOLLOUT;
 							ev.data.fd = conn->fd;
 							epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
@@ -371,8 +323,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					std::cout << "EPOLLOUT event triggered for fd " << conn->fd << std::endl;
 					if (!ResponseSender::handleEpollOut(conn, epollFd, connections)) {
 						conn = NULL;
-					}					std::cout << YELLOW << "************************************************************************************************" << RESET <<std::endl;
-
+					}					
 				}
 				else if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP)
 				{
@@ -406,7 +357,6 @@ int main(int ac, char** av)
 	}
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGINT, sigintHandler);
-	signal(SIGPIPE, SIG_IGN);
 	http = parseConfig(av[1]);
 	if (http == NULL)
 		return ( 1 );

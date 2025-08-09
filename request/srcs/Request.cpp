@@ -1,8 +1,10 @@
+#include <cstdio>
 # include <ctime>
 # include <climits>
 # include <cstddef>
 # include <cstdlib>
 # include <iostream>
+#include <sstream>
 # include "../incs/Request.hpp"
 # include "../../conf/Http.hpp"
 # include "../../Connection.hpp"
@@ -30,118 +32,142 @@ bool	Request::_processBodyHeaders()
 
 	if (!transferEncoding.empty())
 	{
+		std::cout << "||| Process chunked transfer |||\n";
 		_rb.setChunked(_isChunkedTransferEncoding(transferEncoding));
-		if (_rb.isChunked())
-		{
-			if (!_processChunkedTransfer())
-				return false;
-			return true;
-		}
-		return setState(false, BAD_REQUEST);
 	}
 	else if (!contentLengthStr.empty())
 		return _processContentLength();
 	else
-	{
-		std::string method = _rl.getMethod();
-		if (method == "POST")
-			return setState(false, LENGTH_REQUIRED);
-		else if (method == "GET" || method == "DELETE")
-			return setState(true, OK);
-	}
+		return setState(false, LENGTH_REQUIRED);
 
 	return true;
 }
 
 bool	Request::_processContentLength()
 {
+	std::cout << "||| Process content length |||\n";
 	std::string	contentLengthStr = _rh.getHeaderValue("content-length");
-	if (contentLengthStr.empty())
-		return true;
 
 	char* end;
 	unsigned long long contentLength = strtoull(contentLengthStr.c_str(), &end, 10);
 
-	if (*end != '\0' || contentLengthStr.empty())
+	if (*end != '\0')
 		return setState(false, BAD_REQUEST);
 
-	if (contentLength == 0 && (_rl.getMethod() == "GET" || _rl.getMethod() == "DELETE"))
+	if (contentLength == 0)
 		return setState(true, OK);
 
 	_rb.setContentLength(contentLength);
 	return true;
 }
 
-bool	Request::_processChunkedTransfer()
-{
-	std::string	transferEncoding = _rh.getHeaderValue("transfer-encoding");
-	if (transferEncoding.empty())
-		return false;
-
-	_rb.setChunked(_isChunkedTransferEncoding(transferEncoding));
-	if (!_rb.isChunked())
-		return false;
-	return true;
-}
-
 std::string stripQuotes(const char* str)
 {
-	if (!str) return "";
+	if (!str)
+		return "";
 
 	std::string s(str);
 
 	if (s.size() >= 2 && ((s[0] == '"' && s[s.size() - 1] == '"') || (s[0] == '\'' && s[s.size() - 1] == '\'')))
 		s = s.substr(1, s.size() - 2);
 
-	if (s[0] != '/')
-	{
-		s = "/" + s;
-	}
 	std::cout << "stripQuotes: " << s << std::endl;
-	
+
 	return s;
 }
 
-bool	Request::_connectionChecks(Http* http, Connection* conn)
+void    Request::treatUploadLocation(Connection* conn)
+{
+    std::string rawPath = stripQuotes(conn->uploadLocation.c_str());
+
+    std::string tmp;
+    bool slash = false;
+    for (size_t i = 0; i < rawPath.size(); ++i)
+    {
+        if (rawPath[i] == '/')
+        {
+            if (!slash)
+            {
+                tmp += '/';
+                slash = true;
+            }
+        }
+        else
+        {
+            slash = false;
+            tmp += rawPath[i];
+        }
+    }
+    rawPath = tmp;
+
+    std::string segment;
+    bool skipping = true;
+    std::vector<std::string> parts;
+    std::istringstream iss(rawPath);
+
+    while (std::getline(iss, segment, '/'))
+    {
+        if (segment.empty()) continue;
+        if (skipping && segment[0] == '.')
+            continue;
+        skipping = false;
+        parts.push_back(segment);
+    }
+
+    std::string cleaned;
+    for (size_t i = 0; i < parts.size(); ++i)
+        cleaned += "/" + parts[i];
+
+    if (cleaned.empty())
+        cleaned = "/";
+
+    std::string fullPath = "/tmp" + cleaned;
+    conn->uploadLocation = fullPath;
+
+    std::string path;
+    for (size_t i = 0; i < parts.size(); ++i)
+    {
+        path += "/" + parts[i];
+        std::string current = "/tmp" + path;
+        std::cout << "Checking directory: " << current << std::endl;
+        if (access(current.c_str(), F_OK) == -1)
+        {
+            if (mkdir(current.c_str(), 0755) == -1)
+            {
+                perror("mkdir");
+                conn->req->setState(false, INTERNAL_SERVER_ERROR);
+                return;
+            }
+        }
+    }
+}
+
+
+bool	Request::_connectionChecks(Connection* conn)
 {
 	std::cout << "********************** CONNECTION CHECKS ************************" << std::endl;
-	if (!conn->conServer)
-	{
-		std::cout << GREEN << "********************** GETTING SERVER IN CONNECTIONCHECKS ************************" << RESET << std::endl;
-		conn->findServer(http);
-		if (conn->conServer == NULL)
-			std::cout << "************************ Server not found! ************************\n";
-		std::cout << conn->conServer << std::endl;
-		std::string method = _rl.getMethod();
-		std::vector<std::string> allowed = conn->_getAllowedMethods();
 
-		if (!conn->_isAllowedMethod(method, allowed))
-		{
-			std::cout  << BGREEN << "not allowed method so without creating file" << RESET <<  std::endl;
-			return conn->req->setState(false, METHOD_NOT_ALLOWED);
-		}
-		if (conn->getUpload())
-		{
-			std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&& \n";
-			char* c = getcwd(NULL, 0);
-			std::string cwd(c);
-			free(c);
-			std::cout << "cwd >>>>>>>>>>>>>>> " << cwd << " ||||||||||||||||\n";
-			std::string uploadDir = cwd + stripQuotes(conn->getUploadLocation());
-			FileHandler::createDirectory(uploadDir);
-			_rb.create(POST_BODY, uploadDir);
-			_state = BODY;
-		}
-		else
-			return setState(false, FORBIDDEN);
+	std::string method = _rl.getMethod();
+	std::cout << conn->conServer << std::endl;
+	std::vector<std::string> allowed = conn->_getAllowedMethods();
+	if (!conn->_isAllowedMethod(method, allowed))
+	{
+		std::cout  << BGREEN << "not allowed method so without creating file" << RESET <<  std::endl;
+		return conn->req->setState(false, METHOD_NOT_ALLOWED);
 	}
-	else
-		std::cout << "ConServer isn't NULL\n";
+	conn->getUpload();
+	if (conn->uploadAuthorized)
+	{
+		treatUploadLocation(conn);
+		std::cout << "Upload location set to: " << conn->uploadLocation << std::endl;
+		_rb.create(POST_BODY, conn->uploadLocation);
+		_state = BODY;
+	}
 	return true;
 }
 
 
-bool	Request::_validateMethodBodyCompatibility(Http* http, Connection* conn)
+bool	Request::_validateMethodBodyCompatibility(Connection* conn)
 {
 	(void)http;
 	(void)conn;
@@ -149,18 +175,13 @@ bool	Request::_validateMethodBodyCompatibility(Http* http, Connection* conn)
 	bool hasBody = _rb.getContentLength() > 0 || _rb.isChunked();
 	bool hasContentLength = !_rh.getHeaderValue("content-length").empty();
 
-	if (!_connectionChecks(http, conn))
+	if (!_connectionChecks(conn))
 		return false;
-	if (method == "GET" || method == "DELETE")
-		return setState(true, OK);
-	if (!hasContentLength && method == "POST")
-		return setState(false, LENGTH_REQUIRED);
-	
+
 	if (hasBody)
 	{
-		std::cout << "Has body case::::::::::::::::::::" << std::endl;
 		_rb.setExpected();
-		std::cout << "Connection checks passed!\n";
+		std::cout << "||| Body set as expected |||\n";
 	}
 	else if (method == "POST" && hasContentLength)
 	{
@@ -268,13 +289,14 @@ bool	Request::lineSection()
 	if (crlf_pos == std::string::npos)
 		return false;
 
-	std::cout << "Request line: " << _buffer.substr(0, crlf_pos) << std::endl;
+	std::cout << BG_YELLOW << "Request line:\t" << _buffer.substr(0, crlf_pos) << RESET << std::endl;
 	_rl = RequestLine(_buffer.substr(0, crlf_pos));
 	if (!_rl.parse())
 		return setState(false, _rl.getStatusCode());
 
 	_buffer.erase(0, crlf_pos + 2);
 	_state = HEADERS;
+	std::cout << BG_YELLOW << " - TO HEADERS - \n" << RESET;
 	return true;
 }
 
@@ -288,16 +310,29 @@ bool	Request::headerSection(Connection* conn, Http* http)
 	if (headersStr.empty())
 		return setState(false, BAD_REQUEST);
 
-	std::cout << "Request headers:\n" << _buffer.substr(0, end_header) << std::endl;
+	std::cout << BG_YELLOW << "Request headers:\n\t" << _buffer.substr(0, end_header) << RESET << std::endl;
 	_rh = RequestHeaders(headersStr);
 	if (!_rh.parse())
 		return setState(false, _rh.getStatusCode());
 
 	_buffer.erase(0, end_header + 4);
 
-	if (!_processBodyHeaders() || !_validateMethodBodyCompatibility(http, conn))
+	if (!conn->conServer)
+		conn->findServer(http);
+	std::cout << "Server found: " << (conn->conServer ? "Yes" : "No") << std::endl;
+	if (_rl.getMethod() == "GET" || _rl.getMethod() == "DELETE")
 	{
-		std::cout << "Out here with: " << getStatusCode() << "\n";
+		std::cout << BG_YELLOW << "OUT: THAT'S A GET OR DELETE REQUEST" << RESET << std::endl;
+		return setState(true, OK);
+	}
+	if (conn->checkMaxBodySize() == false)
+	{
+		std::cout << BG_YELLOW << "OUT: PAYLOAD TOO LARGE" << RESET << std::endl;
+		return setState(false, PAYLOAD_TOO_LARGE);
+	}
+
+	std::cout << BG_YELLOW << "IN: THAT'S A POST REQUEST" << RESET << std::endl;
+	if (!_processBodyHeaders() || !_validateMethodBodyCompatibility(conn))
 		return false;
 	}
 
@@ -381,6 +416,7 @@ bool	Request::appendToBuffer(Connection* conn, Http* http, const char* data, siz
 				break;
 
 			case BODY:
+				std::cout << BG_YELLOW << "ON BODY SECTION" << RESET << std::endl;
 				if (bodySection())
 					progress = true;
 				break;

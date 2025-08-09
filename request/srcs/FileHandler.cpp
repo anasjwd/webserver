@@ -146,8 +146,6 @@ bool	FileHandler::create(FileType type, std::string uploadDir)
 	{
 		switch (type)
 		{
-			case TEMP_BODY:
-				return _createBodyFile(true, NULL);
 			case POST_BODY:
 				return _createBodyFile(false, uploadDir);
 			default:
