@@ -303,11 +303,6 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 						conn->closeConnection(conn, connections, epollFd);
 					else
 					{
-						if (!conn)
-						{
-							std::cout << "Client is killed!\n";
-							exit(1);
-						}
 						if (!conn->req)
 						{
 							std::cout << "Creating new request for fd " << conn->fd << std::endl;
@@ -317,7 +312,6 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 						conn->req->appendToBuffer(conn, http, buff, bytes);
 						if (conn->req->isRequestDone())
 						{
-							std::cout << BG_YELLOW << "Request is done, processing: " << conn->req->getStatusCode() << "\n" << RESET;
 							ev.events = EPOLLOUT;
 							ev.data.fd = conn->fd;
 							epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
@@ -363,7 +357,6 @@ int main(int ac, char** av)
 	}
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGINT, sigintHandler);
-	// signal(SIGPIPE, SIG_IGN);
 	http = parseConfig(av[1]);
 	if (http == NULL)
 		return ( 1 );

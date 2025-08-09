@@ -169,6 +169,8 @@ bool	Request::_connectionChecks(Connection* conn)
 
 bool	Request::_validateMethodBodyCompatibility(Connection* conn)
 {
+	(void)http;
+	(void)conn;
 	const std::string& method = _rl.getMethod();
 	bool hasBody = _rb.getContentLength() > 0 || _rb.isChunked();
 	bool hasContentLength = !_rh.getHeaderValue("content-length").empty();
@@ -332,6 +334,37 @@ bool	Request::headerSection(Connection* conn, Http* http)
 	std::cout << BG_YELLOW << "IN: THAT'S A POST REQUEST" << RESET << std::endl;
 	if (!_processBodyHeaders() || !_validateMethodBodyCompatibility(conn))
 		return false;
+	}
+
+	// std::cout << "Has body case::::::::::::::::::::" << std::endl;
+	// if (!_connectionChecks(http, conn))
+	// 	return false;
+	if (!conn->conServer)
+	{
+		conn->findServer(http);
+		if (conn->conServer == NULL)
+			std::cout << "************************ Server not found! ************************\n";
+		std::string method = _rl.getMethod();
+		std::vector<std::string> allowed = conn->_getAllowedMethods();
+
+		if (!conn->_isAllowedMethod(method, allowed))
+		{
+			std::cout  << BGREEN << "not allowed method so without creating file" << RESET <<  std::endl;
+			return conn->req->setState(false, METHOD_NOT_ALLOWED);
+		}
+		if (conn->getUpload())
+		{
+			char* uploadDir =  conn->getUploadLocation();
+			_rb.create(POST_BODY, uploadDir);
+			_state = BODY;
+		}
+		else
+			return setState(false, FORBIDDEN);
+	}
+	else
+		std::cout << "ConServer isn't NULL\n";
+	_rb.setExpected();
+	std::cout << "Connection checks passed!\n";
 
 	return true;
 }
