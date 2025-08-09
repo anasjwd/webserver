@@ -76,70 +76,70 @@ std::string stripQuotes(const char* str)
 	return s;
 }
 
-void    Request::treatUploadLocation(Connection* conn)
+void	Request::treatUploadLocation(Connection* conn)
 {
-    std::string rawPath = stripQuotes(conn->uploadLocation.c_str());
+	std::string rawPath = stripQuotes(conn->uploadLocation.c_str());
 
-    std::string tmp;
-    bool slash = false;
-    for (size_t i = 0; i < rawPath.size(); ++i)
-    {
-        if (rawPath[i] == '/')
-        {
-            if (!slash)
-            {
-                tmp += '/';
-                slash = true;
-            }
-        }
-        else
-        {
-            slash = false;
-            tmp += rawPath[i];
-        }
-    }
-    rawPath = tmp;
+	std::string tmp;
+	bool slash = false;
+	for (size_t i = 0; i < rawPath.size(); ++i)
+	{
+		if (rawPath[i] == '/')
+		{
+			if (!slash)
+			{
+				tmp += '/';
+				slash = true;
+			}
+		}
+		else
+		{
+			slash = false;
+			tmp += rawPath[i];
+		}
+	}
+	rawPath = tmp;
 
-    std::string segment;
-    bool skipping = true;
-    std::vector<std::string> parts;
-    std::istringstream iss(rawPath);
+	std::string segment;
+	bool skipping = true;
+	std::vector<std::string> parts;
+	std::istringstream iss(rawPath);
 
-    while (std::getline(iss, segment, '/'))
-    {
-        if (segment.empty()) continue;
-        if (skipping && segment[0] == '.')
-            continue;
-        skipping = false;
-        parts.push_back(segment);
-    }
+	while (std::getline(iss, segment, '/'))
+	{
+		if (segment.empty()) continue;
+		if (skipping && segment[0] == '.')
+			continue;
+		skipping = false;
+		parts.push_back(segment);
+	}
 
-    std::string cleaned;
-    for (size_t i = 0; i < parts.size(); ++i)
-        cleaned += "/" + parts[i];
+	std::string cleaned;
+	for (size_t i = 0; i < parts.size(); ++i)
+		cleaned += "/" + parts[i];
 
-    if (cleaned.empty())
-        cleaned = "/";
+	if (cleaned.empty())
+		cleaned = "/";
 
-    std::string fullPath = "/tmp" + cleaned;
-    conn->uploadLocation = fullPath;
+	std::string fullPath = "/tmp" + cleaned;
+	conn->uploadLocation = fullPath;
 
-    std::string path;
-    for (size_t i = 0; i < parts.size(); ++i)
-    {
-        path += "/" + parts[i];
-        std::string current = "/tmp" + path;
-        std::cout << "Checking directory: " << current << std::endl;
-        if (access(current.c_str(), F_OK) == -1)
-        {
-            if (mkdir(current.c_str(), 0755) == -1)
-            {
-                perror("mkdir");
-                conn->req->setState(false, INTERNAL_SERVER_ERROR);
-                return;
-            }
-        }
-    }
+	std::string path;
+	for (size_t i = 0; i < parts.size(); ++i)
+	{
+		path += "/" + parts[i];
+		std::string current = "/tmp" + path;
+		std::cout << "Checking directory: " << current << std::endl;
+		if (access(current.c_str(), F_OK) == -1)
+		{
+			if (mkdir(current.c_str(), 0755) == -1)
+			{
+				perror("mkdir");
+				conn->req->setState(false, INTERNAL_SERVER_ERROR);
+				return;
+			}
+		}
+	}
 }
 
 
@@ -169,8 +169,6 @@ bool	Request::_connectionChecks(Connection* conn)
 
 bool	Request::_validateMethodBodyCompatibility(Connection* conn)
 {
-	(void)http;
-	(void)conn;
 	const std::string& method = _rl.getMethod();
 	bool hasBody = _rb.getContentLength() > 0 || _rb.isChunked();
 	bool hasContentLength = !_rh.getHeaderValue("content-length").empty();
@@ -334,37 +332,6 @@ bool	Request::headerSection(Connection* conn, Http* http)
 	std::cout << BG_YELLOW << "IN: THAT'S A POST REQUEST" << RESET << std::endl;
 	if (!_processBodyHeaders() || !_validateMethodBodyCompatibility(conn))
 		return false;
-	}
-
-	// std::cout << "Has body case::::::::::::::::::::" << std::endl;
-	// if (!_connectionChecks(http, conn))
-	// 	return false;
-	if (!conn->conServer)
-	{
-		conn->findServer(http);
-		if (conn->conServer == NULL)
-			std::cout << "************************ Server not found! ************************\n";
-		std::string method = _rl.getMethod();
-		std::vector<std::string> allowed = conn->_getAllowedMethods();
-
-		if (!conn->_isAllowedMethod(method, allowed))
-		{
-			std::cout  << BGREEN << "not allowed method so without creating file" << RESET <<  std::endl;
-			return conn->req->setState(false, METHOD_NOT_ALLOWED);
-		}
-		if (conn->getUpload())
-		{
-			char* uploadDir =  conn->getUploadLocation();
-			_rb.create(POST_BODY, uploadDir);
-			_state = BODY;
-		}
-		else
-			return setState(false, FORBIDDEN);
-	}
-	else
-		std::cout << "ConServer isn't NULL\n";
-	_rb.setExpected();
-	std::cout << "Connection checks passed!\n";
 
 	return true;
 }
