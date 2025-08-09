@@ -14,8 +14,6 @@ RequestBody::RequestBody()
 
 RequestBody::~RequestBody()
 {
-	if (_fileHandler.fd() != -1)
-		std::cout << "Body file path: " << _fileHandler.path() << "\n";
 }
 
 bool	RequestBody::_parseChunkSize(const std::string& buf)
@@ -121,11 +119,6 @@ bool	RequestBody::create(FileType type, std::string uploadDir)
 bool	RequestBody::isChunked() const
 {
 	return _isChunked;
-}
-
-bool	RequestBody::isExpected() const
-{
-	return _expected;
 }
 
 bool	RequestBody::isCompleted() const

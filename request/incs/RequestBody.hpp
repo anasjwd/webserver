@@ -31,7 +31,6 @@ class	RequestBody
 		bool						create(FileType, std::string);
 
 		bool						isChunked() const;
-		bool						isExpected() const;
 		bool						isCompleted() const;
 
 		void						setExpected();

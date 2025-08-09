@@ -7,7 +7,7 @@
 #include <string>
 
 Response ReturnHandler::handle(Connection* conn) {
-    std::cout << RED <<  "return handler" << RESET << std::endl;
+    // << RED <<  "return handler" << RESET << std::endl;
     Return* ret = conn ? conn->getReturnDirective() : NULL;
     if (!ret) return Response();
     const Location* loc = conn->getLocation();
@@ -31,7 +31,7 @@ Response ReturnHandler::handle(Connection* conn) {
             urlStr = urlStr.substr(1, urlStr.size() - 2);
         if (code >= 300 && code < 400 && url && url[0]) {
            bool isAbsoluteUrl = urlStr.find("http://") == 0 || urlStr.find("https://") == 0;
-           std::cout <<  CYAN << isAbsoluteUrl << " " << urlStr << RESET  <<  std::endl;
+           // <<  CYAN << isAbsoluteUrl << " " << urlStr << RESET  <<  std::endl;
             if (!urlStr.empty() && !isAbsoluteUrl && urlStr[0] != '/')
                 urlStr = "/" + urlStr;
 
@@ -51,7 +51,7 @@ Response ReturnHandler::handle(Connection* conn) {
             }
             return ErrorResponse::createErrorResponseWithMapping(conn, code, url && url[0] ? std::string(url) : "");
         } else {
-            std::cout << url << " " << url[0] << std::endl;
+            // << url << " " << url[0] << std::endl;
             std::string res =  Response::createErrorResponse(code,  url);
             send(conn->fd, res.c_str(), res.size(), MSG_NOSIGNAL);
             conn->fileSendState = 3;

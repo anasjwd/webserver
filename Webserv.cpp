@@ -75,7 +75,7 @@ int main() {
     epoll_event events[MAX_EVENTS];
     std::map<int, ClientState> clients;
 
-    std::cout << "Server listening on port " << PORT << "...\n";
+    // << "Server listening on port " << PORT << "...\n";
 
     while (true) {
         int n = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
@@ -113,11 +113,11 @@ int main() {
                 new_client.lastActivity = time(NULL);
                 clients.insert(std::make_pair(client_fd, new_client));
                 
-                std::cout << "New connection: " << client_fd << std::endl;
+                // << "New connection: " << client_fd << std::endl;
             } else {
                 time_t now = time(NULL);
                 if (now - clients[fd].lastActivity > REQUEST_TIMEOUT) {
-                    std::cout << "Connection " << fd << " timed out\n";
+                    // << "Connection " << fd << " timed out\n";
                     close(fd);
                     clients.erase(fd);
                     continue;
@@ -130,7 +130,7 @@ int main() {
 
                 if (bytesRead <= 0) {
                     if (bytesRead == 0) {
-                        std::cout << "Connection " << fd << " closed by client\n";
+                        // << "Connection " << fd << " closed by client\n";
                     } else {
                         perror("recv");
                     }
@@ -143,8 +143,8 @@ int main() {
                 bool parsed = clients[fd].request.parseFromBuffer(clients[fd].buffer);
 
                 if (parsed) {
-                    std::cout << "\n--- Received Request ---\n";
-                    std::cout << clients[fd].request << std::endl;
+                    // << "\n--- Received Request ---\n";
+                    // << clients[fd].request << std::endl;
                     
                     clients[fd].request.sendResponse(fd);
                     close(fd);
@@ -155,8 +155,8 @@ int main() {
                     close(fd);
                     clients.erase(fd);
                 } else {
-                    std::cout << "Didn't enter here!\n";
-                    std::cout << "Request:\n" 
+                    // << "Didn't enter here!\n";
+                    // << "Request:\n" 
                         << clients[fd].request << std::endl;
                 }
             }

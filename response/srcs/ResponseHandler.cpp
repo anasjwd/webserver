@@ -80,15 +80,15 @@ std::map<int, std::string> ResponseHandler::_getErrorPages(Connection* conn) {
 
 /* std::string ResponseHandler::_buildFilePath(const std::string& uri, const std::string& root, const Location* location) {
     std::string path = root;
-    std::cout << BGREEN << std::endl;
-    std::cout << "root start -> " << path << std::endl;
+    // << BGREEN << std::endl;
+    // << "root start -> " << path << std::endl;
     //example www/////// ---> www
     while (!path.empty() && path[path.length() - 1] == '/')
     {
-        std::cout << "root loop ->" << path << std::endl;
+        // << "root loop ->" << path << std::endl;
         path.erase(path.length() - 1);
     }
-    std::cout << "root ends ->" << path << std::endl;
+    // << "root ends ->" << path << std::endl;
 
     std::string cleanUri = uri;
     if (location && location->getUri()) {
@@ -106,8 +106,8 @@ std::map<int, std::string> ResponseHandler::_getErrorPages(Connection* conn) {
         std::string locationPrefix = "/" + locUri;
 
     //     std::string prefix = "/" + locUri;
-    //     std::cout << "clean Uri --> " <<  cleanUri << std::endl;
-    //     std::cout << "prefix --> " <<  prefix << std::endl;
+    //     // << "clean Uri --> " <<  cleanUri << std::endl;
+    //     // << "prefix --> " <<  prefix << std::endl;
     //     if (cleanUri.find(prefix) == 0) {
     //         cleanUri = cleanUri.substr(prefix.length());
     //         if (!cleanUri.empty() && cleanUri[0] == '/') cleanUri = cleanUri.substr(1);
@@ -146,7 +146,7 @@ std::map<int, std::string> ResponseHandler::_getErrorPages(Connection* conn) {
         path += "/" + cleanUri;
     }
     
-    std::cout << RESET << std::endl;
+    // << RESET << std::endl;
 
     return path;
 }
@@ -231,8 +231,8 @@ std::string path = root;
             locationPrefix.erase(locationPrefix.length() - 1);
         }
         
-        std::cout << BBLUE << "Location prefix: '" << locationPrefix << "'" << RESET << std::endl;
-        std::cout << BBLUE << "Original URI: '" << cleanUri << "'" << RESET << std::endl;
+        // << BBLUE << "Location prefix: '" << locationPrefix << "'" << RESET << std::endl;
+        // << BBLUE << "Original URI: '" << cleanUri << "'" << RESET << std::endl;
         
         // Check if URI starts with location prefix
         if (cleanUri.length() >= locationPrefix.length() && 
@@ -242,7 +242,7 @@ std::string path = root;
             if (cleanUri.length() == locationPrefix.length()) {
                 // Exact match (e.g., URI="/kapouet", location="/kapouet")
                 // Result should be just the root path
-                std::cout << BBLUE << "Exact location match, using root: '" << path << "'" << RESET << std::endl;
+                // << BBLUE << "Exact location match, using root: '" << path << "'" << RESET << std::endl;
                 return path;
             }
             
@@ -252,7 +252,7 @@ std::string path = root;
                 // Strip the location prefix and the following '/'
                 std::string remainder = cleanUri.substr(locationPrefix.length() + 1);
                 
-                std::cout << BBLUE << "Stripped remainder: '" << remainder << "'" << RESET << std::endl;
+                // << BBLUE << "Stripped remainder: '" << remainder << "'" << RESET << std::endl;
                 
                 // Clean any additional leading slashes
                 while (!remainder.empty() && remainder[0] == '/') {
@@ -264,7 +264,7 @@ std::string path = root;
                     path += "/" + remainder;
                 }
                 
-                std::cout << BBLUE << "Final path after location processing: '" << path << "'" << RESET << std::endl;
+                // << BBLUE << "Final path after location processing: '" << path << "'" << RESET << std::endl;
                 return path;
             }
             // If nextChar is not '/', it might be a different resource
@@ -283,7 +283,7 @@ std::string path = root;
         path += "/" + cleanUri;
     }
     
-    std::cout << BBLUE << "Default path handling result: '" << path << "'" << RESET << std::endl;
+    // << BBLUE << "Default path handling result: '" << path << "'" << RESET << std::endl;
     return path;
 }
 std::string ResponseHandler::_getMimeType(const std::string& path) {
@@ -453,7 +453,7 @@ std::string ResponseHandler::_getRootPath(Connection* conn) {
 
 Response ResponseHandler::handleRequest(Connection* conn) 
 {
-    std::cout << RED  << "in handle request "<< RESET << std::endl;
+    // << RED  << "in handle request "<< RESET << std::endl;
     const Request& request = *conn->req;
     if (conn->req->getStatusCode() != OK)
     {
@@ -462,17 +462,17 @@ Response ResponseHandler::handleRequest(Connection* conn)
         return ErrorResponse::createErrorResponseWithMapping(conn,conn->req->getStatusCode() );
     }
     std::string method = request.getRequestLine().getMethod();
-    std::cout << method << std::endl;
+    // << method << std::endl;
 
     std::vector<std::string> allowed = conn->_getAllowedMethods();
-    for (std::vector<std::string>::const_iterator it = allowed.begin(); it != allowed.end(); it++)
-        std::cout <<BGREEN << (*it) << RESET << std::endl;
+    // for (std::vector<std::string>::const_iterator it = allowed.begin(); it != allowed.end(); it++)
+        // <<BGREEN << (*it) << RESET << std::endl;
 
     if (!conn->_isAllowedMethod(method, allowed))
         return ErrorResponse::createMethodNotAllowedResponse(conn ,allowed);
     const Location* location = conn->getLocation();
-    if (location)
-        std::cout << BG_GREEN << "location uri " << location->getUri() << RESET << std::endl;
+    // if (location)
+        // << BG_GREEN << "location uri " << location->getUri() << RESET << std::endl;
     Return* ret = conn->getReturnDirective();
     if (ret) return ReturnHandler::handle(conn);
     std::string root;
@@ -489,12 +489,12 @@ Response ResponseHandler::handleRequest(Connection* conn)
         root = std::string(locRoot->getPath());
     else
         root = _getRootPath(conn);
-    std::cout << CYAN << "methods " << method <<  RESET << std::endl;
-    std::cout << CYAN << "root " << root <<  RESET << std::endl;
+    // << CYAN << "methods " << method <<  RESET << std::endl;
+    // << CYAN << "root " << root <<  RESET << std::endl;
     std::string uri = conn->_normalizeUri(request.getRequestLine().getUri());
-    std::cout << CYAN << "After nomalize uri " << uri << RESET << std::endl;
+    // << CYAN << "After nomalize uri " << uri << RESET << std::endl;
     std::string filePath = _buildFilePath(uri, root, location);
-    std::cout << CYAN << "filepath " <<  filePath <<  RESET << std::endl;
+    // << CYAN << "filepath " <<  filePath <<  RESET << std::endl;
     
     struct stat fileStat;
     bool pathExists = (stat(filePath.c_str(), &fileStat) == 0);
@@ -505,7 +505,7 @@ Response ResponseHandler::handleRequest(Connection* conn)
     if (location && location->getUri() && location->getUri()[0] == '.' && !isDir) {   
           
         if (conn->cgiExecuted == false) {
-            std::cout << YELLOW << "Executing CGI..." << RESET << std::endl;
+            // << YELLOW << "Executing CGI..." << RESET << std::endl;
             conn->isCgi = true;
             conn->cgiStartTime = time(NULL);
             return CgiHandler::executeCgi(conn, filePath);
@@ -513,23 +513,23 @@ Response ResponseHandler::handleRequest(Connection* conn)
     }
     
     if (method == "GET") {
-        std::cout << CYAN << "GET request for filepath: " << filePath << RESET << std::endl;
+        // << CYAN << "GET request for filepath: " << filePath << RESET << std::endl;
         
         
-        std::cout << CYAN << "Path exists: " << (pathExists ? "YES" : "NO") 
-                << ", Is dir: " << (isDir ? "YES" : "NO") 
-                << ", Is file: " << (isFile ? "YES" : "NO") << RESET << std::endl;
+        // << CYAN << "Path exists: " << (pathExists ? "YES" : "NO") 
+                // << ", Is dir: " << (isDir ? "YES" : "NO") 
+                // << ", Is file: " << (isFile ? "YES" : "NO") << RESET << std::endl;
         
         // Case 1: Direct file request
         if (isFile) {
-            std::cout << BGREEN << "Serving file directly: " << filePath << RESET << std::endl;
+            // << BGREEN << "Serving file directly: " << filePath << RESET << std::endl;
             return FileResponse::serve(filePath, _getMimeType(filePath), 200);
         }
         
         // Case 2: Directory or location root - look for index files
         if (isDir) {
             std::vector<std::string> indexFiles = _getIndexFiles(conn);
-            std::cout << BYELLOW << "Looking for index files..." << RESET << std::endl;
+            // << BYELLOW << "Looking for index files..." << RESET << std::endl;
             
             std::string searchDir = filePath;
             
@@ -549,7 +549,7 @@ Response ResponseHandler::handleRequest(Connection* conn)
                 }
                 altPath += locationName;
                 
-                std::cout << BYELLOW << "Trying alternative path: " << altPath << RESET << std::endl;
+                // << BYELLOW << "Trying alternative path: " << altPath << RESET << std::endl;
                 
                 if (stat(altPath.c_str(), &fileStat) == 0 && S_ISDIR(fileStat.st_mode)) {
                     searchDir = altPath;
@@ -565,10 +565,10 @@ Response ResponseHandler::handleRequest(Connection* conn)
                     }
                     indexPath += indexFiles[i];
                     
-                    std::cout << BYELLOW << "Trying index file: " << indexPath << RESET << std::endl;
+                    // << BYELLOW << "Trying index file: " << indexPath << RESET << std::endl;
                     
                     if (stat(indexPath.c_str(), &fileStat) == 0 && S_ISREG(fileStat.st_mode)) {
-                        std::cout << BGREEN << "Found index file: " << indexPath << RESET << std::endl;
+                        // << BGREEN << "Found index file: " << indexPath << RESET << std::endl;
                         return FileResponse::serve(indexPath, _getMimeType(indexPath), 200);
                     }
                 }
@@ -595,7 +595,7 @@ Response ResponseHandler::handleRequest(Connection* conn)
         }
         
         // Case 3: File/directory not found
-        std::cout << BRED << "Path not found: " << filePath << RESET << std::endl;
+        // << BRED << "Path not found: " << filePath << RESET << std::endl;
         return ErrorResponse::createNotFoundResponse(conn);
     }
     else if (method == "POST")
