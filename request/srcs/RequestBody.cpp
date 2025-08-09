@@ -101,24 +101,22 @@ void	RequestBody::clear()
 bool	RequestBody::create(FileType type, std::string uploadDir)
 {
 	if (_fileHandler.fd() != -1)
-	{
-		std::cerr << "Temporary file already exists, cannot create a new one\n";
 		return setState(false, INTERNAL_SERVER_ERROR);
-	}
 
 	if (!_fileHandler.create(type, uploadDir))
-	{
-		std::cerr << "Failed to create temporary file for request body\n";
 		return setState(false, INTERNAL_SERVER_ERROR);
-	}
 
-	std::cout << "Temporary file created at: " << _fileHandler.path() << "\n";
 	return true;
 }
 
 bool	RequestBody::isChunked() const
 {
 	return _isChunked;
+}
+
+bool	RequestBody::isExpected() const
+{
+	return _expected;
 }
 
 bool	RequestBody::isCompleted() const
@@ -180,25 +178,28 @@ size_t	RequestBody::getBytesReceived() const
 
 bool	RequestBody::receiveData(const char* data, size_t len)
 {
-	std::cout << "RECEIVEDATA CALLED!!!!!1\n";
 	if (!_expected || _isCompleted || !data || len == 0)
 		return false;
 
 	if (_isChunked)
 		return _processChunkData(data, len);
 
-	if (_contentLength != 0 && _bytesReceived + len >= _contentLength)
+	size_t remaining = _contentLength - _bytesReceived;
+	if (len > remaining)
 	{
-		len = _contentLength - _bytesReceived;
+		if (_fileHandler.write(data, remaining) == -1)
+			return setState(false, INTERNAL_SERVER_ERROR);
+		_bytesReceived += remaining;
 		_isCompleted = true;
 	}
-	if (_fileHandler.write(data, len) == -1)
+	else
 	{
-		std::cout << "Failing of write here!\n";
-		return setState(false, INTERNAL_SERVER_ERROR);
+		if (_fileHandler.write(data, len) == -1)
+			return setState(false, INTERNAL_SERVER_ERROR);
+		_bytesReceived += len;
+		if (_bytesReceived == _contentLength)
+			_isCompleted = true;
 	}
 
-	_bytesReceived += len;
-	std::cout << "BACK FROM RECEIVED DATA.\n";
 	return true;
 }
