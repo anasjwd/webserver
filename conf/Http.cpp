@@ -28,9 +28,14 @@ bool Http::validate(void)
 		}
 		if (j == 8)
 		{
-			std::cerr << "Error: Invalid directive inside of http block\n";
 			return ( false );
 		}
 	}
 	return ( true );
+	/*for (unsigned int i = 0; i < size; i++) {
+		if (directives[i]->getType() == SERVER) {
+			return ( true );
+		}
+	}
+	return ( false );*/
 }

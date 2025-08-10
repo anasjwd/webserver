@@ -161,8 +161,8 @@ void addUniqueListen(std::map<IpPortKey, int>& sockAddr, const char* host, int p
 			}
 			else
 				++it;
-			sockAddr[wildcard] = NONESSENTIAL;
 		}
+		sockAddr[wildcard] = NONESSENTIAL;
 	}
 	else
 	{
@@ -179,6 +179,7 @@ void getSockAddr(Http* http, std::map<IpPortKey, int>& sockAddr)
 	Server* serverHolder;
 	Listen* listenHolder;
 	unsigned int serverSize;
+	bool listenPresent = false;
 
 	while (idx < size)
 	{
@@ -193,8 +194,16 @@ void getSockAddr(Http* http, std::map<IpPortKey, int>& sockAddr)
 				{
 					listenHolder = dynamic_cast<Listen*>(serverHolder->directives[jdx]);
 					addUniqueListen(sockAddr, listenHolder->getHost(), listenHolder->getPort());
+					std::cout << "host: " << listenHolder->getHost() << std::endl;
+					std::cout << "port: " << listenHolder->getPort() << std::endl;
+					listenPresent = true;
 				}
 				++jdx;
+			}
+			if (listenPresent == false) {
+				addUniqueListen(sockAddr, "0.0.0.0", 8080);
+			} else {
+				listenPresent = false;
 			}
 		}
 		++idx;
@@ -367,6 +376,13 @@ int main(int ac, char** av)
 		close(epollFd);
 		delete http;
 		return ( 1 );
+	}
+	std::map<IpPortKey, int>::iterator it;
+	std::cout << "added IP/Port: \n";
+	for (it = sockAddr.begin(); it != sockAddr.end(); ++it)
+	{
+		std::cout << "host: " << it->first.first << std::endl;
+		std::cout << "port: " << it->first.second << std::endl;
 	}
 	serverLoop(http, sockets, epollFd);
 	closeSockets(sockets);
