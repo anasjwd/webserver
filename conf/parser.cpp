@@ -36,6 +36,7 @@ Http* parser(std::vector<t_token*>& tokens)
 	}
 	if (http->validate() == false)
 	{
+		std::cerr << "Error: Invalid content inside of global block\n";
 		delete http;
 		return ( NULL );
 	}

@@ -41,7 +41,7 @@ IDirective* parseServerBlock(
 	if (server->validate() == false)
 	{
 		delete server;
-		throw DirectiveException("invalid directive inside of server block");
+		throw DirectiveException("invalid content inside of server block");
 	}
 	return ( server );
 }
