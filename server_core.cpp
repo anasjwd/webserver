@@ -311,7 +311,8 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 							conn->req = new Request(conn->fd);
 							conn->resetCgiState();
 						}
-						conn->req->appendToBuffer(conn, http, buff, bytes);
+						if (conn->req->appendToBuffer(conn, http, buff, bytes) )
+						
 						if (conn->req->isRequestDone())
 						{
 							std::cerr << "Request parsing done with: " << conn->req->getStatusCode() << "\n";

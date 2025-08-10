@@ -157,21 +157,21 @@ void CgiHandler::waitCgi(Connection* conn) {
         return;
     }
 
-    time_t currentTime = time(NULL);
-    if (currentTime - conn->cgiStartTime > CGI_TIMEOUT) {
-        // << "[CGI] Timeout for process " << conn->cgiPid << " on fd " << conn->fd << std::endl;
-        if (conn->cgiPid > 0) {
-            kill(conn->cgiPid, SIGTERM);
-            usleep(100000);
-            kill(conn->cgiPid, SIGKILL);
-        }
-        conn->cgiCompleted = true;
-        if (conn->pipefd[0] != -1) {
-            close(conn->pipefd[0]);
-            conn->pipefd[0] = -1;
-        }
-        return;
-    }
+    // time_t currentTime = time(NULL);
+    // if (currentTime - conn->cgiStartTime > CGI_TIMEOUT) {
+    //     // << "[CGI] Timeout for process " << conn->cgiPid << " on fd " << conn->fd << std::endl;
+    //     if (conn->cgiPid > 0) {
+    //         kill(conn->cgiPid, SIGTERM);
+    //         usleep(100000);
+    //         kill(conn->cgiPid, SIGKILL);
+    //     }
+    //     conn->cgiCompleted = true;
+    //     if (conn->pipefd[0] != -1) {
+    //         close(conn->pipefd[0]);
+    //         conn->pipefd[0] = -1;
+    //     }
+    //     return;
+    // }
 
     int status;
     pid_t result = waitpid(conn->cgiPid, &status, WNOHANG);
