@@ -35,24 +35,28 @@ Response CgiHandler::executeCgi(Connection* conn, const std::string& scriptPath)
     
     struct stat fileStat;
     if (stat(scriptPath.c_str(), &fileStat) != 0) {
-        std::cout << RED << "file not opened" << RESET << std::endl;
+        std::cerr << RED << "file not opened 1" << scriptPath << RESET << std::endl;
         return ErrorResponse::createNotFoundResponse(conn);
     }
     if (!S_ISREG(fileStat.st_mode)) {
-        std::cout << RED << "file not a regular file" << RESET << std::endl;
+        // << RED << "file not a regular file" << RESET << std::endl;
         return ErrorResponse::createForbiddenResponse(conn);
     }
     if (access(scriptPath.c_str(), R_OK) != 0) {
-        std::cout << RED << "file not readable" << RESET << std::endl;
+        // << RED << "file not readable" << RESET << std::endl;
         return ErrorResponse::createForbiddenResponse(conn);
     }
     
     size_t dotPos = scriptPath.rfind('.');
     if (dotPos == std::string::npos) {
+        std::cerr << RED << "file not opened 2" << RESET << std::endl;
+
         return ErrorResponse::createNotFoundResponse(conn);
     }
     std::string extension = scriptPath.substr(dotPos);
     if (cgiInterpreters.find(extension) == cgiInterpreters.end()) {
+        std::cerr << RED << "file not opened 3" << RESET << std::endl;
+
         return ErrorResponse::createNotFoundResponse(conn);
     }
     
@@ -142,7 +146,7 @@ Response CgiHandler::executeCgi(Connection* conn, const std::string& scriptPath)
 }
 
 void CgiHandler::writePostDataToCgi(Connection* conn) {
-    std::cout << "[CGI] Writing POST data to CGI process " << conn->cgiPid << " on fd " << conn->fd << std::endl;
+    // << "[CGI] Writing POST data to CGI process " << conn->cgiPid << " on fd " << conn->fd << std::endl;
 
     if (!conn->req || conn->req->getRequestLine().getMethod() != "POST")
         return;
@@ -155,7 +159,7 @@ void CgiHandler::waitCgi(Connection* conn) {
 
     time_t currentTime = time(NULL);
     if (currentTime - conn->cgiStartTime > CGI_TIMEOUT) {
-        std::cout << "[CGI] Timeout for process " << conn->cgiPid << " on fd " << conn->fd << std::endl;
+        // << "[CGI] Timeout for process " << conn->cgiPid << " on fd " << conn->fd << std::endl;
         if (conn->cgiPid > 0) {
             kill(conn->cgiPid, SIGTERM);
             usleep(100000);
@@ -172,14 +176,14 @@ void CgiHandler::waitCgi(Connection* conn) {
     int status;
     pid_t result = waitpid(conn->cgiPid, &status, WNOHANG);
     if (result > 0) {
-        std::cout << "[CGI] Process " << conn->cgiPid << " finished with status " << status << std::endl;
+        // << "[CGI] Process " << conn->cgiPid << " finished with status " << status << std::endl;
         conn->cgiCompleted = true;
         if (conn->pipefd[0] != -1) {
             close(conn->pipefd[0]);
             conn->pipefd[0] = -1;
         }
     } else if (result == -1) {
-        std::cout << "[CGI] waitpid error for process " << conn->cgiPid << std::endl;
+        // << "[CGI] waitpid error for process " << conn->cgiPid << std::endl;
         conn->cgiCompleted = true;
         if (conn->pipefd[0] != -1) {
             close(conn->pipefd[0]);
@@ -200,8 +204,8 @@ void CgiHandler::readCgiOutput(Connection* conn) {
     if (bytesRead > 0) {
         conn->cgiOutput.append(buffer, bytesRead);
 
-        std::cout << "[CGI] Read " << bytesRead << " bytes (total: "
-                  << conn->cgiOutput.size() << ")\n";
+        // << "[CGI] Read " << bytesRead << " bytes (total: "
+                //   << conn->cgiOutput.size() << ")\n";
 
         if (conn->cgiReadState == 0) {
             size_t headerEnd = conn->cgiOutput.find("\r\n\r\n");
@@ -214,14 +218,14 @@ void CgiHandler::readCgiOutput(Connection* conn) {
                 conn->cgiHeaders = conn->cgiOutput.substr(0, headerEnd);
                 conn->cgiBody = conn->cgiOutput.substr(headerEnd + (isCRLF ? 4 : 2));
                 conn->cgiReadState = 1;
-                std::cout << "[CGI] Parsed headers (" << conn->cgiHeaders.length()
-                          << ") and body (" << conn->cgiBody.length() << ")\n";
+                // << "[CGI] Parsed headers (" << conn->cgiHeaders.length()
+                        //   << ") and body (" << conn->cgiBody.length() << ")\n";
             }
         }
     }
     else if (bytesRead == 0) {
         // EOF
-        std::cout << "[CGI] EOF from process " << conn->cgiPid << "\n";
+        // << "[CGI] EOF from process " << conn->cgiPid << "\n";
         close(conn->pipefd[0]);
         conn->pipefd[0] = -1;
         conn->cgiCompleted = true;
@@ -245,9 +249,9 @@ Response CgiHandler::returnCgiResponse(Connection* conn) {
         return Response(200);
     }
     
-    std::cout << "[CGI] Preparing response - output length: " << conn->cgiOutput.length() 
-              << ", headers length: " << conn->cgiHeaders.length() 
-              << ", body length: " << conn->cgiBody.length() << std::endl;
+    // << "[CGI] Preparing response - output length: " << conn->cgiOutput.length() 
+            //   << ", headers length: " << conn->cgiHeaders.length() 
+            //   << ", body length: " << conn->cgiBody.length() << std::endl;
     
     std::ostringstream tempFileName;
     tempFileName << "/tmp/cgi_output_" << conn->fd << "_" << time(NULL);
@@ -317,13 +321,13 @@ Response CgiHandler::returnCgiResponse(Connection* conn) {
             tempFile << responseBody;
             tempFile.close();
             conn->cgiResponse.setFileBody(tempFilePath);
-            std::cout << "[CGI] Wrote " << responseBody.length() << " bytes to " << tempFilePath << std::endl;
+            // << "[CGI] Wrote " << responseBody.length() << " bytes to " << tempFilePath << std::endl;
         } else {
-            std::cout << "[CGI] Error: Could not open temp file " << tempFilePath << std::endl;
+            // << "[CGI] Error: Could not open temp file " << tempFilePath << std::endl;
             return ErrorResponse::createInternalErrorResponse(conn);
         }
     } else {
-        std::cout << "[CGI] Warning: Empty response body" << std::endl;
+        // << "[CGI] Warning: Empty response body" << std::endl;
         // Create empty file for consistency
         std::ofstream tempFile(tempFilePath.c_str());
         tempFile.close();

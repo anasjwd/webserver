@@ -19,7 +19,7 @@ FileHandler::~FileHandler()
 	close();
 	if (_isTemp)
 	{
-		std::cout << BBLUE << "Removing temporary file: " << _path << "\n" << RESET;
+		// << BBLUE << "Removing temporary file: " << _path << "\n" << RESET;
 		remove();
 	}
 }
@@ -28,24 +28,24 @@ bool	FileHandler::_createBodyFile(bool isTemp, std::string uploadDir)
 {
 	char pathTemplate[PATH_MAX];
 
-	std::cout << "Body file to be created, isTmp: " << isTemp << ", uploadDir: " << (uploadDir == "" ? "NULL": uploadDir) << "\n";
+	// << "Body file to be created, isTmp: " << isTemp << ", uploadDir: " << (uploadDir == "" ? "NULL": uploadDir) << "\n";
 
 	if (uploadDir != "" && !exists(uploadDir) && !createDirectory(uploadDir))
 	{
-		std::cout << "Directory wasn't created!\n";
+		// << "Directory wasn't created!\n";
 		return false;
 	}
-	if (uploadDir == "")
-		std::cout << "upload dir is NULL\n";
-	else
-		std::cout << "Directory was created!\n";
+	// if (uploadDir == "")
+		// << "upload dir is NULL\n";
+	// else
+		// << "Directory was created!\n";
 
 	std::snprintf(pathTemplate, sizeof(pathTemplate), "%s/webserv_request_body_XXXXXX", uploadDir != "" ? uploadDir.c_str() : "/tmp");
 
 	_fd = mkstemp(pathTemplate);
 	if (_fd == -1)
 	{
-		std::cout << "Fail: mkstemp\n";
+		// << "Fail: mkstemp\n";
 		return false;
 	}
 	
@@ -112,12 +112,12 @@ ssize_t	FileHandler::write(const char* data, size_t size)
 {
 	if (!_isOpen)
 	{
-		std::cout << "Filehandler::write fail: file not open!\n";
+		// << "Filehandler::write fail: file not open!\n";
 		return -1;
 	}
 	if (_fd == -1)
 	{
-		std::cout << "Filehandler::fd: -1!\n";
+		// << "Filehandler::fd: -1!\n";
 		return _fd;
 	}
 
@@ -128,7 +128,7 @@ ssize_t	FileHandler::write(const char* data, size_t size)
 		if (_offset > _size)
 			_size = _offset;
 	}	
-	std::cout << "Filehandler::write size:" << written << "\n";
+	// << "Filehandler::write size:" << written << "\n";
 	return written;
 }
 
@@ -137,11 +137,11 @@ bool	FileHandler::create(FileType type, std::string uploadDir)
 	if (_isOpen)
 		close();
 
-	std::cout << "Creating file: " << type << ", expected 1;\n";
-	if (uploadDir != "")
-		std::cout << "UploadDir is: " << uploadDir << "\n";
-	else
-		std::cout << "UploadDir is: NULL\n";
+	// << "Creating file: " << type << ", expected 1;\n";
+	// if (uploadDir != "")
+		// << "UploadDir is: " << uploadDir << "\n";
+	// else
+		// << "UploadDir is: NULL\n";
 	try
 	{
 		switch (type)

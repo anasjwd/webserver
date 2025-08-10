@@ -141,7 +141,7 @@ void Response::setFileSize(size_t size) {
 
 Response Response::createRedirectResponse(int statusCode, const std::string& location) {
     Response response(statusCode);
-    std::cout << GREEN << location << RESET << std::endl;
+    // << GREEN << location << RESET << std::endl;
     response.addHeader("Location", location);
     return response;
 }

@@ -2,6 +2,7 @@
 # include <map>
 # include <ctime>
 # include <string>
+#include <sys/wait.h>
 # include <vector>
 # include <fcntl.h>
 # include <sstream>
@@ -22,11 +23,8 @@
 # include <netinet/tcp.h>
 # include <sys/sendfile.h>
 # include "Connection.hpp"
-#include "conf/Location.hpp"
 # include "conf/Server.hpp"
 # include "conf/IDirective.hpp"
-#include "conf/Upload.hpp"
-#include "conf/UploadLocation.hpp"
 # include "conf/cfg_parser.hpp"
 # include "request/incs/Defines.hpp"
 # include "request/incs/Request.hpp"
@@ -38,7 +36,7 @@
 # define	NONESSENTIAL	101
 # define	MAX_EVENTS		512
 # define	BACKLOG			511
-# define	EIGHT_KB		65536
+# define	EIGHT_KB		8192
 
 /*
 	TODO:
@@ -122,7 +120,7 @@ int createListeningSocket(const char* host, unsigned int port, int epfd)
 		return ( -1 );
 	}
 
-	std::cout << "Server listening on [ " << host << ":" << port << " ]\n";
+	// << "Server listening on [ " << host << ":" << port << " ]\n";
 	freeaddrinfo(res);
 	return (sockfd);
 }
@@ -222,25 +220,31 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 		Connection* conn = *it;
 		if (conn && !conn->isCgi && conn->isTimedOut())
 		{
-			std::cout << "Connection timeout for fd " << conn->fd << std::endl;
 			if (conn->req)
 				conn->req->setState(false, REQUEST_TIMEOUT);
 			epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, &ev);
-			std::cout << "Closing connection fd " << conn->fd << std::endl;
 			conn->closeConnection(conn, connections, epollFd);
+			it = connections.begin();
 		}
 		else if (conn && conn->isCgi && conn->isCgiTimedOut())
 		{
-			std::cout << "Connection cgi timeout for fd " << conn->fd << std::endl;
 			std::string res =  Response::createErrorResponse(504, "CGI TIMROUT");
 			send(conn->fd, res.c_str(), res.size(), MSG_NOSIGNAL);
 			epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, &ev);
-			std::cout << "Closing cgi connection fd " << conn->fd << std::endl;
+			/*
+				TODO
+				Should close the child process of the CGI if it's still working,
+				And remove the file where you put the response.
+			*/
+			if (conn->cgiCompleted == false)
+				kill(conn->cgiPid, SIGKILL);
 			conn->closeConnection(conn, connections, epollFd);
+			it = connections.begin();
 		}
+		else
+			++it;
 		if (connections.size() == 0)
 			break;
-		++it;
 	}
 	checkTime = time(NULL);
 }
@@ -262,19 +266,15 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 		if (time(NULL) - lastTimeoutCheck >= 1)
 			checkForTimeouts(connections, ev, epollFd, lastTimeoutCheck);
 
-		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 0);
+		numberOfEvents = epoll_wait(epollFd, events, MAX_EVENTS, 2000);
 		int i = 0;
 		for (; i < numberOfEvents; i++)
 		{
-			std::cout << "((((((((!!!!! Entered the while loop ((((((((!!!!!" << std::endl;
 			if (std::find(sockets.begin(), sockets.end(), events[i].data.fd) != sockets.end())
 			{
 				int clientFd = accept(events[i].data.fd, NULL, NULL);
 				if (clientFd == -1)
-				{
-					std::cout << "Error: failed to accept a client" << std::endl;
 					continue;
-				}
 				
 				int flags = fcntl(clientFd, F_GETFL, 0);
 				fcntl(clientFd, F_SETFL, flags | O_NONBLOCK);
@@ -283,7 +283,6 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 
 				Connection* conn = new Connection(clientFd);
 				connections.push_back(conn);
-				std::cout << RED << "Connection created!\n" << RESET;
 
 				ev.events = EPOLLIN;
 				ev.data.fd = clientFd;
@@ -297,7 +296,6 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 
 				if (events[i].events & EPOLLIN)
 				{
-					std::cout << RED << "EPOLLIN " << events[i].data.fd << "\n" << RESET;
 					bytes = read(conn->fd, buff, EIGHT_KB);
 					if (bytes <= 0)
 						conn->closeConnection(conn, connections, epollFd);
@@ -305,13 +303,13 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					{
 						if (!conn->req)
 						{
-							std::cout << "Creating new request for fd " << conn->fd << std::endl;
 							conn->req = new Request(conn->fd);
 							conn->resetCgiState();
 						}
 						conn->req->appendToBuffer(conn, http, buff, bytes);
 						if (conn->req->isRequestDone())
 						{
+							std::cerr << "Request parsing done with: " << conn->req->getStatusCode() << "\n";
 							ev.events = EPOLLOUT;
 							ev.data.fd = conn->fd;
 							epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);
@@ -320,14 +318,13 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				}
 				else if (events[i].events & EPOLLOUT)
 				{
-					std::cout << "EPOLLOUT event triggered for fd " << conn->fd << std::endl;
 					if (!ResponseSender::handleEpollOut(conn, epollFd, connections)) {
 						conn = NULL;
 					}					
 				}
 				else if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP)
 				{
-					std::cout << "Connection error or hangup on fd " << conn->fd << std::endl;
+					std::cerr << "Connection error or hangup on fd " << conn->fd << std::endl;
 					conn->closeConnection(conn, connections, epollFd);
 					conn = NULL;
 				}

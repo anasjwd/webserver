@@ -28,10 +28,10 @@ class	Request
 		bool			_processBodyHeaders();
 		bool			_processContentLength();
 		bool			_processChunkedTransfer();
+		bool			_processType(std::string);
 		bool			_connectionChecks(Connection*);
 		bool			_isChunkedTransferEncoding(const std::string&);
 		bool			_validateMethodBodyCompatibility(Connection *);
-
 
 	public:
 		Request();

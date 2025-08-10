@@ -391,11 +391,11 @@ IDirective* parseReturnDirective(
 	return_dir->setUrl(strdup(tokens[pos++]->data));
 	if (tokens[pos]->type != DIR_END)
 	{
-		std::cout <<"tokens[pos] " << tokens[pos] << std::endl;
-		std::cout <<"pos " << pos << std::endl;
-		std::cout <<"tokens[pos]->type " << tokens[pos]->type << std::endl;
-		std::cout << return_dir->getUrl() << std::endl;
-		std::cout <<"DIR_END " << DIR_END << std::endl;
+		// <<"tokens[pos] " << tokens[pos] << std::endl;
+		// <<"pos " << pos << std::endl;
+		// <<"tokens[pos]->type " << tokens[pos]->type << std::endl;
+		// << return_dir->getUrl() << std::endl;
+		// <<"DIR_END " << DIR_END << std::endl;
 		delete return_dir;
 		throw DirectiveException("incomplete return directive - missing \";\"");
 	}
@@ -502,7 +502,7 @@ IDirective* parseUploadLocationDirective(std::vector<t_token*>& tokens,
 		throw DirectiveException("incomplete root directive - missing \";\"");
 	}
 	++pos;
-	std::cout << ">>>>>>> " << uploadLocation->getLocation() << std::endl;
+	// << ">>>>>>> " << uploadLocation->getLocation() << std::endl;
 	return ( uploadLocation );
 }
 
@@ -530,7 +530,7 @@ IDirective* createNode(
 		parseUploadDirective,
 		parseUploadLocationDirective
 	};
-	std::cout << pos << " > " << tokens[pos]->data << std::endl;
+	// << pos << " > " << tokens[pos]->data << std::endl;
 
 	for (int i = 0; i < 13; i++)
 	{
