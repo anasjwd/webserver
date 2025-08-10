@@ -1,5 +1,6 @@
 # pragma once
 
+# include <fcntl.h>
 # include "conf/Http.hpp"
 # include "conf/Root.hpp"
 # include "conf/Index.hpp"
@@ -27,10 +28,14 @@ class	Connection
 		time_t			lastActivityTime;
 		time_t			lastTimeoutCheck;
 
+		std::string		uploadLocation;
+		bool			uploadAuthorized;
+
 		bool			closed;
 		int				fileFd;
 		int				fileSendState; // 0: not started, 1: headers sent, 2: sending body, 3: done
 		ssize_t			fileSendOffset;
+		bool 			headersSent;
 
 		bool			isCgi;
 		bool			cgiExecuted;
@@ -38,17 +43,17 @@ class	Connection
 		std::string		cgiOutput;
 		Response		cgiResponse;
 		int				cgiPid;
-		int				cgiPipeToChild[2];
-		int				cgiPipeFromChild[2];
+		// int				cgiPipeToChild[2];
+		// int				cgiPipeFromChild[2];
+		int				pipefd[2];
 		int				cgiReadState;
 		std::string		cgiHeaders;
 		std::string		cgiBody;
 		time_t			cgiStartTime;
 
-		mutable const Location*	cachedLocation;
-
 		Connection();
 		Connection(int);
+		~Connection();
 
 		bool				isTimedOut() const;
 		bool				isCgiTimedOut() const;
@@ -57,9 +62,10 @@ class	Connection
 		IDirective*			getDirective(DIRTYPE type);
 
 		// Alassiqu:
-		LimitExcept*		getLimitExcept() const;
+		void				getUpload();
 		bool				checkMaxBodySize();
 		ClientMaxBodySize*	getClientMaxBodySize();
+		LimitExcept*		getLimitExcept() const;
 
 		// ahanaf
 		Root*				getRoot();
@@ -83,5 +89,5 @@ class	Connection
 
 		void resetCgiState();
 		void epollinProcess(Http*, Connection*, std::vector<Connection*>&, struct epoll_event&, int);
-
+		static std::string _normalizeUri(const std::string& uri);
 };

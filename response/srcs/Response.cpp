@@ -92,22 +92,18 @@ std::string Response::build() {
     if (_headers.find("Server") == _headers.end()) {
         _headers["Server"] = "WebServ/1.1";
     }
-    if (_statusCode != 204 && _statusCode != 304) {
-        if (_headers.find("Content-Length") == _headers.end()) {
-            std::ostringstream oss;
-            oss << _fileSize;
-            _headers["Content-Length"] = oss.str();    
-        }
-    }
-    if (_statusCode != 204 && _statusCode != 304 && !_filePath.empty()) {
+    // if (_headers.find("Content-Length") == _headers.end()) {
+    //         std::ostringstream oss;
+    //         oss << _fileSize;
+    //         _headers["Content-Length"] = oss.str();    
+    // }
+    if (!_filePath.empty()) {
         if (_headers.find("Content-Type") == _headers.end()) {
             _headers["Content-Type"] = "text/plain";
         }
     }
-    // _headers["Set-Cookie"] = "name=ahanaf";
 
-//     _headers["Set-Cookie"] = "num=20";
-    // _headers["Connection"] = "close"; // 
+    _headers["Connection"] = "close"; 
     std::vector<std::pair<std::string, std::string> > sortedHeaders(_headers.begin(), _headers.end());
     std::sort(sortedHeaders.begin(), sortedHeaders.end());
     for (size_t i = 0; i < sortedHeaders.size(); ++i) {
@@ -140,23 +136,47 @@ void Response::setFilePath(const std::string& path) {
 
 void Response::setFileSize(size_t size) {
     _fileSize = size;
-    std::cout << "size is " << size << std::endl;
     _isBuilt = false;
 }
 
 Response Response::createRedirectResponse(int statusCode, const std::string& location) {
     Response response(statusCode);
-    std::cout << GREEN << location << RESET << std::endl;
+    // << GREEN << location << RESET << std::endl;
     response.addHeader("Location", location);
+    return response;
+}
+
+std::string Response::createErrorResponse(int statusCode, const std::string& errorMessage) {
+    Response response(statusCode);
     response.setContentType("text/html");
     
-    std::string tempPath = "/tmp/webserv_redirect.html";
-    std::ofstream tempFile(tempPath.c_str());
-    tempFile << "<html><head><title>Redirect</title></head><body>"
-             << "<h1>Redirect</h1><p>The document has moved <a href=\"" 
-             << location << "\">here</a>.</p></body></html>";
-    tempFile.close();
+    std::ostringstream htmlBody;
+    htmlBody << "<!DOCTYPE html>\n"
+             << "<html>\n"
+             << "<head>\n"
+             << "    <title>" << statusCode << " " << response._getStatusMessage(statusCode) << "</title>\n"
+             << "    <style>\n"
+             << "        body { font-family: Arial, sans-serif; margin: 40px; }\n"
+             << "        h1 { color: #d32f2f; }\n"
+             << "        .error-code { font-size: 48px; font-weight: bold; color: #666; }\n"
+             << "        .error-message { margin: 20px 0; color: #333; }\n"
+             << "        .footer { margin-top: 30px; color: #999; font-size: 12px; }\n"
+             << "    </style>\n"
+             << "</head>\n"
+             << "<body>\n"
+             << "    <div class=\"error-code\">" << statusCode << "</div>\n"
+             << "    <h1>" << response._getStatusMessage(statusCode) << "</h1>\n";
     
-    response.setFileBody(tempPath);
-    return response;
+    if (!errorMessage.empty()) {
+        htmlBody << "    <div class=\"error-message\">" << errorMessage << "</div>\n";
+    }
+    
+    htmlBody << "    <div class=\"footer\">WebServ/1.1</div>\n"
+             << "</body>\n"
+             << "</html>\n";
+    
+    std::string bodyContent = htmlBody.str();
+    response.setFileSize(bodyContent.length());
+    std::string headers = response.build();
+    return headers + bodyContent;
 }

@@ -4,19 +4,18 @@
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<link rel="icon" href="data:;base64,=">
-		<link rel="stylesheet" href="./assets/css/style.css">
+		<link rel="stylesheet" href="/assets/css/style.css">
 		<title>Form Testing | 42 Webserv</title>
 	</head>
-	<body>
+	<body class="dark-mode">
 		<nav>
 			<div class="nav-container">
-				<a href="index.html" class="logo">42 Webserv</a>
+				<a href="/index.html" class="logo">42 Webserv</a>
 				<ul class="nav-links">
-					<li><a href="index.html">Home</a></li>
-					<li><a href="form.html">ReqTests</a></li>
-					<li><a href="cgi.html">The CGI</a></li>
-					<li><a href="about.html">About</a></li>
-					<li><button class="theme-toggle" id="themeToggle">🌙</button></li>
+					<li><a href="/index.html">Home</a></li>
+					<li><a href="/form.html">ReqTests</a></li>
+					<li><a href="/cgi.html">The CGI</a></li>
+					<li><a href="/about.html">About</a></li>
 				</ul>
 			</div>
 		</nav>
@@ -63,7 +62,7 @@
 
 				<div class="form-container">
 					<h2>File Upload</h2>
-					<form id="uploadForm"  method="post" enctype="multipart/form-data">
+					<form id="uploadForm" method="post" enctype="multipart/form-data">
 						<div class="form-group">
 							<label for="fileDescription">File Description</label>
 							<input type="text" id="fileDescription" name="description">
@@ -89,108 +88,5 @@
 			<b>GEET (Alassiqu, Ajawad, Ahanaf)</b></p>
 		</footer>
 
-		<script src="./assets/js/script.js"></script>
-		<!-- <script>
-			// File upload preview
-			document.getElementById('fileInput').addEventListener('change', function(e) {
-				const file = e.target.files[0];
-				const preview = document.getElementById('filePreview');
-				
-				if (file) {
-					if (file.type.startsWith('image/')) {
-						const reader = new FileReader();
-						reader.onload = function(e) {
-							preview.src = e.target.result;
-							preview.style.display = 'block';
-						}
-						reader.readAsDataURL(file);
-					} else {
-						preview.style.display = 'none';
-					}
-				}
-			});
-
-			document.getElementById('standardForm').addEventListener('submit', function(e) {
-				e.preventDefault();
-				const formData = new FormData(this);
-				
-				fetch(this.action, {
-					method: 'POST',
-					body: formData
-				})
-				.then(response => response.text())
-				.then(data => {
-					const responseDiv = document.getElementById('standardResponse');
-					responseDiv.textContent = data;
-					responseDiv.className = 'response-container success';
-					responseDiv.style.display = 'block';
-				})
-				.catch(error => {
-					const responseDiv = document.getElementById('standardResponse');
-					responseDiv.textContent = 'Error: ' + error.message;
-					responseDiv.className = 'response-container error';
-					responseDiv.style.display = 'block';
-				});
-			});
-
-			document.getElementById('uploadForm').addEventListener('submit', function(e) {
-				e.preventDefault();
-				const formData = new FormData(this);
-				
-				fetch(this.action, {
-					method: 'POST',
-					body: formData
-				})
-				.then(response => response.text())
-				.then(data => {
-					const responseDiv = document.getElementById('uploadResponse');
-					responseDiv.textContent = data;
-					responseDiv.className = 'response-container success';
-					responseDiv.style.display = 'block';
-				})
-				.catch(error => {
-					const responseDiv = document.getElementById('uploadResponse');
-					responseDiv.textContent = 'Error: ' + error.message;
-					responseDiv.className = 'response-container error';
-					responseDiv.style.display = 'block';
-				});
-			});
-
-			document.getElementById('sendJson').addEventListener('click', function() {
-				const jsonData = document.getElementById('jsonData').value;
-				const endpoint = document.getElementById('apiEndpoint').value;
-				
-				try {
-					// Validate JSON
-					JSON.parse(jsonData);
-					
-					fetch(endpoint, {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json'
-						},
-						body: jsonData
-					})
-					.then(response => response.text())
-					.then(data => {
-						const responseDiv = document.getElementById('jsonResponse');
-						responseDiv.textContent = data;
-						responseDiv.className = 'response-container success';
-						responseDiv.style.display = 'block';
-					})
-					.catch(error => {
-						const responseDiv = document.getElementById('jsonResponse');
-						responseDiv.textContent = 'Error: ' + error.message;
-						responseDiv.className = 'response-container error';
-						responseDiv.style.display = 'block';
-					});
-				} catch (e) {
-					const responseDiv = document.getElementById('jsonResponse');
-					responseDiv.textContent = 'Invalid JSON: ' + e.message;
-					responseDiv.className = 'response-container error';
-					responseDiv.style.display = 'block';
-				}
-			});
-		</script> -->
 	</body>
 </html>

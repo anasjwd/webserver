@@ -1,0 +1,32 @@
+```
+Great question! Let's break down the scenario:
+
+HTTP/1.1 request arrives
+
+Body Content-Length is greater than the configured max body size
+
+The requested location is either invalid or does not match any configured location
+
+What status codes might apply?
+If the body size exceeds the max body size:
+
+The server typically responds with 413 Payload Too Large (previously known as Request Entity Too Large).
+
+This indicates that the server refuses to process the request because the body is too large.
+
+If the location/path does not exist or is not matched by any configured route:
+
+The server usually responds with 404 Not Found.
+
+This means the server cannot find the requested resource.
+
+Which takes precedence?
+Many HTTP servers check the validity of the location (URI path) first. If the location is invalid or not matched, they typically respond with 404 Not Found before even reading the body.
+
+However, if the request is accepted for processing and the server inspects the body length, and it exceeds limits, it should respond with 413 Payload Too Large.
+
+```
+
+```
+
+```

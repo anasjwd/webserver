@@ -1,57 +1,72 @@
-#include <csignal>
 # include <ctime>
+# include <csignal>
 # include <cstddef>
 # include <cstdlib>
-#include <sys/wait.h>
 # include <unistd.h>
 # include <algorithm>
+# include <sys/wait.h>
 # include <sys/epoll.h>
 # include "conf/Http.hpp"
 # include "conf/Root.hpp"
 # include "Connection.hpp"
 # include "conf/Listen.hpp"
 # include "conf/Server.hpp"
+# include "conf/Upload.hpp"
 # include "conf/Location.hpp"
 # include "conf/AutoIndex.hpp"
 # include "conf/IDirective.hpp"
 # include "conf/ServerName.hpp"
 # include "conf/LimitExcept.hpp"
+# include "conf/UploadLocation.hpp"
 # include "request/incs/Defines.hpp"
 # include "conf/ClientMaxBodySize.hpp"
+#include "response/include/Response.hpp"
 # include "response/include/ResponseHandler.hpp"
 
 Connection::Connection()
     :   fd(-1), req(NULL), connect(false), conServer(NULL),
         lastActivityTime(time(NULL)), lastTimeoutCheck(time(NULL)),
-        closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0),
+        uploadAuthorized(false),
+		closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0), 
+		headersSent(false),
         isCgi(false), cgiExecuted(false), cgiCompleted(false), cgiPid(-1), cgiReadState(0),
-        cgiStartTime(0), cachedLocation(NULL)
+        cgiStartTime(0)
 {
-    cgiPipeFromChild[0] = -1;
-    cgiPipeFromChild[1] = -1;
-    cgiPipeToChild[0] = -1;
-    cgiPipeToChild[1] = -1;
+	// << BG_BLUE << "Connection default constructor called "<< RESET << std::endl;
+    // cgiPipeFromChild[0] = -1;
+    // cgiPipeFromChild[1] = -1;
+    // cgiPipeToChild[0] = -1;
+    // cgiPipeToChild[1] = -1;
+	pipefd[0] = -1;
+	pipefd[1] = -1;
 }
 
 Connection::Connection(int clientFd)
     :   fd(clientFd), req(NULL), connect(false), conServer(NULL),
         lastActivityTime(time(NULL)), lastTimeoutCheck(time(NULL)),
-        closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0),
+        closed(false), fileFd(-1), fileSendState(0), fileSendOffset(0), headersSent(false),
         isCgi(false), cgiExecuted(false), cgiCompleted(false), cgiPid(-1), cgiReadState(0),
-        cgiStartTime(0), cachedLocation(NULL)
+        cgiStartTime(0)
 {
-    cgiPipeFromChild[0] = -1;
-    cgiPipeFromChild[1] = -1;
-    cgiPipeToChild[0] = -1;
-    cgiPipeToChild[1] = -1;
+	// << BG_BLUE << "Connection param constructor called for fd " << fd << RESET << std::endl;
+    // cgiPipeFromChild[0] = -1;
+    // cgiPipeFromChild[1] = -1;
+    // cgiPipeToChild[0] = -1;
+    // cgiPipeToChild[1] = -1;
+	pipefd[0] = -1;
+	pipefd[1] = -1;
 }
 
+Connection::~Connection()
+{
+	// << BG_BLUE << "Connection destructor called for fd " << fd << RESET << std::endl;
+}
 
 void Connection::resetCgiState() {
-    std::cout << "[DEBUG] Resetting CGI state for fd " << fd << std::endl;
+    // << "[DEBUG] Resetting CGI state for fd " << fd << std::endl;
     
     if (cgiPid > 0) {
-        std::cout << "[DEBUG] Killing existing CGI process " << cgiPid << std::endl;
+        // << "[DEBUG] Killing existing CGI process " << cgiPid << std::endl;
         kill(cgiPid, SIGTERM);
         usleep(10000); // Wait 10ms
         kill(cgiPid, SIGKILL);
@@ -64,23 +79,29 @@ void Connection::resetCgiState() {
     cgiPid = -1;
     cgiReadState = 0;
     cgiStartTime = 0;
-    
-    if (cgiPipeFromChild[0] != -1) {
-        close(cgiPipeFromChild[0]);
-        cgiPipeFromChild[0] = -1;
-    }
-    if (cgiPipeFromChild[1] != -1) {
-        close(cgiPipeFromChild[1]);
-        cgiPipeFromChild[1] = -1;
-    }
-    if (cgiPipeToChild[0] != -1) {
-        close(cgiPipeToChild[0]);
-        cgiPipeToChild[0] = -1;
-    }
-    if (cgiPipeToChild[1] != -1) {
-        close(cgiPipeToChild[1]);
-        cgiPipeToChild[1] = -1;
-    }
+
+	if (pipefd[0] != -1)
+		close(pipefd[0]);
+
+	if (pipefd[1] != -1)
+		close(pipefd[1]);
+
+    // if (cgiPipeFromChild[0] != -1) {
+    //     close(cgiPipeFromChild[0]);
+    //     cgiPipeFromChild[0] = -1;
+    // }
+    // if (cgiPipeFromChild[1] != -1) {
+    //     close(cgiPipeFromChild[1]);
+    //     cgiPipeFromChild[1] = -1;
+    // }
+    // if (cgiPipeToChild[0] != -1) {
+    //     close(cgiPipeToChild[0]);
+    //     cgiPipeToChild[0] = -1;
+    // }
+    // if (cgiPipeToChild[1] != -1) {
+    //     close(cgiPipeToChild[1]);
+    //     cgiPipeToChild[1] = -1;
+    // }
     
     cgiHeaders.clear();
     cgiBody.clear();
@@ -88,18 +109,18 @@ void Connection::resetCgiState() {
     
     cgiResponse.clear();
     
-    std::cout << "[DEBUG] CGI state reset complete for fd " << fd << std::endl;
+    // << "[DEBUG] CGI state reset complete for fd " << fd << std::endl;
 }
 
 Connection* Connection::findConnectionByFd(int fd, std::vector<Connection*>& connections)
 {
 	if (connections.size() == 0)
 		return NULL;
-	std::cout << "Size of connections: " << connections.size() << "\n";
+	// << "Size of connections: " << connections.size() << "\n";
 	for (std::vector<Connection*>::iterator it = connections.begin(); 
 		it != connections.end(); ++it)
 	{
-		std::cout << "test\n";
+		// << "test\n";
 		if ((*it)->fd == fd)
 			return *it;
 	}
@@ -119,17 +140,37 @@ static std::vector<Server*> getServersFromHttp(Http* http)
 
 bool	Connection::findServer(Http *http)
 {
+	// << "!!!!!!!!!!!!!!!!!!!!!!Trying to find the server!!!!!!!!!!!!!\n";
+
+	// << "1\n";
+	// << req->getState() << " " << HEADERS << std::endl;
+	// << req->getRequestHeaders().hasHeader("host") << std::endl;
+
 	if (!req || req->getState() < HEADERS || !req->getRequestHeaders().hasHeader("host"))
+	{
+		// << "Passed first condition\n";
 		return false;
+	}
+	// << "2\n";
+
 	if (req->getState() >= HEADERS && !req->getRequestHeaders().hasHeader("host"))
+	{
+		// << "Passed second condition\n";
 		return false;
+	}
+	// << "3\n";
 
 	unsigned int port = req->getRequestHeaders().getHostPort();
 	std::string hostname = req->getRequestHeaders().getHostName();
 	std::vector<Server*> servers = getServersFromHttp(http);
+	// << "4\n";
 	
 	if (servers.empty())
+	{
+		// << "Passed third condition\n";
 		return false;
+	}
+	// << "5\n";
 		
 	for (std::vector<Server*>::const_iterator it = servers.begin(); it != servers.end(); ++it) {
 		Server* server = *it;
@@ -150,7 +191,6 @@ bool	Connection::findServer(Http *http)
 							if (names[i] == hostname)
 							{
 								conServer = server;
-								cachedLocation = NULL;
 								return true;
 							}
 					}
@@ -162,7 +202,6 @@ bool	Connection::findServer(Http *http)
 				if (listen && listen->getPort() == port)
 				{
 					conServer = server;
-					cachedLocation = NULL; 
 					return true;
 				}
 			}
@@ -170,6 +209,9 @@ bool	Connection::findServer(Http *http)
 	}
 	if (conServer == NULL)
 		conServer = servers[0];
+	// if (conServer == NULL)
+		// << "Con server still NULL.\n";
+
 	return false;
 }
 
@@ -185,6 +227,24 @@ IDirective*	Connection::getDirective(DIRTYPE type)
 			return *dit;
 	}
 	return NULL;
+}
+
+void	Connection::getUpload()
+{
+	// << "About to get Location\n";
+	const Location*	location = getLocation();
+	if (location == NULL)
+		return ;
+
+	// << "Location:" << location->getUri() << "\n";
+	for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); 
+	dit != location->directives.end(); ++dit) 
+	{
+		if ((*dit)->getType() == UPLOAD)
+			uploadAuthorized = static_cast<Upload*>(*dit)->getState();
+		else if ((*dit)->getType() == UPLOAD_LOCATION)
+			uploadLocation = static_cast<UploadLocation*>(*dit)->getLocation();
+	}
 }
 
 LimitExcept*	Connection::getLimitExcept() const
@@ -222,11 +282,11 @@ bool	Connection::checkMaxBodySize()
 
 	if (maxAllowedSize < actualSize)
 	{
-		std::cout << "MaxBodySize ";
-		if (maxAllowedSize == 1048576)
-			std::cout << "default (1M) detected!\n";
-		else
-			std::cout << "from config file detected!\n";
+		// << "MaxBodySize ";
+		// if (maxAllowedSize == 1048576)
+			// << "default (1M) detected!\n";
+		// else
+			// << "from config file detected!\n";
 		return false;
 	}
 	return true;
@@ -250,26 +310,53 @@ ClientMaxBodySize*	Connection::getClientMaxBodySize()
 	return NULL;
 }
 
+std::string  Connection::_normalizeUri(const std::string& uri) {
+    std::string result;
+    bool prevSlash = false;
+    
+    for (size_t i = 0; i < uri.size(); ++i) {
+        if (uri[i] == '/') {
+            if (!prevSlash) {
+                result += '/';
+            }
+            prevSlash = true;
+        } else {
+            result += uri[i];
+            prevSlash = false;
+        }
+    }
+    return result.empty() ? "/" : result;
+}
+
+
+
 const Location* Connection::getLocation() const
 {
-	if (cachedLocation)
+	// << "In location\n";
+
+	const Location *location = NULL;
+	if (!conServer)
 	{
-		std::cout << "[CACHE HIT] Using cached location for URI: " << (req ? req->getRequestLine().getUri() : uri) << std::endl;
-		return cachedLocation;
+		// << "ConServer NULL\n";
+		return NULL;
 	}
 
-	if (!conServer)
-		return NULL;
-
 	std::string reqUri;
-	if (req && req->getRequestLine().getUri().size())
+	if (req && req->getRequestLine().getUri().size() > 0)
 		reqUri = req->getRequestLine().getUri();
 	else if (!uri.empty())
 		reqUri = uri;
 	else
+	{
+		// << "NULL case!\n";
 		return NULL;
-	cachedLocation = _findBestLocation(conServer->directives, reqUri);
-	return cachedLocation;
+	}
+	// << "Uri: " << reqUri << "\n";
+	reqUri = _normalizeUri(reqUri);
+	location = _findBestLocation(conServer->directives, reqUri);
+	// if (location == NULL)
+		// << "_findBestLocation is NULL\n";
+	return location;
 }
 
 const Location* Connection::_findBestLocation(const std::vector<IDirective*>& directives, const std::string& reqUri) const
@@ -287,8 +374,6 @@ const Location* Connection::_findBestLocation(const std::vector<IDirective*>& di
 		}
 	}
 
-	// std::cout << "[DEBUG] reqUri: '" << reqUri << "' cgiExtension: '" << cgiExtension << "'" << std::endl;
-
 	for (std::vector<IDirective*>::const_iterator it = directives.begin(); it != directives.end(); ++it) {
 		if ((*it)->getType() != LOCATION)
 			continue;
@@ -296,61 +381,44 @@ const Location* Connection::_findBestLocation(const std::vector<IDirective*>& di
 		if (!loc) continue;
 
 		std::string locUri = loc->getUri();
-		bool exact = loc->isExactMatch();
-
-		// std::cout << "[DEBUG] Checking location: '" << locUri << "' exact: " << exact << std::endl;
-
-		if (exact) {
-			if (reqUri == locUri) {
-				// std::cout << "[DEBUG] Exact match found: " << locUri << std::endl;
-				return loc;
+		if (!locUri.empty() && locUri[0] == '.') {
+			if (!cgiExtension.empty() && locUri == cgiExtension) {
+				cgiMatch = loc;
 			}
 		} else {
-			if (!locUri.empty() && locUri[0] == '.') {
-				if (!cgiExtension.empty() && locUri == cgiExtension) {
-					// std::cout << "[DEBUG] CGI match found: " << locUri << std::endl;
-					cgiMatch = loc;
-				}
+			// For prefix matching, check if request URI starts with location URI
+			bool matches = false;
+			if (locUri == "/") {
+				// Special case: if location is "/", any URI starting with "/" should match
+				matches = (reqUri[0] == '/');
 			} else {
-				// For prefix matching, check if request URI starts with location URI
-				bool matches = false;
-				if (locUri == "/") {
-					// Special case: if location is "/", any URI starting with "/" should match
-					matches = (reqUri[0] == '/');
-				} else {
-					// Check if request URI starts with location URI
-					// For /about/somt to match /about/, we need to check if it starts with /about/
-					if (reqUri.compare(0, locUri.length(), locUri) == 0) {
-						matches = true;
-					}
+				// For /about/somt to match /about/, we need to check if it starts with /about/
+				if (reqUri.compare(0, locUri.length(), locUri) == 0) {
+					matches = true;
 				}
-				
-				if (matches) {
-					if (locUri.length() > bestMatchLen) {
-						bestMatchLen = locUri.length();
-						longestPrefixMatch = loc;
-						// std::cout << "[DEBUG] New longest prefix match: " << locUri << " (length: " << locUri.length() << ")" << std::endl;
-					}
+			}
+			
+			if (matches) {
+				if (locUri.length() > bestMatchLen) {
+					bestMatchLen = locUri.length();
+					longestPrefixMatch = loc;
 				}
 			}
 		}
+		
 	}
 
 	if (cgiMatch) {
-		// std::cout << "[DEBUG] Returning CGI match: " << cgiMatch->getUri() << std::endl;
 		return cgiMatch;
 	}
 
 	if (longestPrefixMatch) {
-		// std::cout << "[DEBUG] Returning longest prefix match: " << longestPrefixMatch->getUri() << std::endl;
 		const Location* nestedMatch = _findBestLocation(longestPrefixMatch->directives, reqUri);
 		if (nestedMatch) {
 			return nestedMatch;
 		}
 		return longestPrefixMatch;
 	}
-
-	// std::cout << "[DEBUG] No match found" << std::endl;
 	return NULL;
 }
 
@@ -379,7 +447,7 @@ AutoIndex* Connection::getAutoIndex()
 	const Location* location = getLocation();
 	if (location) {
 		char* locUri = location->getUri();
-		if (locUri) std::cout << locUri << std::endl;
+		if (locUri) // << locUri << std::endl;
 		for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); 
 		dit != location->directives.end(); ++dit) 
 		{
@@ -459,6 +527,7 @@ ErrorPage* Connection::getErrorPage() {
 ErrorPage* Connection::getErrorPageForCode(int code) {
 	const Location* location = getLocation();
 	if (location) {
+		// << location->getUri() << std::endl;
 		for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); dit != location->directives.end(); ++dit) {
 			if ((*dit)->getType() == ERROR_PAGE) {
 				ErrorPage* ep = static_cast<ErrorPage*>(*dit);
@@ -508,24 +577,24 @@ void Connection::closeConnection(Connection* conn, std::vector<Connection*>& con
 	// 	connections.end()
 	// );
 	connections.erase(find(connections.begin(), connections.end(), conn));
-	if (std::find(connections.begin(), connections.end(), conn) != connections.end())
-	{
-		std::cout << "Failed to remove connection from vector" << std::endl;
-	}
-	else
-	{
-		std::cout << "Connection successfully removed from vector" << std::endl;
-		std::cout << "Remaining connections: " << connections.size() << std::endl;
-		if (conn->req == NULL)
-			std::cout << "Request pointer is NULL" << std::endl;
-		else
-			std::cout << "Request pointer is not NULL" << std::endl;
-	}
+	// if (std::find(connections.begin(), connections.end(), conn) != connections.end())
+	// {
+	// 	// << "Failed to remove connection from vector" << std::endl;
+	// }
+	// else
+	// {
+	// 	// << "Connection successfully removed from vector" << std::endl;
+	// 	// << "Remaining connections: " << connections.size() << std::endl;
+	// 	// if (conn->req == NULL)
+	// 	// 	// << "Request pointer is NULL" << std::endl;
+	// 	// else
+	// 		// << "Request pointer is not NULL" << std::endl;
+	// }
 
 	delete conn;
 	// conn = NULL;
-	std::cout << ">>>>>>>>>>>>>> size = " << connections.size() << std::endl;
-	std::cout << "Connection closed and deleted" << std::endl;
+	// << ">>>>>>>>>>>>>> size = " << connections.size() << std::endl;
+	// << "Connection closed and deleted" << std::endl;
 }
 
 void	Connection::freeConnections(std::vector<Connection*>& connections)
@@ -580,39 +649,48 @@ bool Connection::_isAllowedMethod(const std::string& method, const std::vector<s
 
 bool	Connection::isCgiTimedOut() const
 {
-	return time(NULL) - cgiStartTime > CGI_TIMEOUT;
+	// << BG_CYAN << "Checking CGI timeout for fd " << fd << std::endl;
+	// << "CGI time value: " << time(NULL) - cgiStartTime << RESET << std::endl;
+	return time(NULL) - cgiStartTime >= CGI_TIMEOUT;
 }
 
 bool	Connection::isTimedOut() const
 {
-	return time(NULL) - lastActivityTime > TIMEOUT_SECONDS;
+	return time(NULL) - lastActivityTime >= TIMEOUT_SECONDS;
 }
 
 void	Connection::epollinProcess(Http* http, Connection* conn, std::vector<Connection*>& connections, struct epoll_event& ev, int epollFd)
 {
-	ssize_t	bytes;
-	char	buff[1048576];
 
-	std::cout << RED << "EPOLLIN\n" << RESET;
-	bytes = read(fd, buff, 1048576);
-	if (bytes <= 0)
-		conn->closeConnection(conn, connections, epollFd);
-	else
-	{
-		if (!req)
-		{
-			req = new Request(fd);
-			cachedLocation = NULL;
-			resetCgiState();
-		}
-		req->appendToBuffer(this, http, buff, bytes);
-		if (!checkMaxBodySize())
-			req->setState(false, PAYLOAD_TOO_LARGE);
-		if (req->isRequestDone())
-		{
-			ev.events = EPOLLOUT;
-			ev.data.fd = fd;
-			epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &ev);
-		}
-	}
+	(void)ev;
+	(void)http;
+	(void)conn;
+	(void)epollFd;
+	(void)connections;
+	// ssize_t	bytes;
+	// char	buff[1048576];
+
+	// // << RED << "EPOLLIN\n" << RESET;
+	// bytes = read(fd, buff, 1048576);
+	// if (bytes <= 0)
+	// 	conn->closeConnection(conn, connections, epollFd);
+	// else
+	// {
+	// 	if (!req)
+	// 	{
+	// 		req = new Request(fd);
+	// 		cachedLocation = NULL;
+	// 		resetCgiState();
+	// 	}
+	// 	req->appendToBuffer(conn, http, buff, bytes);
+	// 	if (!checkMaxBodySize())
+	// 		req->setState(false, PAYLOAD_TOO_LARGE);
+	// 	if (req->isRequestDone())
+	// 	{
+	// 		// << RED << "Request done with state:" << req->getStatusCode() << RESET << "\n";
+	// 		ev.events = EPOLLOUT;
+	// 		ev.data.fd = fd;
+	// 		epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &ev);
+	// 	}
+	// }
 }

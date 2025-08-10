@@ -1,7 +1,7 @@
 # pragma once
 
-# define	CGI_TIMEOUT				30
-# define	TIMEOUT_SECONDS			60
+# define	CGI_TIMEOUT				10
+# define	TIMEOUT_SECONDS			10
 
 # define	MAX_HEADER				100
 # define	WS_PATH_MAX				1024
@@ -15,9 +15,7 @@
 
 enum    FileType
 {
-	TEMP_BODY,
-	POST_BODY,
-	UPLOAD_FILE
+	POST_BODY
 };
 
 enum	RequestState
@@ -37,6 +35,7 @@ enum	HttpStatusCode
 	CREATED = 201,
 	ACCEPTED = 202,
 	BAD_REQUEST = 400,
+	FORBIDDEN = 403,
 	METHOD_NOT_ALLOWED = 405,
 	REQUEST_TIMEOUT = 408,
 	LENGTH_REQUIRED = 411,
