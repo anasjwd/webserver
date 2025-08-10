@@ -39,11 +39,11 @@ Response CgiHandler::executeCgi(Connection* conn, const std::string& scriptPath)
         return ErrorResponse::createNotFoundResponse(conn);
     }
     if (!S_ISREG(fileStat.st_mode)) {
-        // << RED << "file not a regular file" << RESET << std::endl;
+        std::cout << RED << "file not a regular file" << RESET << std::endl;
         return ErrorResponse::createForbiddenResponse(conn);
     }
     if (access(scriptPath.c_str(), R_OK) != 0) {
-        // << RED << "file not readable" << RESET << std::endl;
+        std::cout<< RED << "file not readable" << RESET << std::endl;
         return ErrorResponse::createForbiddenResponse(conn);
     }
     
@@ -77,7 +77,7 @@ Response CgiHandler::executeCgi(Connection* conn, const std::string& scriptPath)
         close(conn->pipefd[1]);
         return ErrorResponse::createInternalErrorResponse(conn);
     }
-    
+    std::cout << GREEN << conn->req->getRequestBody().getTempFile().path().c_str() << RESET <<  std::endl;
 
     if (conn->cgiPid == 0) {
         
@@ -229,17 +229,6 @@ void CgiHandler::readCgiOutput(Connection* conn) {
         close(conn->pipefd[0]);
         conn->pipefd[0] = -1;
         conn->cgiCompleted = true;
-    }
-    else {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            // No data yet — return and wait for next epoll event
-            return;
-        } else {
-            std::cerr << "[CGI] Read error: " << strerror(errno) << "\n";
-            close(conn->pipefd[0]);
-            conn->pipefd[0] = -1;
-            conn->cgiCompleted = true;
-        }
     }
 }
 

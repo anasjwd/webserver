@@ -109,15 +109,14 @@ void	ResponseSender::handleConnectionError(Connection* conn, std::vector<Connect
         std::string completeResponse = Response::createErrorResponse(200, errorMessage);
         send(conn->fd, completeResponse.c_str(), completeResponse.size(), MSG_NOSIGNAL);
     }
-	
 	conn->closeConnection(conn, connections, epollFd);
 }
 
 
 bool ResponseSender::sendHeaders(Connection* conn, Response* response, int epollFd, std::vector<Connection*>& connections) {
     std::string responseStr = response->build();
-    // << "response headers\n";
-    // << CYAN <<  responseStr << RESET << std::endl;
+    std::cout  << "response headers\n";
+    std::cout << CYAN <<  responseStr << RESET << std::endl;
     ssize_t sent = send(conn->fd, responseStr.c_str(), responseStr.size(), MSG_NOSIGNAL);
     
     if (sent == -1) {

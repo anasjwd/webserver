@@ -8,36 +8,23 @@
 #include <ctime>
 #include <unistd.h>
 
-static std::string getDefaultErrorFile(int statusCode) {
-    std::stringstream ss;
-    ss << "www/error_" << statusCode << ".html";
-    return ss.str();
-}
 
 
-static void setDefaultErrorFile(Response& response, int statusCode) {
-    std::string file = getDefaultErrorFile(statusCode);
-    struct stat fileStat;
-    if (stat(file.c_str(), &fileStat) == 0 && S_ISREG(fileStat.st_mode)) {
-        response.setFilePath(file);
-        response.setContentType("text/html");
-        response.setFileSize(static_cast<size_t>(fileStat.st_size));
-    } else {
-        std::ofstream f(file.c_str());
-        f << "Error " << statusCode << ": Sorry, an error (" << statusCode << ") occurred." << std::endl;
-        f.close();
-        if (stat(file.c_str(), &fileStat) == 0 && S_ISREG(fileStat.st_mode)) {
-            response.setFilePath(file);
-            response.setContentType("text/html");
-            response.setFileSize(static_cast<size_t>(fileStat.st_size));
-        }
-    }
-}
 
 Response ErrorResponse::createErrorResponse(int statusCode, const std::string& message) {
     (void)message;
     Response response(statusCode);
-    setDefaultErrorFile(response, statusCode);
+    response.setContentType("text/html");
+    std::ostringstream error;
+    error << "/tmp/error";
+    std::string errorPath = error.str();
+    std::ofstream tempFile(errorPath.c_str());
+        if (tempFile.is_open()) {
+            tempFile << "<center>    <h1>ERROR ";
+            tempFile << statusCode;
+            tempFile << " </h1><hr> <p><em>Webserv/1.1</em></p></center>";
+        }
+    response.setFileBody(errorPath);
     return response;
 }
 

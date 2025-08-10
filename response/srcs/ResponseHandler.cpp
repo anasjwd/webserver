@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <cstring>
 #include <ctime>
+#include <fstream>
 #include <sys/socket.h>
 #include <vector>
 #include <string>
@@ -601,15 +602,14 @@ Response ResponseHandler::handleRequest(Connection* conn)
     else if (method == "POST")
     {
         struct stat fileStat;
-        char fPath[] = "www/201.html";
-        if (stat(fPath , &fileStat) != 0) {
+        if (stat(filePath.c_str() , &fileStat) != 0) {
             return ErrorResponse::createNotFoundResponse(conn);
         }
         Response response(201);
         std::string lastPath = request.getRequestBody().getTempFile().path();
-        response.addHeader("location", lastPath);
-        response.setFilePath(fPath);
-        response.setContentType(_getMimeType(fPath));
+        response.addHeader("Location", lastPath);
+        response.setFilePath(filePath);
+        response.setContentType(_getMimeType(filePath));
         response.setFileSize(static_cast<size_t>(fileStat.st_size));
         response.addHeader("Connection", "close");
         return response;

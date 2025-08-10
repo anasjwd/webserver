@@ -7,7 +7,7 @@
 # include "RequestHeaders.hpp"
 
 #define RESET   "\033[0m"
-#define BG_YELLOW   "\033[43m"
+#define BG_YELLOW   "\033[4m"
 
 class	Http;
 class	Connection;
