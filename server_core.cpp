@@ -228,11 +228,11 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 		}
 		else if (conn && conn->isCgi && conn->isCgiTimedOut())
 		{
-			std::string res =  Response::createErrorResponse(504, "CGI TIMROUT");
+			std::string res =  Response::createErrorResponse(504, "CGI TIMEOUT");
 			send(conn->fd, res.c_str(), res.size(), MSG_NOSIGNAL);
 			epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, &ev);
 			/*
-				TODO
+				TODO:
 				Should close the child process of the CGI if it's still working,
 				And remove the file where you put the response.
 			*/

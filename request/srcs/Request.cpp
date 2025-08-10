@@ -1,5 +1,5 @@
 // # include <ctime>
-# include <cstdio>
+// # include <cstdio>
 // # include <climits>
 // # include <cstddef>
 // # include <cstdlib>
@@ -375,16 +375,17 @@
 // 	}
 
 // 	return true;
-// }#include <cstdio>
+# include <cstdio>
 # include <ctime>
 # include <climits>
 # include <cstddef>
 # include <cstdlib>
-# include <iostream>
-#include <sstream>
+# include <sstream>
 # include "../incs/Request.hpp"
 # include "../../conf/Http.hpp"
 # include "../../Connection.hpp"
+# include "../../response/include/ResponseHandler.hpp"
+
 
 Request::Request()
 	:	_fd(-1), _rl(""), _rh(""), _rb(),
@@ -528,10 +529,7 @@ bool	Request::_connectionChecks(Connection* conn)
 	std::cout << conn->conServer << std::endl;
 	std::vector<std::string> allowed = conn->_getAllowedMethods();
 	if (!conn->_isAllowedMethod(method, allowed))
-	{
-		std::cout  << BGREEN << "not allowed method so without creating file" << RESET <<  std::endl;
 		return conn->req->setState(false, METHOD_NOT_ALLOWED);
-	}
 	conn->getUpload();
 	if (conn->uploadAuthorized)
 	{
@@ -540,6 +538,8 @@ bool	Request::_connectionChecks(Connection* conn)
 		_rb.create(POST_BODY, conn->uploadLocation);
 		_state = BODY;
 	}
+	else
+		return setState(false, FORBIDDEN);
 	return true;
 }
 
@@ -559,11 +559,7 @@ bool	Request::_validateMethodBodyCompatibility(Connection* conn)
 		std::cout << "||| Body set as expected |||\n";
 	}
 	else if (method == "POST" && hasContentLength)
-	{
-		// POST with Content-Length: 0 is valid
 		return setState(true, OK);
-	}
-	std::cout << "BodyExpected: " << _rb.isExpected() << "\n";
 
 	return true;
 }
@@ -701,14 +697,17 @@ bool	Request::headerSection(Connection* conn, Http* http)
 		return setState(true, OK);
 	}
 	if (conn->checkMaxBodySize() == false)
-	{
-		std::cout << BG_YELLOW << "OUT: PAYLOAD TOO LARGE" << RESET << std::endl;
 		return setState(false, PAYLOAD_TOO_LARGE);
-	}
-
-	std::cout << BG_YELLOW << "IN: THAT'S A POST REQUEST" << RESET << std::endl;
+		
 	if (!_processBodyHeaders() || !_validateMethodBodyCompatibility(conn))
 		return false;
+
+	struct stat fileStat;
+	const Location *location = conn->getLocation();
+	std::string root = ResponseHandler::_getRootPath(conn);
+	std::string filePath = ResponseHandler::_buildFilePath(_rl.getUri(), root, location);
+	if (stat(filePath.c_str(), &fileStat) != 0)
+		return setState(false, BAD_REQUEST);
 
 	return true;
 }

@@ -21,16 +21,16 @@ public:
     static Response createForbiddenResponse();
     static Response createInternalErrorResponse();
     static Response createErrorResponseWithMapping(Connection* conn, int statusCode, const std::string& message);
+    static std::string _getRootPath(Connection* conn);
+    static std::string _buildFilePath(const std::string& uri, const std::string& root,  const Location* location);
 
 private:
     static std::map<std::string, std::string> _mimeTypes;
-    static std::string _getRootPath(Connection* conn);
     static std::string _getUploadPath(Connection* conn);
     static bool _getAutoIndex(Connection* conn);
     static std::map<int, std::string> _getErrorPages(Connection* conn);
 
     static std::vector<std::string> _getIndexFiles(Connection* conn);
-    static std::string _buildFilePath(const std::string& uri, const std::string& root,  const Location* location);
 
     static std::string _getMimeType(const std::string& path);
     static std::string _getFileExtension(const std::string& path);
