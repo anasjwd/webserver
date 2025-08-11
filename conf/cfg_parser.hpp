@@ -15,7 +15,8 @@ enum TOKEN {
 	BLOCK_END,
 	DIR_END,
 	COLON,
-	EQUAL
+	EQUAL,
+	HTTP_END
 };
 
 /*enum DIRTYPE {
@@ -71,7 +72,8 @@ void consumeDirectives(
 		BlockDirective* block,
 		std::vector<t_token*>& tokens,
 		unsigned int& pos,
-		unsigned int tokensSize);
+		unsigned int tokensSize,
+		TOKEN end);
 
 bool isValidURI(char* uri);
 bool isHostAndPort(std::vector<t_token*>& tokens, unsigned int pos, unsigned int tokensSize);

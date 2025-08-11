@@ -194,8 +194,6 @@ void getSockAddr(Http* http, std::map<IpPortKey, int>& sockAddr)
 				{
 					listenHolder = dynamic_cast<Listen*>(serverHolder->directives[jdx]);
 					addUniqueListen(sockAddr, listenHolder->getHost(), listenHolder->getPort());
-					std::cout << "host: " << listenHolder->getHost() << std::endl;
-					std::cout << "port: " << listenHolder->getPort() << std::endl;
 					listenPresent = true;
 				}
 				++jdx;
@@ -283,7 +281,16 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 					continue;
 				
 				int flags = fcntl(clientFd, F_GETFL, 0);
-				fcntl(clientFd, F_SETFL, flags | O_NONBLOCK);
+				if (flags == -1) {
+					std::cerr << "Error: Failed to get socket flags\n";
+					close(clientFd);
+					continue;
+				}
+				if (fcntl(clientFd, F_SETFL, flags | O_NONBLOCK) == -1) {
+					std::cerr << "Error: Failed to set socket as non-blocking\n";
+					close(clientFd);
+					continue;
+				}
 				int optval = 1;
 				setsockopt(clientFd, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval));
 
@@ -378,13 +385,6 @@ int main(int ac, char** av)
 		close(epollFd);
 		delete http;
 		return ( 1 );
-	}
-	std::map<IpPortKey, int>::iterator it;
-	std::cout << "added IP/Port: \n";
-	for (it = sockAddr.begin(); it != sockAddr.end(); ++it)
-	{
-		std::cout << "host: " << it->first.first << std::endl;
-		std::cout << "port: " << it->first.second << std::endl;
 	}
 	serverLoop(http, sockets, epollFd);
 	closeSockets(sockets);

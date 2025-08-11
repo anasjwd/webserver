@@ -23,7 +23,7 @@ char* grabWord(char* str, int& startToUpdate)
 	int wordLength;
 	char* wordHolder;
 	bool insideQuotes = false;
-	char quotesType;
+	char quotesType = '\0';
 
 	while ((isSep(str[idx], " \t\n{};:#") == false || insideQuotes == true)
 			&& str[idx] != '\0') // TODO: handle quotes

@@ -22,7 +22,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sstream>
-
+#include <cstdio>
 
 
 std::vector<std::string> ResponseHandler::_getIndexFiles(Connection* conn) {
