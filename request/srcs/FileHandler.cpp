@@ -96,7 +96,7 @@ ssize_t	FileHandler::write(const char* data, size_t size)
 	if (!_isOpen)
 		return -1;
 	if (_fd == -1)
-		return _fd;
+		return -1;
 
 	ssize_t written = ::write(_fd, data, size);
 	if (written > 0)

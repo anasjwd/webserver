@@ -56,7 +56,10 @@ bool	RequestBody::_processChunkData(const char* data, size_t len)
 		size_t available = buffer.size() - _chunkParsePos;
 		size_t toWrite = std::min(_currentChunkSize - _bytesReceivedInChunk, available);
 
-		if (_fileHandler.write(buffer.data() + _chunkParsePos, toWrite) == -1)
+		ssize_t wrotten = _fileHandler.write(buffer.data() + _chunkParsePos, toWrite);
+		if (wrotten == -1)
+			return setState(false, INTERNAL_SERVER_ERROR);
+		if (wrotten == 0 && toWrite != 0)
 			return setState(false, INTERNAL_SERVER_ERROR);
 
 		_chunkParsePos += toWrite;
@@ -182,16 +185,23 @@ bool	RequestBody::receiveData(const char* data, size_t len)
 		return _processChunkData(data, len);
 
 	size_t remaining = _contentLength - _bytesReceived;
+	ssize_t wrotten = 0;
 	if (len > remaining)
 	{
-		if (_fileHandler.write(data, remaining) == -1)
+		wrotten = _fileHandler.write(data, remaining);
+		if (wrotten == -1)
+			return setState(false, INTERNAL_SERVER_ERROR);
+		if (wrotten == 0 && remaining != 0)
 			return setState(false, INTERNAL_SERVER_ERROR);
 		_bytesReceived += remaining;
 		_isCompleted = true;
 	}
 	else
 	{
-		if (_fileHandler.write(data, len) == -1)
+		wrotten = _fileHandler.write(data, len);
+		if (wrotten == -1)
+			return setState(false, INTERNAL_SERVER_ERROR);
+		if (wrotten == 0 && remaining != 0)
 			return setState(false, INTERNAL_SERVER_ERROR);
 		_bytesReceived += len;
 		if (_bytesReceived == _contentLength)

@@ -310,7 +310,9 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				if (events[i].events & EPOLLIN)
 				{
 					bytes = read(conn->fd, buff, EIGHT_KB);
-					if (bytes <= 0)
+					if (bytes == 0)
+						conn->closeConnection(conn, connections, epollFd);
+					else if (bytes == -1)
 						conn->closeConnection(conn, connections, epollFd);
 					else
 					{

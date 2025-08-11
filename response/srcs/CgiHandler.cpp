@@ -270,6 +270,10 @@ Response CgiHandler::returnCgiResponse(Connection* conn) {
         }
     } else {
         std::ofstream tempFile(tempFilePath.c_str());
+        if (tempFile.is_open())
+        {
+            tempFile << "<center> <h1> CGI ERROR </h1> </center>";
+        }
         tempFile.close();
         conn->cgiResponse.setFileBody(tempFilePath);
     }
