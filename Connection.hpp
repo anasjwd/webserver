@@ -33,7 +33,7 @@ class	Connection
 
 		bool			closed;
 		int				fileFd;
-		int				fileSendState; // 0: not started, 1: headers sent, 2: sending body, 3: done
+		int				fileSendState;
 		ssize_t			fileSendOffset;
 		bool 			headersSent;
 
@@ -43,8 +43,6 @@ class	Connection
 		std::string		cgiOutput;
 		Response		cgiResponse;
 		int				cgiPid;
-		// int				cgiPipeToChild[2];
-		// int				cgiPipeFromChild[2];
 		int				pipefd[2];
 		int				cgiReadState;
 		std::string		cgiHeaders;
@@ -61,13 +59,11 @@ class	Connection
 		bool				findServer(Http*);
 		IDirective*			getDirective(DIRTYPE type);
 
-		// Alassiqu:
 		void				getUpload();
 		bool				checkMaxBodySize();
 		ClientMaxBodySize*	getClientMaxBodySize();
 		LimitExcept*		getLimitExcept() const;
 
-		// ahanaf
 		Root*				getRoot();
 		Index*				getIndex();
 		const Location*		getLocation() const;
@@ -75,7 +71,6 @@ class	Connection
 		AutoIndex*			getAutoIndex();
 		ErrorPage*			getErrorPage();
 
-		// 
 		Connection*			findConnectionByFd(int, std::vector<Connection*>&);
 		void				closeConnection(Connection*, std::vector<Connection*>&, int);
 		void				freeConnections(std::vector<Connection*>&);
@@ -83,8 +78,8 @@ class	Connection
 		Return*				getReturnDirective();
 		ErrorPage*			getErrorPageForCode(int);
 
-		std::vector<std::string> _getAllowedMethods() const;
-		bool _isAllowedMethod(const std::string& method, const std::vector<std::string>& allowedMethods);
+		std::vector<std::string>	_getAllowedMethods() const;
+		bool						_isAllowedMethod(const std::string& method, const std::vector<std::string>& allowedMethods);
 
 
 		void resetCgiState();

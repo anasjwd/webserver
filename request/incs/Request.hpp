@@ -6,9 +6,6 @@
 # include "RequestLine.hpp"
 # include "RequestHeaders.hpp"
 
-#define RESET   "\033[0m"
-#define BG_YELLOW   "\033[4m"
-
 class	Http;
 class	Connection;
 
@@ -27,8 +24,6 @@ class	Request
 
 		bool			_processBodyHeaders();
 		bool			_processContentLength();
-		bool			_processChunkedTransfer();
-		bool			_processType(std::string);
 		bool			_connectionChecks(Connection*);
 		bool			_isChunkedTransferEncoding(const std::string&);
 		bool			_validateMethodBodyCompatibility(Connection *);
@@ -41,10 +36,8 @@ class	Request
 		bool					stateChecker() const;
 		bool					isRequestDone() const;
 
-		void					setFd(int);
 		bool					setState(bool, HttpStatusCode);
 
-		const int&				getFd() const;
 		const RequestState&		getState() const;
 		const HttpStatusCode&	getStatusCode() const;
 		const RequestLine&		getRequestLine() const;

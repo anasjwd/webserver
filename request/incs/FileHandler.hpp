@@ -22,7 +22,6 @@ class	FileHandler
 	public:
 		FileHandler();
 		~FileHandler();
-		static const std::string TEMP_DIR;
 
 		void				close();
 		bool				remove();

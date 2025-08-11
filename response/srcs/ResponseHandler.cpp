@@ -619,13 +619,10 @@ Response ResponseHandler::handleRequest(Connection* conn)
         std::string file = ResponseHandler::_buildFilePath(uri , root, location);
         conn->getUpload();
         Request::treatUploadLocation(conn);
-        std::string locUpload = conn->uploadLocation;          
-        
-        std::cout << GREEN << locUpload << std::endl;        
-        std::cout <<  file.substr((file.rfind("/") + 1)) << RESET <<  std::endl;
+        std::string locUpload = conn->uploadLocation;
 
-        std::cout << locUpload + "/" +  file << std::endl;
-        
+        locUpload = locUpload + "/" + file.substr((file.rfind("/") + 1));
+        std::cout << locUpload << std::endl;
         struct stat fileStat;
         if (stat(locUpload.c_str(), &fileStat) != 0) {
             return ErrorResponse::createNotFoundResponse(conn);

@@ -57,10 +57,7 @@ bool	RequestBody::_processChunkData(const char* data, size_t len)
 		size_t toWrite = std::min(_currentChunkSize - _bytesReceivedInChunk, available);
 
 		if (_fileHandler.write(buffer.data() + _chunkParsePos, toWrite) == -1)
-		{
-			std::cout << "write:reqbody.cpp 4 \n";	
 			return setState(false, INTERNAL_SERVER_ERROR);
-		}
 
 		_chunkParsePos += toWrite;
 		_bytesReceivedInChunk += toWrite;
