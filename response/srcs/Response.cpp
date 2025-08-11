@@ -80,6 +80,26 @@ void Response::setFileBody(const std::string& filePath) {
     _isBuilt = false;
 }
 
+int Response::getStatusCode() const
+{ 
+    return _statusCode;
+}
+
+const std::string& Response::getStatusMessage() const
+{
+    return _statusMessage;
+}
+
+const std::string& Response::getFilePath() const 
+{ 
+    return _filePath;
+}
+
+size_t Response::getFileSize() const
+{
+    return _fileSize;
+}
+
 std::string Response::build() {
     if (_isBuilt && !_cachedResponse.empty()) return _cachedResponse;
     std::ostringstream res;
@@ -142,7 +162,6 @@ void Response::setFileSize(size_t size) {
 
 Response Response::createRedirectResponse(int statusCode, const std::string& location) {
     Response response(statusCode);
-    // << GREEN << location << RESET << std::endl;
     response.addHeader("Location", location);
     return response;
 }

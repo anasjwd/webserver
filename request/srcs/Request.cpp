@@ -296,9 +296,8 @@ bool	Request::headerSection(Connection* conn, Http* http)
 	}
 	else
 		filePath = ResponseHandler::_buildFilePath(_rl.getUri(), root, location);
-
 	if (stat(filePath.c_str(), &fileStat) == -1)
-		return setState(false, BAD_REQUEST);
+		return setState(false, NOT_FOUND);
 
 	std::vector<std::string> allowed = conn->_getAllowedMethods();
 	if (!conn->_isAllowedMethod(_rl.getMethod(), allowed))
