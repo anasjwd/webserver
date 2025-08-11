@@ -26,7 +26,7 @@ Http* parser(std::vector<t_token*>& tokens)
 
 	http = new Http();
 	try {
-		consumeDirectives(http, tokens, pos, tokens.size());
+		consumeDirectives(http, tokens, pos, tokens.size(), HTTP_END);
 	}
 	catch (std::exception& e)
 	{

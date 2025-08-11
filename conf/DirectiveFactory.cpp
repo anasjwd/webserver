@@ -6,7 +6,8 @@ void consumeDirectives(
 		BlockDirective* block,
 		std::vector<t_token*>& tokens,
 		unsigned int& pos,
-		unsigned int tokensSize);
+		unsigned int tokensSize,
+		TOKEN end);
 
 IDirective* parseServerBlock(
 		std::vector<t_token*>& tokens,
@@ -24,7 +25,7 @@ IDirective* parseServerBlock(
 		throw DirectiveException("incomplete server block - missing \"}\"");
 	}
 	try {
-		consumeDirectives(server, tokens, pos, tokensSize);
+		consumeDirectives(server, tokens, pos, tokensSize, BLOCK_END);
 	}
 	catch (std::exception& e)
 	{
@@ -78,7 +79,7 @@ IDirective* parseLocationBlock(
 	}
 	++pos;
 	try {
-		consumeDirectives(location, tokens, pos, tokensSize);
+		consumeDirectives(location, tokens, pos, tokensSize, BLOCK_END);
 	}
 	catch (std::exception& e)
 	{
@@ -531,7 +532,6 @@ IDirective* createNode(
 		parseUploadDirective,
 		parseUploadLocationDirective
 	};
-	// << pos << " > " << tokens[pos]->data << std::endl;
 
 	for (int i = 0; i < 13; i++)
 	{
@@ -548,8 +548,15 @@ void consumeDirectives(
 		BlockDirective* block,
 		std::vector<t_token*>& tokens,
 		unsigned int& pos,
-		unsigned int tokensSize)
+		unsigned int tokensSize,
+		TOKEN end)
 {
-	while (pos < tokensSize && tokens[pos]->type != BLOCK_END)
-		block->addDirective(createNode(tokens, pos, tokensSize));
+	if (end == HTTP_END) {
+		while (pos < tokensSize)
+			block->addDirective(createNode(tokens, pos, tokensSize));
+	}
+	else {
+		while (pos < tokensSize && tokens[pos]->type != end)
+			block->addDirective(createNode(tokens, pos, tokensSize));
+	}
 }

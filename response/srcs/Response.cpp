@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <sys/stat.h>
 #include <ctime>
+#include <cstdio>
 
 Response::Response() : _statusCode(200), _statusMessage("OK"), _fileSize(0), _isBuilt(false), cursor(0) {
     _addDefaultHeaders();
