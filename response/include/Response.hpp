@@ -63,10 +63,10 @@ class Response
         void setFileSize(size_t size);
         void setContentType(const std::string& type);
         std::string build();
-        int getStatusCode() const { return _statusCode; }
-        const std::string& getStatusMessage() const { return _statusMessage; }
-        const std::string& getFilePath() const { return _filePath; }
-        size_t getFileSize() const { return _fileSize; }
+        int getStatusCode() const;
+        const std::string& getStatusMessage() const;
+        const std::string& getFilePath() const;
+        size_t getFileSize() const;
 
         static Response createRedirectResponse(int statusCode, const std::string& location);
         static std::string createErrorResponse(int statusCode, const std::string& errorMessage);

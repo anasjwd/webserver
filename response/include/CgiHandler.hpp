@@ -12,7 +12,6 @@ public:
     static void waitCgi(Connection* conn);
     static void readCgiOutput(Connection* conn);
     static Response returnCgiResponse(Connection* conn);
-    static void writePostDataToCgi(Connection* conn);
     
 private:
     static std::map<std::string, std::string> buildEnvironment(Connection* conn, const std::string& scriptPath);
