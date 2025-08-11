@@ -1,12 +1,10 @@
 # include <cstdio>
 # include <cstdlib>
-# include <climits>
 # include <cstring>
-# include <iostream>
+# include <limits.h>
 # include <unistd.h>
 # include <stdexcept>
 # include "../incs/FileHandler.hpp"
-# include "../../response/include/Response.hpp"
 
 FileHandler::FileHandler() 
 	:	_fd(-1), _size(0), _offset(0),
@@ -17,11 +15,6 @@ FileHandler::FileHandler()
 FileHandler::~FileHandler()
 {
 	close();
-	if (_isTemp)
-	{
-		// << BBLUE << "Removing temporary file: " << _path << "\n" << RESET;
-		remove();
-	}
 }
 
 bool	FileHandler::_createBodyFile(bool isTemp, std::string uploadDir)

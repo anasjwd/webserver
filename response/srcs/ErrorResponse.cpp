@@ -19,12 +19,13 @@ Response ErrorResponse::createErrorResponse(int statusCode, const std::string& m
     error << "/tmp/error";
     std::string errorPath = error.str();
     std::ofstream tempFile(errorPath.c_str());
-        if (tempFile.is_open()) {
-            tempFile << "<center>    <h1>ERROR ";
-            tempFile << statusCode;
-            tempFile << " </h1><hr> <p><em>Webserv/1.1</em></p></center>";
-        }
+    if (tempFile.is_open()) {
+        tempFile << "<center>    <h1>ERROR ";
+        tempFile << statusCode;
+        tempFile << " </h1><hr> <p><em>Webserv/1.1</em></p></center>";
+    }
     response.setFileBody(errorPath);
+    response.setFileSize(72);
     return response;
 }
 

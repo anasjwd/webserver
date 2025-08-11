@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="icon" href="data:;base64,=">
+		<link rel="stylesheet" href="/assets/css/style.css">
+		<title>Form Testing | 42 Webserv</title>
+	</head>
+	<body class="dark-mode">
+		<nav>
+			<div class="nav-container">
+				<a href="/index.html" class="logo">42 Webserv</a>
+				<ul class="nav-links">
+					<li><a href="/index.html">Home</a></li>
+					<li><a href="/form.html">ReqTests</a></li>
+					<li><a href="/cgi.html">The CGI</a></li>
+					<li><a href="/about.html">About</a></li>
+				</ul>
+			</div>
+		</nav>
+
+		<div class="main-content">
+			<div class="container">
+				<header>
+					<h1>Form Testing Page</h1>
+					<p class="description">
+						Test various HTTP POST requests and file uploads with our webserver implementation.
+						This page includes different form types to verify your server's handling of form data,
+						file uploads, and different content types.
+					</p>
+				</header>
+
+				<div class="form-container">
+					<h2>File Delete</h2>
+					<form id="uploadForm" method="delete">
+						<div class="form-group">
+							<label for="fileDescription">File Description</label>
+							<input type="text" id="fileDescription" name="description">
+						</div>
+
+						<div class="form-group file-upload">
+							<label for="fileInput">Choose a file to upload</label>
+							<input type="text" name="text" required>
+							<!-- <input type="file" id="fileInput" name="file" required> -->
+						</div>
+
+						<button type="submit" class="submit-btn">Upload File</button>
+					</form>
+
+					<div id="uploadResponse" class="response-container"></div>
+				</div>
+
+			</div>
+		</div>
+
+		<footer>
+			<p><b>© 2025 42 Webserv Project |</b> Created by 
+			<b>GEET (Alassiqu, Ajawad, Ahanaf)</b></p>
+		</footer>
+
+	</body>
+</html>

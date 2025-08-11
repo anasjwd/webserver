@@ -231,6 +231,8 @@ void	checkForTimeouts(std::vector<Connection*>& connections, struct epoll_event 
 		{
 			if (conn->req)
 				conn->req->setState(false, REQUEST_TIMEOUT);
+			std::string res =  Response::createErrorResponse(408, "TIMEOUT");
+			send(conn->fd, res.c_str(), res.size(), MSG_NOSIGNAL);
 			epoll_ctl(epollFd, EPOLL_CTL_DEL, conn->fd, &ev);
 			conn->closeConnection(conn, connections, epollFd);
 			it = connections.begin();

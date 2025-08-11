@@ -51,7 +51,7 @@ class	Request
 		const RequestBody&		getRequestBody() const;
 		const RequestHeaders&	getRequestHeaders() const;
 
-		void					treatUploadLocation(Connection*);
+		static void				treatUploadLocation(Connection*);
 		bool					contentLength(const std::string&);
 
 		bool					bodySection();
