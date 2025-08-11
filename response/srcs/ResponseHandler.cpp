@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <cstring>
 #include <ctime>
+#include <cstdio>
 #include <sys/socket.h>
 #include <vector>
 #include <string>
