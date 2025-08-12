@@ -69,7 +69,6 @@ Response CgiHandler::executeCgi(Connection* conn, const std::string& scriptPath)
         close(conn->pipefd[1]);
         return ErrorResponse::createInternalErrorResponse(conn);
     }
-    std::cout << GREEN << conn->req->getRequestBody().getTempFile().path().c_str() << RESET <<  std::endl;
 
     if (conn->cgiPid == 0) {
         
@@ -191,7 +190,6 @@ void CgiHandler::readCgiOutput(Connection* conn) {
         conn->pipefd[0] = -1;
         conn->cgiCompleted = true;
     }
-    // TODO: read: case of < 0.
 }
 
 

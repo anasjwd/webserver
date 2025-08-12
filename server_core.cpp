@@ -38,11 +38,6 @@
 # define	BACKLOG			511
 # define	EIGHT_KB		8192
 
-/*
-	TODO:
-	It takes too long for uploading files, thinking of incrementing it from 8KB to 500KB or 1MB.
-	To see with jawad later: 1048576.
-*/ 
 
 bool got_singint = false;
 
@@ -310,11 +305,14 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				if (events[i].events & EPOLLIN)
 				{
 					bytes = read(conn->fd, buff, EIGHT_KB);
-					// Do not make since.
 					if (bytes == 0)
 						conn->closeConnection(conn, connections, epollFd);
 					else if (bytes == -1)
+					{
+						std::string res = Response::createErrorResponse(500, "Internal Server Error");
+						send(conn->fd, res.c_str(), res.size(), MSG_NOSIGNAL);
 						conn->closeConnection(conn, connections, epollFd);
+					}
 					else
 					{
 						if (!conn->req)

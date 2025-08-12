@@ -285,7 +285,21 @@ bool	Request::headerSection(Connection* conn, Http* http)
 	std::string filePath;
 	struct stat	fileStat;
 	const Location* location = conn->getLocation();
-	std::string root = ResponseHandler::_getRootPath(conn);
+	std::string root;
+	Root* locRoot = NULL;
+	if (location) {
+		for (std::vector<IDirective*>::const_iterator dit = location->directives.begin(); dit != location->directives.end(); ++dit) {
+			if ((*dit)->getType() == ROOT) {
+				locRoot = static_cast<Root*>(*dit);
+				break;
+			}
+		}
+	}
+	if (locRoot && locRoot->getPath())
+		root = std::string(locRoot->getPath());
+	else
+		root = ResponseHandler::_getRootPath(conn);
+
 	if (_rl.getMethod() == "DELETE")
 	{
 		file = ResponseHandler::_buildFilePath(_rl.getUri() , root, location);
@@ -298,7 +312,6 @@ bool	Request::headerSection(Connection* conn, Http* http)
 		filePath = ResponseHandler::_buildFilePath(_rl.getUri(), root, location);
 	if (stat(filePath.c_str(), &fileStat) == -1)
 		return setState(false, NOT_FOUND);
-
 	std::vector<std::string> allowed = conn->_getAllowedMethods();
 	if (!conn->_isAllowedMethod(_rl.getMethod(), allowed))
 		return conn->req->setState(false, METHOD_NOT_ALLOWED);
