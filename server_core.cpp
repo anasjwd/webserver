@@ -310,6 +310,7 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 				if (events[i].events & EPOLLIN)
 				{
 					bytes = read(conn->fd, buff, EIGHT_KB);
+					// Do not make since.
 					if (bytes == 0)
 						conn->closeConnection(conn, connections, epollFd);
 					else if (bytes == -1)
@@ -325,7 +326,6 @@ void	serverLoop(Http* http, std::vector<int>& sockets, int epollFd)
 						
 						if (conn->req->isRequestDone())
 						{
-							std::cerr << "Request parsing done with: " << conn->req->getStatusCode() << "\n";
 							ev.events = EPOLLOUT;
 							ev.data.fd = conn->fd;
 							epoll_ctl(epollFd, EPOLL_CTL_MOD, conn->fd, &ev);

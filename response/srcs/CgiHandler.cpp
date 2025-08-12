@@ -191,6 +191,7 @@ void CgiHandler::readCgiOutput(Connection* conn) {
         conn->pipefd[0] = -1;
         conn->cgiCompleted = true;
     }
+    // TODO: read: case of < 0.
 }
 
 

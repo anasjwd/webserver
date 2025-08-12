@@ -98,7 +98,6 @@ IDirective* parseLocationBlock(
 		delete location;
 		throw DirectiveException("invalid directive inside of location block");
 	}
-	std::cout << ">>>>>>>>> " << location->getUri() << std::endl;
 	return ( location );
 }
 
