@@ -62,7 +62,7 @@ typedef struct s_token {
 
 #include <algorithm>
 
-Http* parseConfig(char* fileName);
+Http* parseConfig(const char* fileName);
 
 std::vector<t_token*> tokenize(char* content);
 

@@ -365,14 +365,16 @@ int main(int ac, char** av)
 
 	if (ac < 2)
 	{
-		std::cerr << "Error: config file missing.\n";
-		return ( 1 );
+		http = parseConfig("conf/default.conf");
+		if (http == NULL)
+			return ( 1 );
+	} else {
+		http = parseConfig(av[1]);
+		if (http == NULL)
+			return ( 1 );
 	}
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGINT, sigintHandler);
-	http = parseConfig(av[1]);
-	if (http == NULL)
-		return ( 1 );
 	getSockAddr(http, sockAddr);
 	epollFd = epoll_create(1);
 	if (epollFd == -1)

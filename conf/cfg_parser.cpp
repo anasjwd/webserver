@@ -22,7 +22,7 @@ char* readCfgFileContent(const char* filename)
 	return content;
 }
 
-Http* parseConfig(char* fileName) {
+Http* parseConfig(const char* fileName) {
 	char* content = readCfgFileContent(fileName);
 	if (content == NULL)
 		return ( NULL );
