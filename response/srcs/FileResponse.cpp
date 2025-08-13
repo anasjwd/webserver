@@ -5,8 +5,8 @@
 Response FileResponse::serve(const std::string& filePath, const std::string& mimeType, int statusCode) {
     struct stat fileStat;
     if (stat(filePath.c_str(), &fileStat) != 0 || !S_ISREG(fileStat.st_mode)) {
-        // TODO return ErrorResponse::createNotFoundResponse(conn)  ;
-        return Response(404);
+        Response response = ErrorResponse::createErrorResponse(404);
+        return response;
     }
     Response response(statusCode);
     response.setFilePath(filePath);

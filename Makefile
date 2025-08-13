@@ -1,5 +1,5 @@
 CXX = c++ -std=c++98
-CXXFLAGS = -Wall -Wextra -Werror -g3 -fsanitize=address
+CXXFLAGS = -Wall -Wextra -Werror
 TARGET = webserv
 
 SRCS     = conf/AutoIndex.cpp conf/BlockDirective.cpp conf/cfg_parser.cpp conf/ClientMaxBodySize.cpp conf/DirectiveFactory.cpp conf/DirectiveFactoryUtils.cpp \

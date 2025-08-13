@@ -301,7 +301,7 @@ Response ResponseHandler::handleRequest(Connection* conn)
 {
     const Request& request = *conn->req;
     if (conn->req->getStatusCode() != OK)
-    {        
+    {   
         return ErrorResponse::createErrorResponseWithMapping(conn,conn->req->getStatusCode() );
     }
     std::string method = request.getRequestLine().getMethod();

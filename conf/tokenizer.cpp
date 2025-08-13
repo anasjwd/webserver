@@ -26,7 +26,7 @@ char* grabWord(char* str, int& startToUpdate)
 	char quotesType = '\0';
 
 	while ((isSep(str[idx], " \t\n{};:#") == false || insideQuotes == true)
-			&& str[idx] != '\0') // TODO: handle quotes
+			&& str[idx] != '\0')
 	{
 		if (inStr(str[idx], "\'\"") && insideQuotes == false)
 		{
@@ -54,7 +54,7 @@ char* grabComment(char* str, int& startToUpdate)
 	int commentLength;
 	char* commentHolder;
 	
-	while (isSep(str[idx], "\n") == false && str[idx]) // TODO: handle quotes
+	while (isSep(str[idx], "\n") == false && str[idx])
 		idx++;
 	commentLength = idx - startToUpdate;
 	commentHolder = new char[commentLength + 1];

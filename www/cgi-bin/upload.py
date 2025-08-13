@@ -64,7 +64,7 @@ html = """
 <body>
     <div class="container">
         <h1>Upload a File</h1>
-        <form action="./form.html" method="post" enctype="multipart/form-data">
+        <form action="./upload.py" method="post" enctype="multipart/form-data">
             <label for="file">Select a file:</label>
              <input type="file" name="file" id="file">
             
